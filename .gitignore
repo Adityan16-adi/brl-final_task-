@@ -1,0 +1,32 @@
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+
+# React / Node
+node_modules/
+dist/
+coverage/
+npm-debug.log*
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+
+# Android configuration and signing keys
+local.properties
+key.properties
+*.jks
+*.keystore
+
+# Firebase service-account credentials
+service-account*.json
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
