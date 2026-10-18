@@ -13,6 +13,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/assignments", require("./routes/assignmentRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/materials", require("./routes/materialRoutes"));
+app.use("/api/calendar", require("./routes/calendarRoutes"));
 
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "Backend is running" });
