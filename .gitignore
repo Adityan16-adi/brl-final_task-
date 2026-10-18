@@ -30,3 +30,4 @@ service-account*.json
 .idea/
 .DS_Store
 Thumbs.db
+apps/backend/uploads
