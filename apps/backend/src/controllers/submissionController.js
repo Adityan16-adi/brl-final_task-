@@ -6,7 +6,7 @@ const Submission = require("../models/Submission");
 // POST /api/submissions/assignment/:assignmentId
 exports.submitAssignment = async (req, res) => {
   try {
-    const { studentId, text } = req.body;
+    const { studentId, text } = req.body || {};
 const fileUrl = req.file ? `/uploads/${req.file.filename}` : req.body.fileUrl;
 if (!studentId || (!text && !fileUrl)) {
       return res
