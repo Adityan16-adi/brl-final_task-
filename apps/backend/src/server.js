@@ -11,6 +11,7 @@ app.use(express.json());
 const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/assignments", require("./routes/assignmentRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "Backend is running" });

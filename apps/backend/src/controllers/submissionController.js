@@ -1,3 +1,5 @@
+const { notifyUser } = require("../utils/notify");
+
 const Assignment = require("../models/Assignment");
 const Submission = require("../models/Submission");
 
@@ -78,6 +80,13 @@ exports.gradeSubmission = async (req, res) => {
     existing.feedback = feedback || "";
     existing.status = "graded";
     await existing.save();
+    await notifyUser({
+  userId: existing.studentId,
+  title: "Assignment graded",
+  message: `You got ${marks}/${existing.assignmentId.maxMarks} in "${existing.assignmentId.title}"`,
+  type: "grade",
+  refId: existing._id,
+});
 
     res.json({ success: true, message: "Graded", data: existing });
   } catch (error) {
