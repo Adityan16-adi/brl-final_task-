@@ -21,19 +21,33 @@ import { useLanguage, useLocalizedDate, useLocalizedNumber } from "../i18n/useLa
 import "./Workspace.css";
 import LocalizedText from "../i18n/LocalizedText.jsx";
 
-const navigation = [
-  { label: "Overview", to: "/app/dashboard", icon: LayoutDashboard },
-  { label: "Classes", to: "/app/classes", icon: GraduationCap },
-  { label: "Assignments", to: "/app/assignments", icon: ClipboardCheck },
-  { label: "Materials", to: "/app/materials", icon: BookOpen },
-  { label: "Attendance", to: "/app/attendance", icon: Check },
-  { label: "Timetable", to: "/app/timetable", icon: CalendarDays },
-  { label: "Calendar", to: "/app/calendar", icon: CalendarDays },
-  { label: "Chat", to: "/app/chat", icon: MessageCircle },
-  { label: "Announcements", to: "/app/announcements", icon: BookMarked },
-  { label: "Notifications", to: "/app/notifications", icon: Bell },
-  { label: "AI Mentor", to: "/app/mentor", icon: Bot },
-  { label: "Quiz Generator", to: "/app/quizzes", icon: FileText },
+const studentNavigation = [
+  { label: "Overview", path: "/dashboard", icon: LayoutDashboard },
+  { label: "My classes", path: "/classes", icon: GraduationCap },
+  { label: "My assignments", path: "/assignments", icon: ClipboardCheck },
+  { label: "Learning materials", path: "/materials", icon: BookOpen },
+  { label: "My attendance", path: "/attendance", icon: Check },
+  { label: "Timetable", path: "/timetable", icon: CalendarDays },
+  { label: "Calendar", path: "/calendar", icon: CalendarDays },
+  { label: "Chat", path: "/chat", icon: MessageCircle },
+  { label: "Announcements", path: "/announcements", icon: BookMarked },
+  { label: "Notifications", path: "/notifications", icon: Bell },
+  { label: "AI Mentor", path: "/mentor", icon: Bot },
+  { label: "Practice quizzes", path: "/quizzes", icon: FileText },
+];
+
+const teacherNavigation = [
+  { label: "Overview", path: "/dashboard", icon: LayoutDashboard },
+  { label: "Manage classes", path: "/classes", icon: GraduationCap },
+  { label: "Assignments & reviews", path: "/assignments", icon: ClipboardCheck },
+  { label: "Learning materials", path: "/materials", icon: BookOpen },
+  { label: "Take attendance", path: "/attendance", icon: Check },
+  { label: "Teaching timetable", path: "/timetable", icon: CalendarDays },
+  { label: "Academic calendar", path: "/calendar", icon: CalendarDays },
+  { label: "Chat", path: "/chat", icon: MessageCircle },
+  { label: "Announcements", path: "/announcements", icon: BookMarked },
+  { label: "Notifications", path: "/notifications", icon: Bell },
+  { label: "Quiz Generator", path: "/quizzes", icon: FileText },
 ];
 
 const fixedContentIds = new Set([
@@ -259,8 +273,38 @@ export function Workspace() {
     <aside className={`workspace-sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
       <Link className="workspace-brand" to={`${rolePath}/dashboard`}><span className="brand-mark"><GraduationCap size={21} /></span><span>{<LocalizedText text={"Unified"} />}<strong>{<LocalizedText text={"Learn"} />}</strong></span></Link>
       <div className="sidebar-role" aria-label={t("{{role}} account", { role: t(user.role === "student" ? "Student" : "Teacher").toLowerCase() })}><span className={`role-avatar ${user.role}`}>{user.role === "teacher" ? t("J") : t("A")}</span><span><strong>{user.name}</strong><small>{t("{{role}} account · {{id}}", { role: t(user.role === "student" ? "Student" : "Teacher"), id: user.id })}</small></span></div>
-      <span className="sidebar-label">{t("LEARNING SPACE")}</span>
-      <nav className="workspace-nav" aria-label={t("Learning space")}>{navigation.map(({ label, to, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setMobileOpen(false)} className={({ isActive }) => `workspace-nav-link${isActive ? " active" : ""}`}><Icon size={17} /><span>{t(label)}</span>{label === "Notifications" && data.notifications.some((item) => item.unread) && <i />}</NavLink>)}</nav>
+<span className="sidebar-label">
+  {t(user.role === "student" ? "STUDENT TOOLS" : "TEACHER TOOLS")}
+</span>
+
+<nav
+  className="workspace-nav"
+  aria-label={t(
+    user.role === "student"
+      ? "Student navigation"
+      : "Teacher navigation"
+  )}
+>
+  {(user.role === "teacher"
+    ? teacherNavigation
+    : studentNavigation
+  ).map(({ label, path, icon: Icon }) => (
+    <NavLink
+      key={path}
+      to={`${rolePath}${path}`}
+      onClick={() => setMobileOpen(false)}
+      className={({ isActive }) =>
+        `workspace-nav-link${isActive ? " active" : ""}`
+      }
+    >
+      <Icon size={17} />
+      <span>{t(label)}</span>
+
+      {label === "Notifications" &&
+        data.notifications.some((item) => item.unread) && <i />}
+    </NavLink>
+  ))}
+</nav>
       <div className="sidebar-bottom"><Link to="/app/profile"><Users size={17} /> {t("Profile")}</Link><Link to="/app/settings"><Settings size={17} /> {t("Settings")}</Link><Link to="/logout"><LogOut size={17} /> {t("Sign out")}</Link></div>
     </aside>
     <div className="workspace-main">
@@ -308,15 +352,530 @@ function WorkspacePage({ path, user, data, allData, setData, setNotice, query })
 }
 
 function Dashboard({ user, data }) {
-  const formatDate = useLocalizedDate();
+  return user.role === "teacher"
+    ? <TeacherDashboard user={user} data={data} />
+    : <StudentDashboard user={user} data={data} />;
+}
+
+function StudentDashboard({ user, data }) {
   const { t } = useLanguage();
-  const student = user.role === "student";
-  return <><PageHeading eyebrow={student ? "YOUR LEARNING SPACE" : "TEACHER SPACE"} title={t("Good morning, {{name}}.", { name: user.name.split(" ")[0] })} subtitle={t(student ? "Here’s your day, at a glance." : "Your classes and follow-ups are ready.")} action={<Link to="/app/calendar" className="workspace-button"><CalendarDays size={16} /> {t("View calendar")}</Link>} />
-    <div className="dashboard-grid"><section className="dashboard-main"><div className="overview-strip"><div><span>{t(student ? "My classes" : "Active classes")}</span><strong>{student ? data.classes.length : t("4")}</strong><small>{t("Ready for your week")}</small></div><div><span>{t(student ? "To do" : "To review")}</span><strong>{student ? data.assignments.filter((item) => item.status === "pending").length : t("12")}</strong><small>{t(student ? "Upcoming assignments" : "Submissions waiting")}</small></div><div><span>{t("Attendance")}</span><strong>{<LocalizedText text={"94%"} />}</strong><small>{t("On track this term")}</small></div></div>
-      <section className="workspace-panel"><div className="panel-heading"><div><span className="panel-kicker">{t("UP NEXT")}</span><h2>{t("Classes this week")}</h2></div><Link to="/app/classes">{t("All classes")} <ArrowRight size={15} /></Link></div><div className="event-list">{data.events.filter((event) => event.type === "Class").slice(0, 3).map((event) => <div className="event-row" key={event.id}><span className="event-time">{event.time}</span><span className="event-mark" /><span className="event-copy"><strong>{localizedRecord(t, event.id, event.title)}</strong><small>{localizedRecord(t, event.id, event.location)}{<LocalizedText text={"·"} />}{formatDate(event.date, { day: "numeric", month: "short" })}</small></span><Link to={`/app/classroom/${event.id}`} aria-label={t("Open {{title}}", { title: localizedRecord(t, event.id, event.title) })}><ArrowUpRight size={16} /></Link></div>)}</div></section>
-      <section className="workspace-panel"><div className="panel-heading"><div><span className="panel-kicker">{t("KEEP MOVING")}</span><h2>{t(student ? "Assignments" : "Recent submissions")}</h2></div><Link to="/app/assignments">{t("See all")} <ArrowRight size={15} /></Link></div><div className="simple-list">{data.assignments.slice(0, 3).map((item) => <Link to={`/app/assignments/${item.id}`} className="simple-row" key={item.id}><span className={`list-icon ${item.status}`}><ClipboardCheck size={17} /></span><span><strong>{localizedRecord(t, item.id, item.title)}</strong><small>{localizedRecord(t, item.id, item.subject)}{<LocalizedText text={"·"} />}{t("Due {{date}}", { date: formatDate(item.dueDate, { day: "numeric", month: "short" }) })}</small></span><span className={`status-pill ${item.status}`}>{localizedStatus(t, item.status)}</span></Link>)}</div></section></section>
-      <aside className="dashboard-aside"><section className="progress-panel"><span className="panel-kicker">{t("YOUR PROGRESS")}</span><div className="progress-ring"><strong>{<LocalizedText text={"78"} />}<small>{<LocalizedText text={"%"} />}</small></strong></div><h3>{t("Steady progress")}</h3><p>{t("You’re building a strong weekly rhythm. Keep it up.")}</p><Link to="/app/attendance">{t("View attendance")} <ArrowRight size={15} /></Link></section><section className="announcement-mini"><div className="panel-heading"><h2>{t("Class updates")}</h2><Link to="/app/announcements" aria-label={t("All announcements")}><ArrowUpRight size={16} /></Link></div>{data.announcements.slice(0, 2).map((item) => <Link className="announcement-mini-row" to="/app/announcements" key={item.id}><strong>{localizedRecord(t, item.id, item.title)}</strong><small>{localizedRecord(t, item.id, item.className)}{<LocalizedText text={"·"} />}{localizedRecord(t, item.id, item.date)}</small></Link>)}</section><Link to="/app/mentor" className="mentor-shortcut"><span><Bot size={19} /></span><strong>{t("Need a study buddy?")}</strong><small>{t("Open your AI Mentor preview")}</small><ArrowRight size={16} /></Link></aside></div>
-  </>;
+  const formatDate = useLocalizedDate();
+  const base = "/app/student";
+  const firstName = user.name.split(" ")[0];
+
+  const upcomingClasses = data.events
+    .filter((item) => item.type === "Class")
+    .slice(0, 3);
+
+  const pendingAssignments = data.assignments.filter(
+    (item) => ["pending", "late"].includes(item.status)
+  );
+
+  const presentCount = data.attendance.filter(
+    (item) => (item.status || "").toLowerCase() === "present"
+  ).length;
+
+  const attendanceRate = data.attendance.length
+    ? `${Math.round((presentCount / data.attendance.length) * 100)}%`
+    : "—";
+
+  return (
+    <div className="role-dashboard student-dashboard">
+      <PageHeading
+        eyebrow="YOUR LEARNING SPACE"
+        title={t("Good morning, {{name}}.", { name: firstName })}
+        subtitle={t("Here’s your day, at a glance.")}
+        action={
+          <Link to={`${base}/timetable`} className="workspace-button">
+            <CalendarDays size={16} />
+            {t("View calendar")}
+          </Link>
+        }
+      />
+
+      <section className="workspace-panel">
+        <div className="panel-heading">
+          <div>
+            <span className="panel-kicker">
+              {t("YOUR LEARNING JOURNEY")}
+            </span>
+            <h2>{t("Make learning your own")}</h2>
+          </div>
+          <BookOpen size={21} />
+        </div>
+
+        <p className="panel-body-copy">
+          {t("Keep your classes, assignments, study resources, and learning support close at hand.")}
+        </p>
+
+        <div className="heading-actions">
+          <Link
+            to={`${base}/classes/join`}
+            className="workspace-button primary-action"
+          >
+            <Plus size={16} />
+            {t("Join a class")}
+          </Link>
+
+          <Link
+            to={`${base}/mentor`}
+            className="workspace-button"
+          >
+            <Bot size={16} />
+            {t("AI Mentor")}
+          </Link>
+        </div>
+      </section>
+
+      <div className="overview-strip">
+        <div>
+          <span>{t("My classes")}</span>
+          <strong>{data.classes.length}</strong>
+          <small>{t("Ready for your week")}</small>
+        </div>
+
+        <div>
+          <span>{t("Upcoming assignments")}</span>
+          <strong>{pendingAssignments.length}</strong>
+          <small>{t("To do")}</small>
+        </div>
+
+        <div>
+          <span>{t("Attendance")}</span>
+          <strong>{attendanceRate}</strong>
+          <small>{t("This term")}</small>
+        </div>
+      </div>
+
+      <div className="dashboard-grid">
+        <section className="dashboard-main">
+          <section className="workspace-panel">
+            <div className="panel-heading">
+              <div>
+                <span className="panel-kicker">{t("UP NEXT")}</span>
+                <h2>{t("Classes this week")}</h2>
+              </div>
+              <Link to={`${base}/timetable`}>
+                {t("View calendar")} <ArrowRight size={15} />
+              </Link>
+            </div>
+
+            {upcomingClasses.length ? (
+              <div className="event-list">
+                {upcomingClasses.map((event) => {
+                  const matchingClass = data.classes.find(
+                    (item) => item.name === event.title
+                  );
+
+                  return (
+                    <div className="event-row" key={event.id}>
+                      <span className="event-time">{event.time}</span>
+                      <span className="event-mark" />
+
+                      <span className="event-copy">
+                        <strong>
+                          {localizedRecord(t, event.id, event.title)}
+                        </strong>
+                        <small>
+                          {localizedRecord(t, event.id, event.location)}
+                          {" · "}
+                          {formatDate(event.date, {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </small>
+                      </span>
+
+                      <Link
+                        to={
+                          matchingClass
+                            ? `${base}/classes/${matchingClass.id}`
+                            : `${base}/timetable`
+                        }
+                        aria-label={t("Open {{title}}", {
+                          title: event.title,
+                        })}
+                      >
+                        <ArrowUpRight size={16} />
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title="No upcoming classes"
+                description="Your next class will appear here."
+              />
+            )}
+          </section>
+
+          <section className="workspace-panel">
+            <div className="panel-heading">
+              <div>
+                <span className="panel-kicker">{t("KEEP MOVING")}</span>
+                <h2>{t("Assignments")}</h2>
+              </div>
+              <Link to={`${base}/assignments`}>
+                {t("See all")} <ArrowRight size={15} />
+              </Link>
+            </div>
+
+            {pendingAssignments.length ? (
+              <div className="simple-list">
+                {pendingAssignments.slice(0, 4).map((item) => (
+                  <Link
+                    to={`${base}/assignments/${item.id}`}
+                    className="simple-row"
+                    key={item.id}
+                  >
+                    <span className={`list-icon ${item.status}`}>
+                      <ClipboardCheck size={17} />
+                    </span>
+
+                    <span>
+                      <strong>
+                        {localizedRecord(t, item.id, item.title)}
+                      </strong>
+                      <small>
+                        {localizedRecord(t, item.id, item.subject)}
+                        {" · "}
+                        {t("Due {{date}}", {
+                          date: formatDate(item.dueDate, {
+                            day: "numeric",
+                            month: "short",
+                          }),
+                        })}
+                      </small>
+                    </span>
+
+                    <span className={`status-pill ${item.status}`}>
+                      {t(item.status)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="All caught up"
+                description="You have no pending assignments."
+              />
+            )}
+          </section>
+        </section>
+
+        <aside className="dashboard-aside">
+          <section className="progress-panel">
+            <span className="panel-kicker">{t("YOUR PROGRESS")}</span>
+
+            <div className="progress-ring">
+              <strong>
+                {attendanceRate.replace("%", "")}
+                <small>%</small>
+              </strong>
+            </div>
+
+            <h3>{t("Steady progress")}</h3>
+            <p>{t("You’re building a strong weekly rhythm. Keep it up.")}</p>
+
+            <Link to={`${base}/attendance`}>
+              {t("View attendance")} <ArrowRight size={15} />
+            </Link>
+          </section>
+
+          <section className="announcement-mini">
+            <div className="panel-heading">
+              <h2>{t("Class updates")}</h2>
+              <Link to={`${base}/announcements`}>
+                <ArrowUpRight size={16} />
+              </Link>
+            </div>
+
+            {data.announcements.slice(0, 3).map((item) => (
+              <Link
+                className="announcement-mini-row"
+                to={`${base}/announcements`}
+                key={item.id}
+              >
+                <strong>
+                  {localizedRecord(t, item.id, item.title)}
+                </strong>
+                <small>
+                  {localizedRecord(t, item.id, item.className)}
+                </small>
+              </Link>
+            ))}
+          </section>
+
+          <Link to={`${base}/quizzes`} className="mentor-shortcut">
+            <span><FileText size={19} /></span>
+            <strong>{t("Practice quizzes")}</strong>
+            <small>{t("Check your understanding")}</small>
+            <ArrowRight size={16} />
+          </Link>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function TeacherDashboard({ user, data }) {
+  const { t } = useLanguage();
+  const formatDate = useLocalizedDate();
+  const base = "/app/teacher";
+  const firstName = user.name.split(" ")[0];
+
+  const upcomingClasses = data.events
+    .filter((item) => item.type === "Class")
+    .slice(0, 3);
+
+  const reviewQueue = data.assignments.filter(
+    (item) => ["submitted", "late"].includes(item.status)
+  );
+
+  const learnerCount = data.classes.reduce(
+    (total, item) => total + (Number(item.students) || 0),
+    0
+  );
+
+  return (
+    <div className="role-dashboard teacher-dashboard">
+      <PageHeading
+        eyebrow="TEACHER SPACE"
+        title={t("Good morning, {{name}}.", { name: firstName })}
+        subtitle={t("Your classes and follow-ups are ready.")}
+        action={
+          <Link
+            to={`${base}/assignments`}
+            className="workspace-button primary-action"
+          >
+            <ClipboardCheck size={16} />
+            {t("Recent submissions")}
+          </Link>
+        }
+      />
+
+      <section className="workspace-panel">
+        <div className="panel-heading">
+          <div>
+            <span className="panel-kicker">{t("TEACHER SPACE")}</span>
+            <h2>{t("Your teaching desk")}</h2>
+          </div>
+          <GraduationCap size={21} />
+        </div>
+
+        <p className="panel-body-copy">
+          {t("Prepare lessons, organize classes, review work, and keep students informed.")}
+        </p>
+
+        <div className="heading-actions">
+          <Link
+            to={`${base}/classes/create`}
+            className="workspace-button primary-action"
+          >
+            <Plus size={16} />
+            {t("Create a class")}
+          </Link>
+
+          <Link
+            to={`${base}/assignments/create`}
+            className="workspace-button"
+          >
+            <ClipboardCheck size={16} />
+            {t("Create assignment")}
+          </Link>
+        </div>
+      </section>
+
+      <div className="overview-strip">
+        <div>
+          <span>{t("Active classes")}</span>
+          <strong>{data.classes.length}</strong>
+          <small>{t("Ready for your week")}</small>
+        </div>
+
+        <div>
+          <span>{t("Learners")}</span>
+          <strong>{learnerCount}</strong>
+          <small>{t("Across your classes")}</small>
+        </div>
+
+        <div>
+          <span>{t("To review")}</span>
+          <strong>{reviewQueue.length}</strong>
+          <small>{t("Submissions waiting")}</small>
+        </div>
+      </div>
+
+      <div className="dashboard-grid">
+        <section className="dashboard-main">
+          <section className="workspace-panel">
+            <div className="panel-heading">
+              <div>
+                <span className="panel-kicker">{t("UP NEXT")}</span>
+                <h2>{t("Classes this week")}</h2>
+              </div>
+
+              <Link to={`${base}/timetable`}>
+                {t("View calendar")} <ArrowRight size={15} />
+              </Link>
+            </div>
+
+            {upcomingClasses.length ? (
+              <div className="event-list">
+                {upcomingClasses.map((event) => {
+                  const matchingClass = data.classes.find(
+                    (item) => item.name === event.title
+                  );
+
+                  return (
+                    <div className="event-row" key={event.id}>
+                      <span className="event-time">{event.time}</span>
+                      <span className="event-mark" />
+
+                      <span className="event-copy">
+                        <strong>
+                          {localizedRecord(t, event.id, event.title)}
+                        </strong>
+                        <small>
+                          {localizedRecord(t, event.id, event.location)}
+                          {" · "}
+                          {formatDate(event.date, {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </small>
+                      </span>
+
+                      <Link
+                        to={
+                          matchingClass
+                            ? `${base}/classes/${matchingClass.id}`
+                            : `${base}/timetable`
+                        }
+                        aria-label={t("Open {{title}}", {
+                          title: event.title,
+                        })}
+                      >
+                        <ArrowUpRight size={16} />
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title="No upcoming classes"
+                description="Your next class will appear here."
+              />
+            )}
+          </section>
+
+          <section className="workspace-panel">
+            <div className="panel-heading">
+              <div>
+                <span className="panel-kicker">{t("KEEP MOVING")}</span>
+                <h2>{t("Recent submissions")}</h2>
+              </div>
+
+              <Link to={`${base}/assignments`}>
+                {t("See all")} <ArrowRight size={15} />
+              </Link>
+            </div>
+
+            {reviewQueue.length ? (
+              <div className="simple-list">
+                {reviewQueue.slice(0, 4).map((item) => (
+                  <Link
+                    to={`${base}/assignments/${item.id}`}
+                    className="simple-row"
+                    key={item.id}
+                  >
+                    <span className={`list-icon ${item.status}`}>
+                      <ClipboardCheck size={17} />
+                    </span>
+
+                    <span>
+                      <strong>
+                        {localizedRecord(t, item.id, item.title)}
+                      </strong>
+                      <small>
+                        {localizedRecord(t, item.id, item.subject)}
+                        {" · "}
+                        {t(item.status)}
+                      </small>
+                    </span>
+
+                    <ArrowUpRight size={16} />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="Nothing to review"
+                description="New submissions will appear here."
+              />
+            )}
+          </section>
+        </section>
+
+        <aside className="dashboard-aside">
+          <section className="announcement-mini">
+            <div className="panel-heading">
+              <h2>{t("Teaching actions")}</h2>
+            </div>
+
+            <div className="portal-options">
+              <Link className="portal-option" to={`${base}/attendance`}>
+                <span className="role-icon"><Check size={17} /></span>
+                <span>
+                  <strong>{t("Take attendance")}</strong>
+                  <small>{t("Record class participation")}</small>
+                </span>
+                <ArrowUpRight size={15} />
+              </Link>
+
+              <Link className="portal-option" to={`${base}/materials`}>
+                <span className="role-icon"><BookOpen size={17} /></span>
+                <span>
+                  <strong>{t("Learning materials")}</strong>
+                  <small>{t("Share resources with students")}</small>
+                </span>
+                <ArrowUpRight size={15} />
+              </Link>
+
+              <Link className="portal-option" to={`${base}/announcements`}>
+                <span className="role-icon"><MessageCircle size={17} /></span>
+                <span>
+                  <strong>{t("Announcements")}</strong>
+                  <small>{t("Keep your class informed")}</small>
+                </span>
+                <ArrowUpRight size={15} />
+              </Link>
+
+              <Link className="portal-option" to={`${base}/quizzes`}>
+                <span className="role-icon"><FileText size={17} /></span>
+                <span>
+                  <strong>{t("Quiz Generator")}</strong>
+                  <small>{t("Prepare a quiz")}</small>
+                </span>
+                <ArrowUpRight size={15} />
+              </Link>
+            </div>
+          </section>
+
+          <section className="progress-panel">
+            <span className="panel-kicker">{t("YOUR PROGRESS")}</span>
+            <h3>{t("Teaching overview")}</h3>
+            <p>{t("Your classes and follow-ups are ready.")}</p>
+            <Link to={`${base}/classes`}>
+              {t("Manage classes")} <ArrowRight size={15} />
+            </Link>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
 }
 
 function ClassesPage({ classes, query }) {

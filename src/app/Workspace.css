@@ -680,3 +680,343 @@
 :lang(hi) .workspace-shell :is(.workspace-content, .workspace-button, .workspace-nav-link, .workspace-form, .notification-row, .announcement-detail, .mentor-workspace, .quiz-content) {
   line-height: 1.55;
 }
+/* =========================================
+   UNIFIED LEARN — ROLE-SPECIFIC DASHBOARDS
+========================================= */
+
+.role-dashboard {
+  --role-accent: #8b5cf6;
+  --role-accent-rgb: 139, 92, 246;
+  --role-glow: rgb(139 92 246 / 14%);
+
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  animation: dashboard-enter 360ms ease both;
+}
+
+.teacher-dashboard {
+  --role-accent: #36d8cf;
+  --role-accent-rgb: 54, 216, 207;
+  --role-glow: rgb(54 216 207 / 12%);
+}
+
+@keyframes dashboard-enter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Premium welcome panel */
+
+.role-dashboard > .workspace-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid rgb(var(--role-accent-rgb) / 24%);
+  border-radius: 20px;
+
+  color: #f7f8ff;
+  background:
+    radial-gradient(
+      circle at 88% 8%,
+      var(--role-glow),
+      transparent 36%
+    ),
+    radial-gradient(
+      circle at 76% 110%,
+      rgb(98 85 245 / 15%),
+      transparent 42%
+    ),
+    linear-gradient(125deg, #141329, #111b2d 65%, #10222b);
+
+  box-shadow:
+    0 18px 42px rgb(4 8 22 / 12%),
+    0 0 32px var(--role-glow);
+}
+
+.role-dashboard > .workspace-panel::after {
+  position: absolute;
+  z-index: -1;
+  top: -95px;
+  right: -35px;
+
+  width: 230px;
+  height: 230px;
+
+  border: 1px solid rgb(var(--role-accent-rgb) / 17%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 28px rgb(255 255 255 / 2%);
+
+  content: "";
+  pointer-events: none;
+}
+
+.role-dashboard > .workspace-panel .panel-heading {
+  position: relative;
+  z-index: 1;
+}
+
+.role-dashboard > .workspace-panel .panel-heading h2 {
+  color: #f7f8ff;
+  font-size: clamp(20px, 2.5vw, 27px);
+  letter-spacing: -0.7px;
+}
+
+.role-dashboard > .workspace-panel .panel-kicker {
+  color: #c4b5fd;
+}
+
+.teacher-dashboard > .workspace-panel .panel-kicker {
+  color: #8cece5;
+}
+
+.role-dashboard > .workspace-panel .panel-heading > svg {
+  color: var(--role-accent);
+}
+
+.role-dashboard > .workspace-panel .panel-body-copy {
+  position: relative;
+  z-index: 1;
+
+  max-width: 660px;
+  color: #b7c2da;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.role-dashboard > .workspace-panel .heading-actions {
+  position: relative;
+  z-index: 1;
+
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.role-dashboard > .workspace-panel .workspace-button:not(.primary-action) {
+  border-color: rgb(255 255 255 / 16%);
+  color: #e9edfa;
+  background: rgb(255 255 255 / 5%);
+  backdrop-filter: blur(12px);
+}
+
+.role-dashboard > .workspace-panel .workspace-button:not(.primary-action):hover {
+  border-color: rgb(var(--role-accent-rgb) / 45%);
+  background: rgb(255 255 255 / 9%);
+}
+
+.student-dashboard > .workspace-panel .primary-action {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(110deg, #8b5cf6, #6255f5);
+  box-shadow: 0 5px 20px rgb(98 85 245 / 26%);
+}
+
+.teacher-dashboard > .workspace-panel .primary-action {
+  border-color: transparent;
+  color: #081522;
+  background: linear-gradient(110deg, #78f0e5, #36d8cf);
+  box-shadow: 0 5px 20px rgb(54 216 207 / 19%);
+}
+
+/* Overview metrics */
+
+.role-dashboard .overview-strip {
+  overflow: hidden;
+  margin: 0;
+  border-radius: 15px;
+  box-shadow: 0 8px 28px rgb(10 15 35 / 4%);
+}
+
+.role-dashboard .overview-strip > div {
+  position: relative;
+  gap: 8px;
+  padding: 19px;
+  transition: background-color 180ms ease;
+}
+
+.role-dashboard .overview-strip > div:first-child {
+  box-shadow: inset 0 2px var(--role-accent);
+}
+
+.role-dashboard .overview-strip strong {
+  font-size: clamp(23px, 2.5vw, 29px);
+  letter-spacing: -0.8px;
+}
+
+.role-dashboard .overview-strip span {
+  font-weight: 600;
+}
+
+/* Content panels */
+
+.role-dashboard .dashboard-grid {
+  gap: 18px;
+}
+
+.role-dashboard .dashboard-main,
+.role-dashboard .dashboard-aside {
+  gap: 18px;
+}
+
+.role-dashboard .dashboard-main .workspace-panel {
+  padding: 21px;
+  border-radius: 15px;
+}
+
+.role-dashboard .dashboard-main .panel-heading h2,
+.role-dashboard .dashboard-aside .panel-heading h2 {
+  font-size: 15px;
+}
+
+.role-dashboard .event-row,
+.role-dashboard .simple-row {
+  transition: background-color 160ms ease;
+}
+
+.role-dashboard .event-row {
+  border-radius: 9px;
+}
+
+.role-dashboard .simple-row {
+  padding-right: 7px;
+  padding-left: 7px;
+  border-radius: 9px;
+}
+
+.role-dashboard .event-row:hover,
+.role-dashboard .simple-row:hover {
+  background: var(--role-glow);
+}
+
+.role-dashboard .progress-panel,
+.role-dashboard .announcement-mini {
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+.role-dashboard .progress-panel {
+  border-top: 2px solid var(--role-accent);
+}
+
+.role-dashboard .progress-panel a,
+.role-dashboard .announcement-mini .panel-heading > a {
+  transition: transform 180ms ease;
+}
+
+/* Classroom quick actions */
+
+.role-dashboard .mentor-shortcut {
+  border-color: rgb(var(--role-accent-rgb) / 22%);
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.teacher-dashboard .portal-options {
+  display: grid;
+  gap: 9px;
+}
+
+/* Hover motion for mouse / trackpad */
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .role-dashboard .overview-strip > div:hover {
+    background: var(--role-glow);
+  }
+
+  .role-dashboard .workspace-panel:hover {
+    border-color: rgb(var(--role-accent-rgb) / 32%);
+  }
+
+  .role-dashboard .mentor-shortcut:hover {
+    transform: translateY(-3px);
+    border-color: rgb(var(--role-accent-rgb) / 42%);
+    box-shadow: 0 12px 28px var(--role-glow);
+  }
+
+  .role-dashboard .progress-panel a:hover,
+  .role-dashboard .announcement-mini .panel-heading > a:hover {
+    transform: translateX(3px);
+  }
+}
+
+/* Mobile layout */
+
+@media (max-width: 800px) {
+  .role-dashboard {
+    gap: 15px;
+  }
+
+  .role-dashboard .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .role-dashboard .dashboard-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .role-dashboard > .workspace-panel {
+    padding: 20px 17px;
+    border-radius: 16px;
+  }
+
+  .role-dashboard > .workspace-panel .panel-heading h2 {
+    font-size: 21px;
+  }
+
+  .role-dashboard > .workspace-panel .heading-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .role-dashboard > .workspace-panel .heading-actions .workspace-button {
+    width: 100%;
+  }
+
+  .role-dashboard .overview-strip > div {
+    padding: 12px 7px;
+  }
+
+  .role-dashboard .overview-strip span {
+    font-size: 9px;
+    line-height: 1.5;
+  }
+
+  .role-dashboard .overview-strip strong {
+    font-size: 20px;
+  }
+
+  .role-dashboard .overview-strip small {
+    font-size: 8px;
+  }
+
+  .role-dashboard .dashboard-aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .role-dashboard .dashboard-main .workspace-panel {
+    padding: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .role-dashboard,
+  .role-dashboard * {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

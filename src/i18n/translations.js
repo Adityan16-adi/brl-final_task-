@@ -258,6 +258,38 @@ Object.assign(hindi, {
   "That account belongs to the teacher portal. Use Teacher Login.": "यह खाता शिक्षक पोर्टल का है। शिक्षक लॉग इन का उपयोग करें।"
 });
 
+Object.assign(hindi, {
+  "Make learning your own": "सीखने को अपना बनाएँ",
+  "Keep your classes, assignments, study resources, and learning support close at hand.":
+    "अपनी कक्षाएँ, असाइनमेंट, अध्ययन सामग्री और सीखने में मदद एक ही जगह रखें।",
+  "AI Mentor": "एआई मेंटर",
+  "Study resources": "अध्ययन सामग्री",
+  "This term": "इस सत्र",
+  "Check your understanding": "अपनी समझ जाँचें",
+  "Your teaching desk": "आपकी शिक्षण कार्यशाला",
+  "Prepare lessons, organize classes, review work, and keep students informed.":
+    "पाठ तैयार करें, कक्षाएँ व्यवस्थित करें, काम जाँचें और विद्यार्थियों को जानकारी देते रहें।",
+  "Learners": "विद्यार्थी",
+  "Across your classes": "आपकी सभी कक्षाओं में",
+  "Teaching actions": "शिक्षण के काम",
+  "Take attendance": "उपस्थिति दर्ज करें",
+  "Record class participation": "कक्षा में उपस्थिति दर्ज करें",
+  "Share resources with students": "विद्यार्थियों के साथ सामग्री साझा करें",
+  "Keep your class informed": "अपनी कक्षा को जानकारी देते रहें",
+  "Prepare a quiz": "क्विज़ तैयार करें",
+  "Teaching overview": "शिक्षण का सारांश",
+  "Manage classes": "कक्षाएँ प्रबंधित करें",
+  "No upcoming classes": "आने वाली कोई कक्षा नहीं",
+  "Your next class will appear here.": "आपकी अगली कक्षा यहाँ दिखाई देगी।",
+  "All caught up": "सभी काम पूरे हैं",
+  "You have no pending assignments.": "आपका कोई असाइनमेंट बाकी नहीं है।",
+  "Nothing to review": "जाँचने के लिए कुछ नहीं",
+  "New submissions will appear here.": "नए जमा किए गए काम यहाँ दिखाई देंगे।",
+  "STUDENT PORTAL": "विद्यार्थी पोर्टल",
+  "YOUR LEARNING JOURNEY": "आपकी सीखने की यात्रा",
+  "TEACHER SPACE": "शिक्षक कार्यक्षेत्र",
+});
+
 export const translations = { en: {}, hi: hindi };
 
 export function translate(language, key, values = {}) {
