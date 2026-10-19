@@ -618,3 +618,65 @@
 :root[data-theme="dark"] .calendar-month-weekdays { border-color: var(--workspace-line); }
 :root[data-theme="dark"] .calendar-month-weekdays span { color: #929db7; }
 :root[data-theme="dark"] .month-grid button.outside-month { color: #65708a; }
+
+
+/* Subtle premium interaction polish for the workspace. Keep the movement small
+   so dense academic information stays calm and easy to scan. */
+@keyframes workspace-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.workspace-content > .page-heading,
+.workspace-content > .dashboard-grid,
+.workspace-content > .class-grid,
+.workspace-content > .material-grid,
+.workspace-content > .settings-layout,
+.workspace-content > .calendar-layout,
+.workspace-content > .chat-layout,
+.workspace-content > .announcement-layout,
+.workspace-content > .notification-list,
+.workspace-content > .mentor-workspace,
+.workspace-content > .quiz-content,
+.workspace-content > .workspace-form {
+  animation: workspace-enter 300ms cubic-bezier(.2, .72, .2, 1) both;
+}
+
+.workspace-shell :is(.class-card, .material-card, .notification-row, .announcement-card, .mentor-shortcut, .upcoming-row) {
+  transition: transform 220ms cubic-bezier(.2, .72, .2, 1), border-color 220ms ease, box-shadow 220ms ease, background-color 180ms ease;
+}
+
+.workspace-shell :is(.workspace-button, .icon-button, .topbar-icon, .workspace-nav-link, .text-action) {
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .workspace-shell :is(.class-card, .material-card, .notification-row, .announcement-card, .mentor-shortcut, .upcoming-row):hover {
+    transform: translateY(-2px);
+    border-color: rgb(139 124 230 / 34%);
+    box-shadow: 0 14px 30px rgb(20 25 55 / 11%), 0 0 22px rgb(98 85 245 / 7%);
+  }
+
+  .workspace-shell .workspace-button:not(:disabled):hover,
+  .workspace-shell .icon-button:hover,
+  .workspace-shell .topbar-icon:hover {
+    transform: translateY(-1px);
+  }
+
+  .workspace-shell .workspace-panel {
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+  }
+
+  .workspace-shell .workspace-panel:hover {
+    border-color: color-mix(in srgb, var(--workspace-purple) 24%, var(--workspace-line));
+  }
+
+  :root[data-theme="dark"] .workspace-shell :is(.class-card, .material-card, .notification-row, .announcement-card, .mentor-shortcut, .upcoming-row):hover {
+    border-color: rgb(139 124 230 / 34%);
+    box-shadow: 0 16px 32px rgb(0 0 0 / 28%), 0 0 24px rgb(98 85 245 / 10%);
+  }
+}
+
+:lang(hi) .workspace-shell :is(.workspace-content, .workspace-button, .workspace-nav-link, .workspace-form, .notification-row, .announcement-detail, .mentor-workspace, .quiz-content) {
+  line-height: 1.55;
+}

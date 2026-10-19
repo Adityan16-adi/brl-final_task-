@@ -6,8 +6,12 @@ const questions = [
 ];
 
 export async function askMentor(prompt) {
-  const subject = prompt.toLowerCase().includes("algebra") ? "algebra" : "cell structures";
-  return { text: `Let’s break that down. For ${subject}, start by naming the main idea, then connect it to one example from your lesson. What part feels least clear right now?` };
+  const normalizedPrompt = prompt.toLowerCase();
+  const subjectKey = normalizedPrompt.includes("algebra") || normalizedPrompt.includes("बीजगणित") ? "Mathematics" : "Cell structures";
+  return {
+    responseKey: "Let’s break that down. For {{subject}}, start by naming the main idea, then connect it to one example from your lesson. What part feels least clear right now?",
+    subjectKey,
+  };
 }
 export async function generateQuiz({ count = 3 }) {
   return { questions: questions.slice(0, Math.min(Number(count), questions.length)).map((question) => ({ ...question, options: [...question.options] })) };

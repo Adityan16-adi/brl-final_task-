@@ -215,6 +215,49 @@ Object.assign(hindi, {
   "Selected for local preview": "स्थानीय झलक के लिए चुना गया"
 });
 
+Object.assign(hindi, {
+  "Which cell structure is most associated with releasing usable energy?": "कौन-सी कोशिका संरचना उपयोगी ऊर्जा मुक्त करने से सबसे अधिक जुड़ी है?",
+  "What is the main role of a cell membrane?": "कोशिका झिल्ली की मुख्य भूमिका क्या है?",
+  "Where is most genetic information in an animal cell stored?": "पशु कोशिका में अधिकांश आनुवंशिक जानकारी कहाँ संग्रहीत होती है?",
+  "Mitochondrion": "माइटोकॉन्ड्रिया",
+  "Ribosome": "राइबोसोम",
+  "Cell wall": "कोशिका भित्ति",
+  "Vacuole": "रिक्तिका",
+  "Store genetic information": "आनुवंशिक जानकारी संग्रहीत करना",
+  "Control what enters and leaves": "अंदर आने और बाहर जाने वाली चीज़ों को नियंत्रित करना",
+  "Build proteins": "प्रोटीन बनाना",
+  "Release oxygen": "ऑक्सीजन मुक्त करना",
+  "Cytoplasm": "कोशिकाद्रव्य",
+  "Golgi apparatus": "गॉल्जी उपकरण",
+  "Nucleus": "केंद्रक",
+  "Lysosome": "लाइसोसोम",
+  "Let’s break that down. For {{subject}}, start by naming the main idea, then connect it to one example from your lesson. What part feels least clear right now?": "आइए इसे आसान हिस्सों में समझें। {{subject}} के लिए पहले मुख्य विचार पहचानें, फिर उसे अपने पाठ के किसी उदाहरण से जोड़ें। कौन-सा हिस्सा अभी सबसे कम स्पष्ट है?"
+});
+
+Object.assign(hindi, {
+  "POINTS": "अंक",
+  "Graded": "मूल्यांकन किया गया",
+  "Reviewed": "जाँचा गया",
+  "Set by": "द्वारा निर्धारित",
+  "History": "इतिहास",
+  "Create a concept map showing the role of key cell structures. Include at least six labeled parts and a short note about how two of them work together.": "मुख्य कोशिका संरचनाओं की भूमिका दिखाने वाला एक कॉन्सेप्ट मैप बनाएँ। कम से कम छह भागों को नाम दें और बताएँ कि उनमें से दो साथ कैसे काम करते हैं।",
+  "Complete the practice set and show your working for each problem.": "अभ्यास के सभी प्रश्न हल करें और हर प्रश्न के चरण दिखाएँ।",
+  "Choose one source from class and write a short reflection on its perspective and context.": "कक्षा में दिए गए किसी एक स्रोत को चुनें और उसके दृष्टिकोण तथा संदर्भ पर संक्षिप्त टिप्पणी लिखें।",
+  "Class notes · 8 pages": "कक्षा के नोट्स · 8 पृष्ठ",
+  "Reference · PDF preview": "संदर्भ · PDF झलक",
+  "Study visual · 4 min": "अध्ययन चित्र · 4 मिनट",
+  "Lesson replay · 12 min": "पाठ का पुनः प्रसारण · 12 मिनट",
+  "Library": "पुस्तकालय",
+  "Today · 08:45": "आज · 08:45",
+  "Yesterday · 15:10": "कल · 15:10",
+  "Reminder: bring your cell model notes to class tomorrow.": "याद रखें: कल कक्षा में कोशिका मॉडल के नोट्स लाएँ।",
+  "Should we include the mitochondria in the diagram?": "क्या हमें चित्र में माइटोकॉन्ड्रिया शामिल करना चाहिए?",
+  "Yes, and add a short note about its role.": "हाँ, और इसकी भूमिका पर एक छोटा नोट जोड़ें।",
+  "That preview code was not found. Try CELL24, MATH28, or PAST21.": "यह कोड नहीं मिला। CELL24, MATH28 या PAST21 आज़माएँ।",
+  "That account belongs to the student portal. Use Student Login.": "यह खाता विद्यार्थी पोर्टल का है। विद्यार्थी लॉग इन का उपयोग करें।",
+  "That account belongs to the teacher portal. Use Teacher Login.": "यह खाता शिक्षक पोर्टल का है। शिक्षक लॉग इन का उपयोग करें।"
+});
+
 export const translations = { en: {}, hi: hindi };
 
 export function translate(language, key, values = {}) {

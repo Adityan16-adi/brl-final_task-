@@ -12,6 +12,15 @@ export function ThemeProvider({ children }) {
   });
 
   useLayoutEffect(() => {
+    try {
+      const preferences = JSON.parse(window.localStorage.getItem("unified-learn-preview-preferences") || "{}");
+      document.documentElement.dataset.reduceMotion = preferences.motion ? "true" : "false";
+    } catch {
+      document.documentElement.dataset.reduceMotion = "false";
+    }
+  }, []);
+
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     const themeColor = document.querySelector('meta[name="theme-color"]');
