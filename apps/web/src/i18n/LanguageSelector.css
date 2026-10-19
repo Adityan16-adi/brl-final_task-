@@ -1,0 +1,6 @@
+.language-selector { position: relative; display: inline-flex; align-items: center; }
+.language-selector-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+.language-selector select { min-width: 82px; min-height: 36px; padding: 0 24px 0 10px; border: 1px solid var(--language-border, rgb(168 180 255 / 18%)); border-radius: 9px; color: var(--language-text, #d4daeb); background: var(--language-bg, rgb(255 255 255 / 4%)); font: inherit; font-size: 9px; font-weight: 700; cursor: pointer; }
+.language-selector select:focus-visible { outline: 2px solid #36d8ff; outline-offset: 3px; }
+:root[data-theme="light"] .language-selector select { --language-border: rgb(37 51 82 / 14%); --language-text: #45536d; --language-bg: rgb(255 255 255 / 75%); }
+:root[data-theme="dark"] .language-selector select { --language-border: rgb(168 180 255 / 18%); --language-text: #d4daeb; --language-bg: #111728; }

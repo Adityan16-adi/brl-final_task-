@@ -1,10 +1,12 @@
+const { notifyUser } = require("../utils/notify");
+
 const Assignment = require("../models/Assignment");
 const Submission = require("../models/Submission");
 
 // POST /api/submissions/assignment/:assignmentId
 exports.submitAssignment = async (req, res) => {
   try {
-    const { studentId, text } = req.body;
+    const { studentId, text } = req.body || {};
 const fileUrl = req.file ? `/uploads/${req.file.filename}` : req.body.fileUrl;
 if (!studentId || (!text && !fileUrl)) {
       return res
@@ -78,6 +80,13 @@ exports.gradeSubmission = async (req, res) => {
     existing.feedback = feedback || "";
     existing.status = "graded";
     await existing.save();
+    await notifyUser({
+  userId: existing.studentId,
+  title: "Assignment graded",
+  message: `You got ${marks}/${existing.assignmentId.maxMarks} in "${existing.assignmentId.title}"`,
+  type: "grade",
+  refId: existing._id,
+});
 
     res.json({ success: true, message: "Graded", data: existing });
   } catch (error) {
