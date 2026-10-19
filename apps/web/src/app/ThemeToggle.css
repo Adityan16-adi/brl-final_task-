@@ -1,0 +1,5 @@
+.theme-toggle { display: inline-flex; min-width: 63px; min-height: 36px; align-items: center; justify-content: center; gap: 7px; padding: 0 10px; border: 1px solid var(--theme-toggle-border, rgb(168 180 255 / 18%)); border-radius: 9px; color: var(--theme-toggle-text, #d4daeb); background: var(--theme-toggle-bg, rgb(255 255 255 / 4%)); font-size: 9px; font-weight: 700; cursor: pointer; transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease; }
+.theme-toggle:hover { border-color: var(--theme-toggle-hover, rgb(139 92 246 / 42%)); color: var(--theme-toggle-hover-text, #fff); transform: translateY(-1px); }
+.theme-toggle:active { transform: translateY(0); }
+.theme-toggle-compact { min-width: 36px; width: 36px; height: 36px; padding: 0; }
+.theme-toggle:focus-visible { outline: 2px solid #36d8ff; outline-offset: 3px; }
