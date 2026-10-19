@@ -1,30 +1,53 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:mobile/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('app opens on the learning overview', (tester) async {
+    await tester.pumpWidget(const LearningApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Overview'), findsOneWidget);
+    expect(find.text('Your learning space'), findsOneWidget);
+    expect(find.text('Your workspace'), findsOneWidget);
+    expect(find.text('Make every learning day count.'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('drawer navigation opens the assignments section',
+      (tester) async {
+    await tester.pumpWidget(const LearningApp());
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Open the navigation drawer.
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Assignments'), findsWidgets);
+
+    // Select Assignments from the drawer.
+    await tester.tap(find.text('Assignments').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'This section is part of the app shell. '
+        'Its data and actions will be added in later phases.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Back to overview'), findsOneWidget);
+  });
+
+  testWidgets('app supports light and dark themes with system mode by default',
+      (tester) async {
+    await tester.pumpWidget(const LearningApp());
+
+    final app = tester.widget<MaterialApp>(
+      find.byType(MaterialApp),
+    );
+
+    expect(app.theme, isNotNull);
+    expect(app.darkTheme, isNotNull);
+    expect(app.themeMode, ThemeMode.system);
   });
 }
