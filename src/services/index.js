@@ -5,17 +5,23 @@ export * from "./mock/mockLearningService.js";
 export * from "./mock/mockCommunicationService.js";
 export * from "./mock/mockStudyService.js";
 
-import { isBackendMode, apiListAssignments, apiGetAssignment, apiCreateAssignment, apiSubmitAssignment, apiListMaterials, apiAddMaterial, apiListNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiListCalendarEvents } from "./api/backendAdapter.js";
+import { isBackendMode, dataModeError, apiListAssignments, apiGetAssignment, apiCreateAssignment, apiSubmitAssignment, apiListMaterials, apiAddMaterial, apiListNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiListCalendarEvents, apiListCalendarMonth } from "./api/backendAdapter.js";
 import { listAssignments as mockListAssignments, getAssignment as mockGetAssignment, createAssignment as mockCreateAssignment, submitAssignment as mockSubmitAssignment, listMaterials as mockListMaterials, addMaterial as mockAddMaterial, listCalendarEvents as mockListCalendarEvents } from "./mock/mockLearningService.js";
 import { listNotifications as mockListNotifications, markNotificationRead as mockMarkNotificationRead, markAllNotificationsRead as mockMarkAllNotificationsRead } from "./mock/mockCommunicationService.js";
 
-export const listAssignments = (...args) => isBackendMode ? apiListAssignments(...args) : mockListAssignments(...args);
-export const getAssignment = (...args) => isBackendMode ? apiGetAssignment(...args) : mockGetAssignment(...args);
-export const createAssignment = (...args) => isBackendMode ? apiCreateAssignment(...args) : mockCreateAssignment(...args);
-export const submitAssignment = (...args) => isBackendMode ? apiSubmitAssignment(...args) : mockSubmitAssignment(...args);
-export const listMaterials = (...args) => isBackendMode ? apiListMaterials(...args) : mockListMaterials(...args);
-export const addMaterial = (...args) => isBackendMode ? apiAddMaterial(...args) : mockAddMaterial(...args);
-export const listNotifications = (...args) => isBackendMode ? apiListNotifications(...args) : mockListNotifications(...args);
-export const markNotificationRead = (...args) => isBackendMode ? apiMarkNotificationRead(...args) : mockMarkNotificationRead(...args);
-export const markAllNotificationsRead = (...args) => isBackendMode ? apiMarkAllNotificationsRead(...args) : mockMarkAllNotificationsRead(...args);
-export const listCalendarEvents = (...args) => isBackendMode ? apiListCalendarEvents(...args) : mockListCalendarEvents(...args);
+const selectService = (apiService, mockService, args) => {
+  if (dataModeError) return Promise.reject(new Error(dataModeError));
+  return (isBackendMode ? apiService : mockService)(...args);
+};
+
+export const listAssignments = (...args) => selectService(apiListAssignments, mockListAssignments, args);
+export const getAssignment = (...args) => selectService(apiGetAssignment, mockGetAssignment, args);
+export const createAssignment = (...args) => selectService(apiCreateAssignment, mockCreateAssignment, args);
+export const submitAssignment = (...args) => selectService(apiSubmitAssignment, mockSubmitAssignment, args);
+export const listMaterials = (...args) => selectService(apiListMaterials, mockListMaterials, args);
+export const addMaterial = (...args) => selectService(apiAddMaterial, mockAddMaterial, args);
+export const listNotifications = (...args) => selectService(apiListNotifications, mockListNotifications, args);
+export const markNotificationRead = (...args) => selectService(apiMarkNotificationRead, mockMarkNotificationRead, args);
+export const markAllNotificationsRead = (...args) => selectService(apiMarkAllNotificationsRead, mockMarkAllNotificationsRead, args);
+export const listCalendarEvents = (...args) => selectService(apiListCalendarEvents, mockListCalendarEvents, args);
+export const listCalendarMonth = (...args) => selectService(apiListCalendarMonth, mockListCalendarEvents, args);

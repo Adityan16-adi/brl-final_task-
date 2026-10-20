@@ -2,10 +2,14 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/ap
 const DATA_MODE = import.meta.env.VITE_DATA_MODE || "mock";
 
 export const isBackendMode = DATA_MODE === "api";
+export const dataModeError = DATA_MODE === "mock" || DATA_MODE === "api"
+  ? ""
+  : `Invalid VITE_DATA_MODE '${DATA_MODE}'. Set it to 'mock' or 'api' in .env.local, then restart the frontend.`;
 
 function envId(name) {
   const value = import.meta.env[name];
   if (!value) throw new Error(`Backend testing setup missing ${name}. Add the MongoDB ID to frontend/.env.local.`);
+  if (!/^[a-f\d]{24}$/i.test(value)) throw new Error(`${name} must be a 24-character MongoDB ObjectId. Replace the placeholder in frontend/.env.local.`);
   return value;
 }
 
@@ -147,6 +151,10 @@ export async function apiMarkAllNotificationsRead() {
 export async function apiListCalendarEvents() {
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return apiListCalendarMonth(month);
+}
+
+export async function apiListCalendarMonth(month) {
   return asArray(await request(`/calendar/class/${encodeURIComponent(classId())}?month=${month}`)).map((item) => ({
     ...item, id: idOf(item), date: item.date ? String(item.date).slice(0, 10) : "",
     time: "23:59", type: item.type === "assignment" ? "Deadline" : item.type,
