@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const upload = require("../middleware/upload");
 const {
   createAssignment,
   getAssignmentsByClass,
@@ -8,10 +9,10 @@ const {
   deleteAssignment,
 } = require("../controllers/assignmentController");
 
-router.post("/", createAssignment);
+router.post("/", upload.single("file"), createAssignment);
 router.get("/class/:classId", getAssignmentsByClass);
 router.get("/:id", getAssignmentById);
-router.put("/:id", updateAssignment);
+router.put("/:id", upload.single("file"), updateAssignment);
 router.delete("/:id", deleteAssignment);
 
 module.exports = router;
