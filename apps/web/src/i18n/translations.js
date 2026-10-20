@@ -16,6 +16,7 @@ const hindi = Object.assign({},
 );
 
 Object.assign(hindi, {
+  "Backend mode is enabled for supported records; other tools remain in preview.": "समर्थित रिकॉर्ड के लिए बैकएंड मोड चालू है; अन्य सुविधाएँ पूर्वावलोकन में हैं।",
   "Unified": "Unified", "Learn": "Learn", "Unified Learn": "Unified Learn", "✳": "✳",
   "94%": "94%", "·": "·", "78": "78", "%": "%", "Welcome to": "आपका स्वागत है,",
   "unified-learn.preview/class/": "unified-learn.preview/class/", "· not a real meeting": "· वास्तविक बैठक नहीं",
@@ -259,6 +260,12 @@ Object.assign(hindi, {
 });
 
 Object.assign(hindi, {
+  "Create an assignment for the configured class.": "कॉन्फ़िगर की गई कक्षा के लिए असाइनमेंट बनाएँ।",
+  "This will be sent to the configured backend class.": "यह कॉन्फ़िगर किए गए बैकएंड कक्षा में भेजा जाएगा।",
+  "The selected file will be uploaded to the configured backend.": "चुनी गई फ़ाइल कॉन्फ़िगर किए गए बैकएंड पर अपलोड होगी।",
+  "Submitting…": "जमा किया जा रहा है…",
+  "Could not load assignment": "असाइनमेंट लोड नहीं हो सका",
+  "Loading assignment…": "असाइनमेंट लोड हो रहा है…",
   "Make learning your own": "सीखने को अपना बनाएँ",
   "Keep your classes, assignments, study resources, and learning support close at hand.":
     "अपनी कक्षाएँ, असाइनमेंट, अध्ययन सामग्री और सीखने में मदद एक ही जगह रखें।",

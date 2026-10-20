@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight, ArrowUpRight, Bell, BookMarked, BookOpen, Bot,
@@ -10,7 +10,7 @@ import {
 import {
   addMaterial, askMentor, checkMessage, createAssignment, createClass,
   generateQuiz, getAssignment, getSession, joinClass,
-  listAnnouncements, listAssignments, listAttendance, listCalendarEvents,
+  listAnnouncements, listAssignments, listAttendance, listCalendarEvents, listCalendarMonth,
   listClasses, listMaterials, listMessages, listNotifications, loginAccount,
   logoutAccount, markAllNotificationsRead, markNotificationRead, registerAccount,
   saveAttendance, sendLocalMessage, submitAssignment,
@@ -20,6 +20,7 @@ import LanguageSelector from "../i18n/LanguageSelector.jsx";
 import { useLanguage, useLocalizedDate, useLocalizedNumber } from "../i18n/useLanguage.js";
 import "./Workspace.css";
 import LocalizedText from "../i18n/LocalizedText.jsx";
+import { isBackendMode } from "../services/api/backendAdapter.js";
 
 const studentNavigation = [
   { label: "Overview", path: "/dashboard", icon: LayoutDashboard },
@@ -90,7 +91,7 @@ const titleForPath = (path) => {
   return routeTitles[path.split("/").filter(Boolean).at(-1)] || "Overview";
 };
 
-function LocalNotice({ children = "Changes are stored only in this browser." }) {
+function LocalNotice({ children = isBackendMode ? "Backend mode is enabled for supported records; other tools remain in preview." : "Changes are stored only in this browser." }) {
   const { t } = useLanguage();
   return <div className="local-notice"><Sparkles size={15} /><span>{typeof children === "string" ? t(children) : children}</span></div>;
 }
@@ -228,11 +229,22 @@ export function Workspace() {
       if (!active) return;
       setSession(value);
       if (!value) return;
-      const [classes, assignments, materials, attendance, events, announcements, messages, notifications] = await Promise.all([
+      const results = await Promise.allSettled([
         listClasses(), listAssignments(), listMaterials(), listAttendance(), listCalendarEvents(), listAnnouncements(), listMessages(), listNotifications(),
       ]);
       if (active) {
-        setData({ classes, assignments, materials, attendance, events, announcements, messages, notifications });
+        const keys = ["classes", "assignments", "materials", "attendance", "events", "announcements", "messages", "notifications"];
+        const nextData = {};
+        const failures = [];
+        results.forEach((result, index) => {
+          if (result.status === "fulfilled") nextData[keys[index]] = result.value;
+          else {
+            nextData[keys[index]] = [];
+            failures.push(result.reason?.message || "A learning service could not be reached.");
+          }
+        });
+        setData(nextData);
+        if (failures.length) setNotice([...new Set(failures)].join(" "));
         setDataLoaded(true);
       }
     });
@@ -319,10 +331,10 @@ export function Workspace() {
       </header>
       <main className="workspace-content">
         <LocalNotice />
-        {visibleNotice && <div className="workspace-toast" role="status"><Check size={16} />{visibleNotice}<button aria-label={t("Dismiss")} onClick={dismissNotice}><X size={14} /></button></div>}
+        {visibleNotice && <div className="workspace-toast" role="status"><ShieldAlert size={16} />{visibleNotice}<button aria-label={t("Dismiss")} onClick={dismissNotice}><X size={14} /></button></div>}
         {dataLoaded ? <WorkspacePage path={workspacePath} user={user} data={filtered} allData={data} setData={setData} setNotice={setNotice} query={query} /> : <div className="page-loading" role="status">{<LocalizedText text={"Loading learning records…"} />}</div>}
       </main>
-      <footer className="workspace-footer"><span>{<LocalizedText text={"Unified Learn"} />}</span><span>{t("Changes are stored only in this browser.")}</span></footer>
+      <footer className="workspace-footer"><span>{<LocalizedText text={"Unified Learn"} />}</span><span>{t(isBackendMode ? "Backend mode is enabled for supported records; other tools remain in preview." : "Changes are stored only in this browser.")}</span></footer>
     </div>
   </div>;
 }
@@ -339,8 +351,8 @@ function WorkspacePage({ path, user, data, allData, setData, setNotice, query })
   if (path.endsWith("/assignments")) return <AssignmentsPage assignments={data.assignments} user={user} />;
   if (path.endsWith("/materials")) return <MaterialsPage materials={data.materials} />;
   if (path.endsWith("/attendance")) return <AttendancePage records={data.attendance} role={user.role} setNotice={setNotice} />;
-  if (path.endsWith("/timetable")) return <SchedulePage events={data.events} mode="week" />;
-  if (path.endsWith("/calendar")) return <SchedulePage events={data.events} mode="month" />;
+  if (path.endsWith("/timetable")) return <SchedulePage events={data.events} mode="week" setNotice={setNotice} />;
+  if (path.endsWith("/calendar")) return <SchedulePage events={data.events} mode="month" setNotice={setNotice} />;
   if (path.endsWith("/chat")) return <ChatPage initialMessages={data.messages} setNotice={setNotice} />;
   if (path.endsWith("/announcements")) return <AnnouncementsPage announcements={data.announcements} />;
   if (path.endsWith("/notifications")) return <NotificationsPage items={data.notifications} setData={setData} allData={allData} />;
@@ -918,32 +930,34 @@ function AssignmentsPage({ assignments, user }) {
 
 function AssignmentForm() {
   const { t } = useLanguage();
-  const navigate = useNavigate(); const [error, setError] = useState("");
-  async function submit(event) { event.preventDefault(); const form = new FormData(event.currentTarget); try { const item = await createAssignment({ title: form.get("title"), subject: form.get("subject"), dueDate: form.get("dueDate"), description: form.get("description"), teacher: "Jordan Rivera", points: form.get("points") }); navigate(`/app/assignments/${item.id}`); } catch (cause) { setError(t(cause.message)); } }
-  return <><PageHeading title={t("Create assignment")} subtitle="Draft a task in this browser-only preview." /><form className="workspace-form" onSubmit={submit}><label>{<LocalizedText text={"Assignment title"} />}<input name="title" required placeholder={t("e.g. Ecosystems reflection")} /></label><div className="form-row"><label>{<LocalizedText text={"Subject"} />}<input name="subject" required placeholder={t("e.g. Biology")} /></label><label>{<LocalizedText text={"Due date"} />}<input name="dueDate" required type="date" /></label></div><div className="form-row"><label>{<LocalizedText text={"Points"} />}<input name="points" type="number" min="1" defaultValue="10" /></label><span /></div><label>{<LocalizedText text={"Instructions"} />}<textarea name="description" rows="5" required placeholder={t("Describe the learning goal and what to submit.")} /></label><PreviewNotice>{<LocalizedText text={"Creating this assignment only updates sample data held in this page session."} />}</PreviewNotice>{error && <p className="form-error">{error}</p>}<div className="form-actions"><Link className="workspace-button" to="/app/assignments">{<LocalizedText text={"Cancel"} />}</Link><button className="workspace-button primary-action" type="submit">{<LocalizedText text={"Create preview assignment"} />}<ArrowRight size={16} /></button></div></form></>;
+  const navigate = useNavigate(); const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
+  async function submit(event) { event.preventDefault(); if (saving) return; setSaving(true); setError(""); const form = new FormData(event.currentTarget); try { const item = await createAssignment({ title: form.get("title"), subject: form.get("subject"), dueDate: form.get("dueDate"), description: form.get("description"), teacher: "Jordan Rivera", points: form.get("points") }); navigate(`/app/assignments/${item.id}`); } catch (cause) { setError(t(cause.message)); } finally { setSaving(false); } }
+  return <><PageHeading title={t("Create assignment")} subtitle={isBackendMode ? "Create an assignment for the configured class." : "Draft a task in this browser-only preview."} /><form className="workspace-form" onSubmit={submit}><label>{<LocalizedText text={"Assignment title"} />}<input name="title" required placeholder={t("e.g. Ecosystems reflection")} /></label><div className="form-row"><label>{<LocalizedText text={"Subject"} />}<input name="subject" required placeholder={t("e.g. Biology")} /></label><label>{<LocalizedText text={"Due date"} />}<input name="dueDate" required type="date" /></label></div><div className="form-row"><label>{<LocalizedText text={"Points"} />}<input name="points" type="number" min="1" defaultValue="10" /></label><span /></div><label>{<LocalizedText text={"Instructions"} />}<textarea name="description" rows="5" required placeholder={t("Describe the learning goal and what to submit.")} /></label>{isBackendMode ? <p className="field-hint">{t("This will be sent to the configured backend class.")}</p> : <PreviewNotice>{<LocalizedText text={"Creating this assignment only updates sample data held in this page session."} />}</PreviewNotice>}{error && <p className="form-error" role="alert">{error}</p>}<div className="form-actions"><Link className="workspace-button" to="/app/assignments">{<LocalizedText text={"Cancel"} />}</Link><button className="workspace-button primary-action" disabled={saving} type="submit">{saving ? t("Saving…") : t(isBackendMode ? "Create assignment" : "Create preview assignment")}<ArrowRight size={16} /></button></div></form></>;
 }
 
 function AssignmentDetail({ path, assignments }) {
   const { t } = useLanguage();
   const formatDate = useLocalizedDate();
   const formatNumber = useLocalizedNumber();
-  const id = path.split("/").at(-1); const [item, setItem] = useState(assignments.find((entry) => entry.id === id)); const [file, setFile] = useState(""); const [message, setMessage] = useState("");
-  useEffect(() => { let active = true; getAssignment(id).then((entry) => { if (active) setItem(entry); }).catch(() => { if (active) setItem(null); }); return () => { active = false; }; }, [id]);
-  if (!item) return <EmptyState icon={ClipboardCheck} title={t("Assignment not found")} description="Try one of the sample assignments instead." action={<Link className="workspace-button" to="/app/assignments">{<LocalizedText text={"View assignments"} />}</Link>} />;
-  async function submit(event) { event.preventDefault(); if (!file) return; await submitAssignment(item.id, file); setItem({ ...item, status: "submitted", fileName: file }); setMessage(t("Submission preview saved locally. No file was uploaded.")); }
+  const id = path.split("/").at(-1); const [loadedItem, setLoadedItem] = useState(null); const [loadFailure, setLoadFailure] = useState(null); const [file, setFile] = useState(null); const [message, setMessage] = useState(""); const [submitError, setSubmitError] = useState(""); const [submitting, setSubmitting] = useState(false);
+  const item = loadedItem?.id === id ? loadedItem : assignments.find((entry) => entry.id === id);
+  const loadError = loadFailure?.id === id ? loadFailure.message : "";
+  useEffect(() => { let active = true; getAssignment(id).then((entry) => { if (active) setLoadedItem(entry); }).catch((cause) => { if (active) setLoadFailure({ id, message: cause.message || "Assignment could not be loaded." }); }); return () => { active = false; }; }, [id]);
+  if (!item) return <><PageHeading title={loadError ? t("Could not load assignment") : t("Loading assignment…")} />{loadError && <p className="form-error" role="alert">{t(loadError)}</p>}<Link className="workspace-button" to="/app/assignments">{<LocalizedText text={"View assignments"} />}</Link></>;
+  async function submit(event) { event.preventDefault(); if (!file || submitting) return; setSubmitting(true); setSubmitError(""); try { const result = await submitAssignment(item.id, file); setLoadedItem({ ...item, status: "submitted", fileName: file.name, submission: result }); setMessage(t("Assignment submitted successfully.")); } catch (cause) { setSubmitError(t(cause.message)); } finally { setSubmitting(false); } }
   const subject = localizedRecord(t, item.id, item.subject);
   const title = localizedRecord(t, item.id, item.title);
   const description = localizedRecord(t, item.id, item.description);
   const dueDate = formatDate(item.dueDate, { day: "numeric", month: "short", year: "numeric" });
-  return <><PageHeading eyebrow={`${subject} · ${formatNumber(item.points)} ${t("POINTS")}`} title={title} subtitle={`${t("Due")} ${dueDate} · ${t("Set by")} ${item.teacher}`} /><div className="detail-grid"><section className="workspace-panel detail-wide"><span className="panel-kicker">{<LocalizedText text={"INSTRUCTIONS"} />}</span><p className="assignment-instructions">{description}</p><div className="assignment-meta"><span className={`status-pill ${item.status}`}>{localizedStatus(t, item.status)}</span><span><CalendarDays size={14} />{t("Due")} {dueDate}</span></div></section><section className="workspace-panel submit-panel"><span className="panel-kicker">{<LocalizedText text={"YOUR SUBMISSION"} />}</span><h2>{item.status === "submitted" ? t("Work submitted") : t("Ready when you are")}</h2>{item.fileName && <p className="file-selected"><FileText size={16} />{item.fileName}</p>}<form onSubmit={submit} className="upload-form"><label className="file-picker"><Plus size={16} /><span>{file || t("Choose a file")}</span><input type="file" onChange={(event) => setFile(event.target.files?.[0]?.name || "")} /></label><small>{<LocalizedText text={"File selection is only previewed in this browser."} />}</small><button className="workspace-button primary-action" disabled={!file} type="submit">{<LocalizedText text={"Save submission preview"} />}<ArrowRight size={15} /></button></form>{message && <p className="form-success" role="status">{message}</p>}</section></div></>;
+  return <><PageHeading eyebrow={`${subject} · ${formatNumber(item.points)} ${t("POINTS")}`} title={title} subtitle={`${t("Due")} ${dueDate} · ${t("Set by")} ${item.teacher}`} />{loadError && <p className="form-error" role="alert">{t(loadError)}</p>}<div className="detail-grid"><section className="workspace-panel detail-wide"><span className="panel-kicker">{<LocalizedText text={"INSTRUCTIONS"} />}</span><p className="assignment-instructions">{description}</p><div className="assignment-meta"><span className={`status-pill ${item.status}`}>{localizedStatus(t, item.status)}</span><span><CalendarDays size={14} />{t("Due")} {dueDate}</span></div></section><section className="workspace-panel submit-panel"><span className="panel-kicker">{<LocalizedText text={"YOUR SUBMISSION"} />}</span><h2>{item.status === "submitted" ? t("Work submitted") : t("Ready when you are")}</h2>{(item.fileName || item.submission?.fileUrl) && <p className="file-selected"><FileText size={16} />{item.fileName || item.submission?.fileUrl}</p>}<form onSubmit={submit} className="upload-form"><label className="file-picker"><Plus size={16} /><span>{file?.name || t("Choose a file")}</span><input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label><small>{isBackendMode ? t("The selected file will be uploaded to the configured backend.") : t("The selected file will be uploaded when backend mode is enabled.")}</small>{submitError && <p className="form-error" role="alert">{submitError}</p>}<button className="workspace-button primary-action" disabled={!file || submitting} type="submit">{submitting ? t("Submitting…") : t("Submit assignment")}<ArrowRight size={15} /></button></form>{message && <p className="form-success" role="status">{message}</p>}</section></div></>;
 }
 
 function MaterialsPage({ materials }) {
   const { t } = useLanguage();
-  const [type, setType] = useState("All"); const [formOpen, setFormOpen] = useState(false); const [added, setAdded] = useState(""); const [localMaterials, setLocalMaterials] = useState(materials);
+  const [type, setType] = useState("All"); const [formOpen, setFormOpen] = useState(false); const [added, setAdded] = useState(""); const [error, setError] = useState(""); const [saving, setSaving] = useState(false); const [localMaterials, setLocalMaterials] = useState(materials);
   const shown = localMaterials.filter((item) => type === "All" || item.type === type);
-  async function add(event) { event.preventDefault(); const form = new FormData(event.currentTarget); const item = await addMaterial({ title: form.get("title"), subject: form.get("subject"), type: form.get("type") }); setLocalMaterials((items) => [item, ...items]); setAdded(t("{{title}} is available as a local preview.", { title: item.title })); setFormOpen(false); }
-  return <><PageHeading title={t("Learning materials")} subtitle="Notes, references, and lesson resources." action={<button className="workspace-button primary-action" onClick={() => setFormOpen((open) => !open)}><Plus size={16} />{<LocalizedText text={"Add material"} />}</button>} />{formOpen && <form className="inline-create" onSubmit={add}><label>{<LocalizedText text={"Title"} />}<input required name="title" placeholder={t("Resource title")} /></label><label>{<LocalizedText text={"Subject"} />}<input required name="subject" placeholder={t("Subject")} /></label><label>{<LocalizedText text={"Type"} />}<select name="type"><option value={"Notes"}>{<LocalizedText text={"Notes"} />}</option><option value={"Document"}>{<LocalizedText text={"Document"} />}</option><option value={"Video"}>{<LocalizedText text={"Video"} />}</option><option value={"Image"}>{<LocalizedText text={"Image"} />}</option></select></label><button className="workspace-button primary-action" type="submit">{<LocalizedText text={"Add local preview"} />}</button></form>}{added && <p className="form-success">{added}</p>}<div className="filter-bar"><div className="filter-tabs">{["All", "Notes", "Document", "Video", "Image"].map((item) => <button className={type === item ? "active" : ""} key={item} onClick={() => setType(item)}>{t(item)}</button>)}</div><span>{shown.length}{<LocalizedText text={"resources"} />}</span></div><div className="material-grid">{shown.map((item) => <article className="material-card" key={item.id}><div className={`material-preview ${item.color}`}><span>{item.type === "Video" ? <Video size={26} /> : item.type === "Image" ? <Sparkles size={26} /> : item.type === "Notes" ? <BookOpen size={26} /> : <FileText size={26} />}</span><small>{t(item.type)}</small></div><div><span className="class-subject">{localizedRecord(t, item.id, item.subject)}</span><h2>{localizedRecord(t, item.id, item.title)}</h2><p>{localizedRecord(t, item.id, item.details)}</p><button className="text-action" onClick={() => setAdded(t("{{title}} opened in the preview.", { title: item.title }))}>{<LocalizedText text={"Preview resource"} />}<ArrowUpRight size={15} /></button></div></article>)}</div></>;
+  async function add(event) { event.preventDefault(); if (saving) return; setSaving(true); setError(""); setAdded(""); const form = new FormData(event.currentTarget); try { const item = await addMaterial({ title: form.get("title"), subject: form.get("subject"), type: form.get("type"), link: form.get("link") }); setLocalMaterials((items) => [item, ...items]); setAdded(t("{{title}} was added successfully.", { title: item.title })); setFormOpen(false); } catch (cause) { setError(t(cause.message)); } finally { setSaving(false); } }
+  return <><PageHeading title={t("Learning materials")} subtitle="Notes, references, and lesson resources." action={<button className="workspace-button primary-action" onClick={() => setFormOpen((open) => !open)}><Plus size={16} />{<LocalizedText text={"Add material"} />}</button>} />{formOpen && <form className="inline-create" onSubmit={add}><label>{<LocalizedText text={"Title"} />}<input required name="title" placeholder={t("Resource title")} /></label><label>{<LocalizedText text={"Subject"} />}<input required name="subject" placeholder={t("Subject")} /></label><label>{<LocalizedText text={"Resource URL"} />}<input type="url" name="link" required placeholder="https://…" /></label><label>{<LocalizedText text={"Type"} />}<select name="type"><option value={"Notes"}>{<LocalizedText text={"Notes"} />}</option><option value={"Document"}>{<LocalizedText text={"Document"} />}</option><option value={"Video"}>{<LocalizedText text={"Video"} />}</option><option value={"Image"}>{<LocalizedText text={"Image"} />}</option></select></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="workspace-button primary-action" disabled={saving} type="submit">{saving ? t("Saving…") : t("Add material")}</button></form>}{added && <p className="form-success" role="status">{added}</p>}<div className="filter-bar"><div className="filter-tabs">{["All", "Notes", "Document", "Video", "Image"].map((item) => <button className={type === item ? "active" : ""} key={item} onClick={() => setType(item)}>{t(item)}</button>)}</div><span>{shown.length}{<LocalizedText text={"resources"} />}</span></div><div className="material-grid">{shown.map((item) => <article className="material-card" key={item.id}><div className={`material-preview ${item.color}`}><span>{item.type === "Video" ? <Video size={26} /> : item.type === "Image" ? <Sparkles size={26} /> : item.type === "Notes" ? <BookOpen size={26} /> : <FileText size={26} />}</span><small>{t(item.type)}</small></div><div><span className="class-subject">{localizedRecord(t, item.id, item.subject)}</span><h2>{localizedRecord(t, item.id, item.title)}</h2><p>{localizedRecord(t, item.id, item.details)}</p><button className="text-action" onClick={() => setAdded(t("{{title}} opened in the preview.", { title: item.title }))}>{<LocalizedText text={"Preview resource"} />}<ArrowUpRight size={15} /></button></div></article>)}</div></>;
 }
 
 function AttendancePage({ records, role, setNotice }) {
@@ -981,11 +995,31 @@ function startOfMondayWeek(date) {
   return start;
 }
 
-function SchedulePage({ events, mode }) {
+function SchedulePage({ events, mode, setNotice }) {
   const { t, language } = useLanguage();
   const formatDate = useLocalizedDate();
   const formatNumber = useLocalizedNumber();
-  const [selected, setSelected] = useState("2026-10-19");
+  const [selected, setSelected] = useState(() => dateKey(new Date()));
+  const [calendarData, setCalendarData] = useState(() => ({ month: dateKey(new Date()).slice(0, 7), items: events }));
+  const firstMonth = useRef(selected.slice(0, 7));
+  const monthKey = selected.slice(0, 7);
+  const calendarEvents = calendarData.month === monthKey ? calendarData.items : [];
+  useEffect(() => {
+    if (firstMonth.current === monthKey) {
+      firstMonth.current = "";
+      return;
+    }
+    let active = true;
+    listCalendarMonth(monthKey).then((items) => {
+      if (active) setCalendarData({ month: monthKey, items });
+    }).catch((cause) => {
+      if (active) {
+        setCalendarData({ month: monthKey, items: [] });
+        setNotice(t(cause.message || "Calendar events could not be loaded."));
+      }
+    });
+    return () => { active = false; };
+  }, [monthKey, setNotice, t]);
   const selectedDate = parseDateKey(selected);
   const locale = language === "hi" ? "hi-IN" : "en-IN";
   const weekdayKeys = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -995,7 +1029,7 @@ function SchedulePage({ events, mode }) {
   const monthFirstDayOffset = (monthStart.getDay() + 6) % 7;
   const monthCells = Array.from({ length: 42 }, (_, index) => addDays(monthStart, index - monthFirstDayOffset));
   const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(selectedDate);
-  const visible = events.filter((item) => item.date === selected);
+  const visible = calendarEvents.filter((item) => item.date === selected);
 
   function shiftPeriod(direction) {
     if (mode === "week") {
@@ -1041,7 +1075,7 @@ function SchedulePage({ events, mode }) {
             {monthCells.map((dayDate) => {
               const key = dateKey(dayDate);
               const inMonth = dayDate.getMonth() === selectedDate.getMonth();
-              const hasEvents = events.some((event) => event.date === key);
+              const hasEvents = calendarEvents.some((event) => event.date === key);
               return <button
                 key={key}
                 type="button"
@@ -1070,7 +1104,7 @@ function SchedulePage({ events, mode }) {
       <aside className="workspace-panel calendar-aside">
         <span className="panel-kicker"><LocalizedText text={"UPCOMING"} /></span>
         <h2><LocalizedText text={"Coming up"} /></h2>
-        {events.slice(0, 4).map((event) => <button className="upcoming-row" type="button" key={event.id} onClick={() => setSelected(event.date)}>
+        {calendarEvents.slice(0, 4).map((event) => <button className="upcoming-row" type="button" key={event.id} onClick={() => setSelected(event.date)}>
           <span>{formatNumber(Number(event.date.slice(-2)))}</span>
           <span><strong>{localizedRecord(t, event.id, event.title)}</strong><small>{event.time} <LocalizedText text={"·"} /> {t(event.type)}</small></span>
         </button>)}
@@ -1097,11 +1131,10 @@ function AnnouncementsPage({ announcements }) {
 
 function NotificationsPage({ items, setData, allData }) {
   const { t } = useLanguage();
-  const [filter, setFilter] = useState("All"); const [category, setCategory] = useState("All categories");
+  const [filter, setFilter] = useState("All"); const [category, setCategory] = useState("All categories"); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const shown = items.filter((item) => (filter === "All" || (filter === "Unread" ? item.unread : !item.unread)) && (category === "All categories" || item.category === category));
-  async function markOne(id) { const notifications = await markNotificationRead(id); setData({ ...allData, notifications }); }
-  async function markAll() { const notifications = await markAllNotificationsRead(); setData({ ...allData, notifications }); }
-  return <><PageHeading title={t("Notifications")} subtitle="Important updates from your learning space." action={<button className="workspace-button" onClick={markAll}><Check size={16} />{<LocalizedText text={"Mark all read"} />}</button>} /><div className="filter-bar"><div className="filter-tabs">{["All", "Unread", "Read"].map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{t(item)}</button>)}</div><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label={t("Notification category")}><option value={"All categories"}>{<LocalizedText text={"All categories"} />}</option><option value={"Classes"}>{<LocalizedText text={"Classes"} />}</option><option value={"Assignments"}>{<LocalizedText text={"Assignments"} />}</option></select></div><div className="notification-list">{shown.map((item) => <article className={`notification-row ${item.unread ? "unread" : ""}`} key={item.id}><span className="notification-icon"><Bell size={17} /></span><div><span className="notification-category">{t(item.category)}</span><strong>{localizedRecord(t, item.id, item.title)}</strong><p>{localizedRecord(t, item.id, item.body)}</p><Link to={item.href}>{<LocalizedText text={"Open related page"} />}<ArrowRight size={14} /></Link></div>{item.unread && <button className="icon-button" aria-label={t("Mark {{title}} as read", { title: localizedRecord(t, item.id, item.title) })} onClick={() => markOne(item.id)}><Check size={16} /></button>}</article>)}</div></>;
+  async function updateReadState(operation) { if (busy) return; setBusy(true); setError(""); try { const notifications = await operation(); setData({ ...allData, notifications }); } catch (cause) { setError(t(cause.message)); } finally { setBusy(false); } }
+  return <><PageHeading title={t("Notifications")} subtitle="Important updates from your learning space." action={<button className="workspace-button" disabled={busy} onClick={() => updateReadState(markAllNotificationsRead)}><Check size={16} />{<LocalizedText text={"Mark all read"} />}</button>} />{error && <p className="form-error" role="alert">{error}</p>}<div className="filter-bar"><div className="filter-tabs">{["All", "Unread", "Read"].map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{t(item)}</button>)}</div><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label={t("Notification category")}><option value={"All categories"}>{<LocalizedText text={"All categories"} />}</option><option value={"Classes"}>{<LocalizedText text={"Classes"} />}</option><option value={"Assignments"}>{<LocalizedText text={"Assignments"} />}</option></select></div><div className="notification-list">{shown.map((item) => <article className={`notification-row ${item.unread ? "unread" : ""}`} key={item.id}><span className="notification-icon"><Bell size={17} /></span><div><span className="notification-category">{t(item.category)}</span><strong>{localizedRecord(t, item.id, item.title)}</strong><p>{localizedRecord(t, item.id, item.body)}</p><Link to={item.href}>{<LocalizedText text={"Open related page"} />}<ArrowRight size={14} /></Link></div>{item.unread && <button className="icon-button" disabled={busy} aria-label={t("Mark {{title}} as read", { title: localizedRecord(t, item.id, item.title) })} onClick={() => updateReadState(() => markNotificationRead(item.id))}><Check size={16} /></button>}</article>)}</div></>;
 }
 
 function MentorPage() {
