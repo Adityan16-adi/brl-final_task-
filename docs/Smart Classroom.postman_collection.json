@@ -1,0 +1,225 @@
+{
+  "info": {
+    "_postman_id": "8c205d91-6889-4f8b-a205-3722116c6afa",
+    "name": "Smart Classroom",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57970936",
+    "_collection_link": "https://go.postman.co/collection/57970936-8c205d91-6889-4f8b-a205-3722116c6afa?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Sync User",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjkwNGIwZjkxYmU2ZWIwODY3ZGFiYmFhYjU4N2RmYzJlMzNmMDBhMjQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXVkIjoic21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXV0aF90aW1lIjoxNzkyMzg5NjczLCJ1c2VyX2lkIjoiUWlET3JPVjB4ZlBzNW5CeFdrVjJZZnBRYUxFMiIsInN1YiI6IlFpRE9yT1YweGZQczVuQnhXa1YyWWZwUWFMRTIiLCJpYXQiOjE3OTIzODk2NzMsImV4cCI6MTc5MjM5MzI3MywiZW1haWwiOiJ0ZWphcy50ZXN0QGNsYXNzcm9vbS5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsidGVqYXMudGVzdEBjbGFzc3Jvb20uY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.v7hKh0OKqiu-RVXc8-95fZXfYT-grBV3L7iq8N-L_VwGL7kIuNLyb92Br6oQnwJ6mLS917r97e49kYQmBonbX3RBlpORv0EEUdZjiRPou7A_7GTzYM0kYnZe5TxSTB3Leo0ePxmDvFTN-8W6wvIqA6EIEuHTT8bxSVWmCld2JzlwCGps9uaFv5FUta_NeCkEJvC7FdNLv8O9fU1Xx-FwPLIVfKtzR4ofDXe-FAQqJ1CU3LFdhNPso19ABJYj-ncrq6P0Bbi1ar-MCkMqtPpiKcoHtlvmOElpoA55cl0XmXFkA0BlHYL3guHqCKdSQMIvAOVMKuINBytkOdrhJ0oZuw",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "",
+            "value": ""
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/api/auth/sync",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "auth",
+            "sync"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Firebase Login",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"email\":\"shiva.test@classroom.com\",\r\n    \"password\": \"543210\",\r\n    \"returnSecureToken\": true\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDnYNTndRhW4z8Vokhqy8zkZSl7ho7j8Ls",
+          "protocol": "https",
+          "host": [
+            "identitytoolkit",
+            "googleapis",
+            "com"
+          ],
+          "path": [
+            "v1",
+            "accounts:signInWithPassword"
+          ],
+          "query": [
+            {
+              "key": "key",
+              "value": "AIzaSyDnYNTndRhW4z8Vokhqy8zkZSl7ho7j8Ls"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Join Classroom",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjkwNGIwZjkxYmU2ZWIwODY3ZGFiYmFhYjU4N2RmYzJlMzNmMDBhMjQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXVkIjoic21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXV0aF90aW1lIjoxNzkyMzkxMDA2LCJ1c2VyX2lkIjoiQ2FLZXhzTGFuaVRVQ0N4TEZqYmREZ1c1S3k4MiIsInN1YiI6IkNhS2V4c0xhbmlUVUNDeExGamJkRGdXNUt5ODIiLCJpYXQiOjE3OTIzOTEwMDYsImV4cCI6MTc5MjM5NDYwNiwiZW1haWwiOiJzaGl2YS50ZXN0QGNsYXNzcm9vbS5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsic2hpdmEudGVzdEBjbGFzc3Jvb20uY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.m6-yWMqANJdHVKw4UZ5feCL4Yvw1qcTkC-9skyDuRLZsxzmm5IGv4SLyxC_NZotKPVTuIJW68-L2nJLwwlx4Z2XHEdiiAvwRNaDNEL-2kH7kCu7k9CBbPE0Vy1Zm5q2WwuQfdUKcSD4PrCuG-dWY4NKJc_xSDd6wA94-IZgSLUDIu6fERrRHBlEeSd5BjdHytw-Ec9lsnCfxjSUPPLVUeZpc7YtK__XNhS4mVFRk0KtaiLlQX1oJKQomWu-_UM0NBtgCErYFF8tMAjf-EgKgTwrCvuxwThXq8v7eURkWthNVEn821lHN7EMdnm5cblg8zZ4I6G2-FCipMU4BYsNl3Q",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"code\": \"1D5F8565\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/classrooms/join",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "classrooms",
+            "join"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Classroom",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Classroom Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Remove Student",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjkwNGIwZjkxYmU2ZWIwODY3ZGFiYmFhYjU4N2RmYzJlMzNmMDBhMjQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXVkIjoic21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXV0aF90aW1lIjoxNzkyMzg4NjUyLCJ1c2VyX2lkIjoicVQxb2REYWZPNU9KRzQ2enlqMWR3eW50WG5nMiIsInN1YiI6InFUMW9kRGFmTzVPSkc0Nnp5ajFkd3ludFhuZzIiLCJpYXQiOjE3OTIzODg2NTIsImV4cCI6MTc5MjM5MjI1MiwiZW1haWwiOiJ1amp3YWwudGVzdEBjbGFzc3Jvb20uY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbInVqandhbC50ZXN0QGNsYXNzcm9vbS5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.kY6QVMbnqZDrY5dYMgr-tsaJzxZFbuvsjT7Ki9T5LC7OaS5jDcwPBiokwHs06QSoTSpVEhIUQ7vCoyh-5SQ9tvNm6_q1z0K6aP3afqShOg6hUEqXUMcfblaL3zAiK-8qyOH1ILKdD4ToXl4d-leSyKq18vUXf9SkGZjAwL3BQrTmFaBK7NtQftiQRM3pYw4ssPei6OFi2HsTvSwtBQLuc8_-_zwRjAxmPXTO3xQwTLbRJOL261tEw_89EDf1C6gK8kQwBNmkwxRWqaUH4sxlj35qtk5fUgBupg8ndyyMcvRwF9f-RfSrUF2I8FsKX24yVSF1xXry5FRanbfeIGWiNg",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"studentUid\": \"CaKexsLaniTUCCxLFjbdDgW5Ky82\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/classrooms/6ad5b3926a0e2cdd2622afb5/students",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "classrooms",
+            "6ad5b3926a0e2cdd2622afb5",
+            "students"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Classroom",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjkwNGIwZjkxYmU2ZWIwODY3ZGFiYmFhYjU4N2RmYzJlMzNmMDBhMjQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXVkIjoic21hcnQtY2xhc3Nyb29tLWNjMGJjIiwiYXV0aF90aW1lIjoxNzkyMzg5NjczLCJ1c2VyX2lkIjoiUWlET3JPVjB4ZlBzNW5CeFdrVjJZZnBRYUxFMiIsInN1YiI6IlFpRE9yT1YweGZQczVuQnhXa1YyWWZwUWFMRTIiLCJpYXQiOjE3OTIzODk2NzMsImV4cCI6MTc5MjM5MzI3MywiZW1haWwiOiJ0ZWphcy50ZXN0QGNsYXNzcm9vbS5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsidGVqYXMudGVzdEBjbGFzc3Jvb20uY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.v7hKh0OKqiu-RVXc8-95fZXfYT-grBV3L7iq8N-L_VwGL7kIuNLyb92Br6oQnwJ6mLS917r97e49kYQmBonbX3RBlpORv0EEUdZjiRPou7A_7GTzYM0kYnZe5TxSTB3Leo0ePxmDvFTN-8W6wvIqA6EIEuHTT8bxSVWmCld2JzlwCGps9uaFv5FUta_NeCkEJvC7FdNLv8O9fU1Xx-FwPLIVfKtzR4ofDXe-FAQqJ1CU3LFdhNPso19ABJYj-ncrq6P0Bbi1ar-MCkMqtPpiKcoHtlvmOElpoA55cl0XmXFkA0BlHYL3guHqCKdSQMIvAOVMKuINBytkOdrhJ0oZuw",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"description\": \"Testing missing classroom name\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/classrooms",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "classrooms"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

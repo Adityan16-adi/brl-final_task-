@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-# React / Node
+# Node.js
 node_modules/
 dist/
 coverage/
@@ -24,10 +24,13 @@ key.properties
 
 # Firebase service-account credentials
 service-account*.json
+config/firebase-service-account.json
 
 # Editors and operating systems
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-apps/backend/uploads
+
+# Backend uploads
+apps/backend/uploads/
