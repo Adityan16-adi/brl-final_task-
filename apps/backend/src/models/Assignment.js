@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 
 const assignmentSchema = new mongoose.Schema(
   {
+    fileUrl: String,
+filePublicId: String,
+fileResourceType: String,
     classId: { type: mongoose.Schema.Types.ObjectId, ref: "Classroom", required: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true, trim: true },

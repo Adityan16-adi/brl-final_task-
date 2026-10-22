@@ -1,4 +1,6 @@
+
 const express = require("express");
+const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -16,15 +18,22 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
-    }
+        methods: ["GET", "POST"],
+    },
 });
 
 require("./src/sockets/handRaise")(io);
 
+app.use(cors());
 app.use(express.json());
+
 app.use("/api/auth", authRoutes);
 app.use("/api/classrooms", classroomRoutes);
+app.use("/api/assignments", require("./src/routes/assignmentRoutes"));
+app.use("/api/submissions", require("./src/routes/submissionRoutes"));
+app.use("/api/materials", require("./src/routes/materialRoutes"));
+app.use("/api/calendar", require("./src/routes/calendarRoutes"));
+app.use("/api/notifications", require("./src/routes/notificationRoutes"));
 
 app.get("/", (req, res) => {
     res.send("Smart Classroom Backend is running!");
@@ -34,11 +43,11 @@ app.get("/protected", verifyToken, (req, res) => {
     res.status(200).json({
         success: true,
         message: "Authentication successful!",
-        uid: req.user.uid
+        uid: req.user.uid,
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
     await connectDB();

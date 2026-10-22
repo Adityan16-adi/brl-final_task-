@@ -159,6 +159,76 @@ module.exports = (io) => {
             });
         });
 
+
+        // Microphone status
+        socket.on("mic-status", (data, callback) => {
+            if (
+                !data ||
+                typeof data.classroomId !== "string" ||
+                typeof data.enabled !== "boolean"
+            ) {
+                return callback?.({
+                    success: false,
+                    message: "Invalid microphone status"
+                });
+            }
+
+            const room = `classroom:${data.classroomId}`;
+
+            if (!socket.rooms.has(room)) {
+                return callback?.({
+                    success: false,
+                    message: "Join the classroom first"
+                });
+            }
+
+            io.to(room).emit("mic-status-updated", {
+                uid: socket.user.uid,
+                name: socket.user.name,
+                enabled: data.enabled
+            });
+
+            callback?.({
+                success: true,
+                message: "Microphone status updated"
+            });
+        });
+
+        // Camera status
+        socket.on("camera-status", (data, callback) => {
+            if (
+                !data ||
+                typeof data.classroomId !== "string" ||
+                typeof data.enabled !== "boolean"
+            ) {
+                return callback?.({
+                    success: false,
+                    message: "Invalid camera status"
+                });
+            }
+
+            const room = `classroom:${data.classroomId}`;
+
+            if (!socket.rooms.has(room)) {
+                return callback?.({
+                    success: false,
+                    message: "Join the classroom first"
+                });
+            }
+
+            io.to(room).emit("camera-status-updated", {
+                uid: socket.user.uid,
+                name: socket.user.name,
+                enabled: data.enabled
+            });
+
+            callback?.({
+                success: true,
+                message: "Camera status updated"
+            });
+        });
+
+
         // Disconnect
         socket.on("disconnect", () => {
             console.log("Socket disconnected:", socket.id);
