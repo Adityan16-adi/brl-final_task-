@@ -1,3 +1,4 @@
+const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const Assignment = require("../models/Assignment");
 
 // POST /api/assignments  -> create a new assignment
@@ -10,11 +11,16 @@ exports.createAssignment = async (req, res) => {
         .status(400)
         .json({ success: false, message: "classId, title and dueDate are required" });
     }
-
-  const attachments = (req.files || []).map((f) => ({
-  name: f.originalname,
-  url: `/uploads/${f.filename}`,
-}));
+ 
+let fileData = {};
+if (req.file) {
+  const result = await uploadToCloudinary(req.file.buffer, "assignments");
+  fileData = {
+    fileUrl: result.secure_url,
+    filePublicId: result.public_id,
+    fileResourceType: result.resource_type,
+  };
+}
 
 const assignment = await Assignment.create({
   classId,
@@ -23,7 +29,7 @@ const assignment = await Assignment.create({
   dueDate,
   maxMarks,
   createdBy,
-  attachments,
+  ...fileData
 });
 
     res.status(201).json({ success: true, message: "Assignment created", data: assignment });
