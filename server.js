@@ -1,14 +1,9 @@
 const express = require("express");
-<<<<<<< HEAD
 const cors = require("cors");
-=======
 const http = require("http");
 const { Server } = require("socket.io");
-
->>>>>>> origin/main
 require("dotenv").config();
 require("./config/firebase");
- 
 
 const classroomRoutes = require("./src/routes/classroomRoutes");
 const authRoutes = require("./src/routes/authRoutes");
@@ -16,19 +11,6 @@ const connectDB = require("./config/db");
 const verifyToken = require("./src/middleware/authMiddleware");
 
 const app = express();
-<<<<<<< HEAD
-app.use(cors());
-
-app.use(express.json());
-app.use("/api/auth", authRoutes);
-app.use("/api/classrooms",classroomRoutes);
-app.use("/api/assignments", require("./src/routes/assignmentRoutes"));
-app.use("/api/submissions", require("./src/routes/submissionRoutes"));
-app.use("/api/materials", require("./src/routes/materialRoutes"));
-app.use("/api/calendar", require("./src/routes/calendarRoutes"));
-app.use("/api/notifications", require("./src/routes/notificationRoutes"));
-console.log("Classroom routes mounted");
-=======
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -40,10 +22,17 @@ const io = new Server(server, {
 
 require("./src/sockets/handRaise")(io);
 
+app.use(cors());
 app.use(express.json());
+
 app.use("/api/auth", authRoutes);
 app.use("/api/classrooms", classroomRoutes);
->>>>>>> origin/main
+app.use("/api/assignments", require("./src/routes/assignmentRoutes"));
+app.use("/api/submissions", require("./src/routes/submissionRoutes"));
+app.use("/api/materials", require("./src/routes/materialRoutes"));
+app.use("/api/calendar", require("./src/routes/calendarRoutes"));
+app.use("/api/notifications", require("./src/routes/notificationRoutes"));
+console.log("Classroom routes mounted");
 
 app.get("/", (req, res) => {
     res.send("Smart Classroom Backend is running!");
