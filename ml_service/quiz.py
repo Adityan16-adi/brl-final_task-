@@ -71,6 +71,6 @@ def generate_quiz(text: str, num_questions: int = 5, difficulty: str = "medium",
         try:
             data = chain.invoke(payload)
             return Quiz.model_validate(data).model_dump()
-        except Exception as e:  # bad JSON / failed validation -> retry
+        except ValueError as e:  # bad JSON / failed validation -> retry (provider errors are NOT retried here)
             last_err = e
     raise RuntimeError(f"Could not generate a valid quiz: {last_err}")
