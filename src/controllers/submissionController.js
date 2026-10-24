@@ -3,9 +3,13 @@ const { notifyUser } = require("../utils/notify");
 const Assignment = require("../models/Assignment");
 const Submission = require("../models/Submission");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
+const { deleteFromCloudinary } = uploadToCloudinary;
 
 // POST /api/submissions/assignment/:assignmentId
 exports.submitAssignment = async (req, res) => {
+    let newlyUploadedPublicId = null;
+    let newlyUploadedResourceType = null;
+
     try {
         const { studentId, text } = req.body || {};
 
@@ -25,6 +29,11 @@ exports.submitAssignment = async (req, res) => {
             });
         }
 
+        const previous = await Submission.findOne({
+            assignmentId: assignment._id,
+            studentId,
+        });
+
         let fileUrl = req.body.fileUrl || "";
         let filePublicId = "";
         let fileResourceType = "";
@@ -38,17 +47,14 @@ exports.submitAssignment = async (req, res) => {
             fileUrl = result.secure_url;
             filePublicId = result.public_id;
             fileResourceType = result.resource_type;
+            newlyUploadedPublicId = result.public_id;
+            newlyUploadedResourceType = result.resource_type;
         }
 
         const now = new Date();
         const isLate = now > assignment.dueDate;
 
         // Preserve existing file metadata if this is a text-only resubmission.
-        const previous = await Submission.findOne({
-            assignmentId: assignment._id,
-            studentId,
-        });
-
         if (!req.file && previous) {
             filePublicId = previous.filePublicId || "";
             fileResourceType = previous.fileResourceType || "";
@@ -76,12 +82,26 @@ exports.submitAssignment = async (req, res) => {
             }
         );
 
+        // Safe cleanup: Only delete old asset AFTER the database update has succeeded
+        if (req.file && previous?.filePublicId && previous.filePublicId !== filePublicId) {
+            await deleteFromCloudinary(previous.filePublicId, previous.fileResourceType);
+        }
+
         return res.status(201).json({
             success: true,
             message: "Submitted",
             data: submission,
         });
     } catch (error) {
+        if (newlyUploadedPublicId) {
+            await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
+        }
+        if (error.message && error.message.includes("Cloud storage is not configured")) {
+            return res.status(503).json({
+                success: false,
+                message: "Storage service not configured. Unable to upload file.",
+            });
+        }
         console.error("Submit assignment error:", error);
         return res.status(500).json({
             success: false,

@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
+const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 
 require("dotenv").config();
@@ -35,6 +36,18 @@ app.use("/api/materials", require("./src/routes/materialRoutes"));
 app.use("/api/calendar", require("./src/routes/calendarRoutes"));
 app.use("/api/notifications", require("./src/routes/notificationRoutes"));
 
+app.get("/api/health", (req, res) => {
+    const isDbConnected = mongoose.connection.readyState === 1;
+    const status = isDbConnected ? "ok" : "degraded";
+    const statusCode = isDbConnected ? 200 : 503;
+    res.status(statusCode).json({
+        status,
+        database: isDbConnected ? "connected" : "disconnected",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+    });
+});
+
 app.get("/", (req, res) => {
     res.send("Smart Classroom Backend is running!");
 });
@@ -44,6 +57,15 @@ app.get("/protected", verifyToken, (req, res) => {
         success: true,
         message: "Authentication successful!",
         uid: req.user.uid,
+    });
+});
+
+// Express error-handling middleware (catches Multer filter errors, etc.)
+app.use((err, req, res, next) => {
+    const statusCode = err.status || err.statusCode || 400;
+    res.status(statusCode).json({
+        success: false,
+        message: err.message || "An unexpected error occurred",
     });
 });
 
@@ -58,4 +80,8 @@ const startServer = async () => {
     });
 };
 
-startServer();
+if (require.main === module) {
+    startServer();
+}
+
+module.exports = { app, server, startServer };

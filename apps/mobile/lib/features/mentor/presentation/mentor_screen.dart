@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/providers/network_providers.dart';
@@ -53,10 +53,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
       final response = await dio.post<Map<String, dynamic>>(
         '/mentor/chat',
-        data: {
-          'session_id': sessionId,
-          'message': text,
-        },
+        data: {'session_id': sessionId, 'message': text},
       );
 
       final reply = response.data?['reply'] as String?;
@@ -72,8 +69,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.response?.statusCode == 500 ||
-                e.response?.statusCode == 502
+        _error = e.response?.statusCode == 500 || e.response?.statusCode == 502
             ? 'The AI service could not generate a reply. Check the ML service logs and API key.'
             : 'Could not reach the ML service. Check your Wi-Fi and API address.';
       });
@@ -104,9 +100,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _messages.clear();
         _error = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conversation reset.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Conversation reset.')));
     } on DioException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -249,9 +244,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             Text(
               'What would you like to learn?',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -285,8 +279,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   Widget _messageBubble(MentorMessage message, ColorScheme colors) {
     return Align(
-      alignment:
-          message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.82,

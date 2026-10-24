@@ -1,397 +1,443 @@
-import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile/core/branding/app_branding.dart';
+import 'package:mobile/core/theme/app_theme.dart';
 
-class HomeScreen extends StatefulWidget {
+import '../../auth/application/auth_providers.dart';
+import '../../auth/domain/auth_repository.dart';
+import 'home_providers.dart';
+import 'widgets/assignments_view.dart';
+import 'widgets/classrooms_view.dart';
+import 'widgets/create_class_dialog.dart';
+import 'widgets/join_class_dialog.dart';
+import 'widgets/materials_view.dart';
+import 'widgets/overview_view.dart';
+import 'widgets/schedule_view.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  int _currentIndex = 0;
 
-  static const _sections = [
-    ('Overview', Icons.dashboard_outlined),
-    ('My classrooms', Icons.groups_outlined),
-    ('Assignments', Icons.assignment_outlined),
-    ('Learning materials', Icons.menu_book_outlined),
-    ('Profile & settings', Icons.person_outline_rounded),
+  static const _titles = [
+    'Dashboard Overview',
+    'Enrolled Classrooms',
+    'Course Assignments',
+    'Learning Materials',
+    'Weekly Schedule',
   ];
+
+  void _onTabSelect(int index) {
+    if (index != _currentIndex) {
+      setState(() => _currentIndex = index);
+    }
+  }
+
+  void _cycleTheme() {
+    ref.read(themeModeProvider.notifier).cycle();
+  }
+
+  IconData _getThemeIcon(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return Icons.brightness_auto_rounded;
+      case ThemeMode.light:
+        return Icons.light_mode_rounded;
+      case ThemeMode.dark:
+        return Icons.dark_mode_rounded;
+    }
+  }
+
+  String _getThemeTooltip(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'Theme: System (Tap to toggle)';
+      case ThemeMode.light:
+        return 'Theme: Light (Tap to toggle)';
+      case ThemeMode.dark:
+        return 'Theme: Dark (Tap to toggle)';
+    }
+  }
+
+  void _showAccountSheet(BuildContext context, AppUser? user) {
+    final colors = Theme.of(context).colorScheme;
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: colors.primaryContainer,
+                child: Text(
+                  user?.name.isNotEmpty == true
+                      ? user!.name[0].toUpperCase()
+                      : 'U',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: colors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                user?.name ?? 'Demo User',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                user?.email ?? 'student@demo.com',
+                style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      (user?.isTeacher == true
+                              ? AppTheme.roleTeacher
+                              : AppTheme.roleStudent)
+                          .withAlpha(24),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color:
+                        (user?.isTeacher == true
+                                ? AppTheme.roleTeacher
+                                : AppTheme.roleStudent)
+                            .withAlpha(80),
+                  ),
+                ),
+                child: Text(
+                  user?.role.name.toUpperCase() ?? 'STUDENT',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: user?.isTeacher == true
+                        ? AppTheme.roleTeacher
+                        : AppTheme.roleStudent,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(sheetCtx).pop();
+                  ref.read(authRepositoryProvider).signOut();
+                },
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: const Text('Sign Out / Switch Account'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody() {
+    switch (_currentIndex) {
+      case 0:
+        return OverviewView(onNavigateToTab: _onTabSelect);
+      case 1:
+        return const ClassroomsView();
+      case 2:
+        return const AssignmentsView();
+      case 3:
+        return const MaterialsView();
+      case 4:
+        return const ScheduleView();
+      default:
+        return OverviewView(onNavigateToTab: _onTabSelect);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final selected = _sections[_selectedIndex];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(selected.$1),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: () => _message(
-              'Notifications will be added in a later phase.',
-            ),
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(context),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton.extended(
-              onPressed: () => _message(
-                'Classroom creation will be connected later.',
-              ),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('New classroom'),
-            )
-          : null,
-      body: _selectedIndex == 0
-          ? _overview(context)
-          : _placeholder(context, selected.$1),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final currentThemeMode = ref.watch(themeModeProvider);
+    final currentUser = ref.watch(currentUserProvider);
 
-    return Drawer(
-      width: 280,
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 16, 24),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: colors.primaryContainer,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Icon(
-                      Icons.school_rounded,
-                      color: colors.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWideScreen = constraints.maxWidth >= 640;
+
+        if (isWideScreen) {
+          return Scaffold(
+            body: Row(
+              children: [
+                // Navigation Rail for tablet / desktop / wide screens
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: _onTabSelect,
+                  extended: constraints.maxWidth >= 900,
+                  minExtendedWidth: 200,
+                  leading: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          AppBranding.appName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: colors.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.school_rounded,
+                            color: colors.onPrimary,
+                            size: 20,
+                          ),
                         ),
-                        Text(
-                          AppBranding.tagline,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
+                        if (constraints.maxWidth >= 900) ...[
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                AppBranding.appName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              Text(
+                                currentUser?.name ?? 'Virtual Classroom',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 16, 8),
-              child: Text('LEARNING'),
-            ),
-            for (var i = 0; i < 4; i++)
-              _drawerItem(
-                context: context,
-                index: i,
-                icon: _sections[i].$2,
-                label: _sections[i].$1,
-              ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 24, 16, 8),
-              child: Text('ACCOUNT'),
-            ),
-            _drawerItem(
-              context: context,
-              index: 4,
-              icon: _sections[4].$2,
-              label: _sections[4].$1,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _drawerItem({
-    required BuildContext context,
-    required int index,
-    required IconData icon,
-    required String label,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-    final isSelected = _selectedIndex == index;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      child: Material(
-        color: isSelected ? colors.secondaryContainer : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () {
-            setState(() => _selectedIndex = index);
-            Navigator.of(context).pop();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 13,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  color: isSelected
-                      ? colors.onSecondaryContainer
-                      : colors.onSurfaceVariant,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected ? colors.onSecondaryContainer : null,
+                  trailing: Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: 'Account Profile',
+                              icon: const Icon(Icons.account_circle_outlined),
+                              onPressed: () =>
+                                  _showAccountSheet(context, currentUser),
+                            ),
+                            const SizedBox(height: 4),
+                            IconButton(
+                              tooltip: _getThemeTooltip(currentThemeMode),
+                              icon: Icon(_getThemeIcon(currentThemeMode)),
+                              onPressed: _cycleTheme,
+                            ),
+                            const SizedBox(height: 8),
+                            FilledButton.tonalIcon(
+                              onPressed: () => context.push('/mentor'),
+                              icon: const Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 18,
+                              ),
+                              label: constraints.maxWidth >= 900
+                                  ? const Text('AI Mentor')
+                                  : const Text('AI'),
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard_rounded),
+                      label: Text('Overview'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.school_outlined),
+                      selectedIcon: Icon(Icons.school_rounded),
+                      label: Text('Classrooms'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.assignment_outlined),
+                      selectedIcon: Icon(Icons.assignment_rounded),
+                      label: Text('Assignments'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.menu_book_outlined),
+                      selectedIcon: Icon(Icons.menu_book_rounded),
+                      label: Text('Materials'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.calendar_month_outlined),
+                      selectedIcon: Icon(Icons.calendar_month_rounded),
+                      label: Text('Schedule'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _overview(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-      children: [
-        Text(
-          'Your learning space',
-          style: textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'A place to learn, collaborate, and stay on track.',
-          style: textTheme.bodyLarge?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Card(
-          color: colors.primaryContainer,
-          child: Padding(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.auto_awesome_rounded,
-                  color: colors.onPrimaryContainer,
-                  size: 30,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Make every learning day count.',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.onPrimaryContainer,
+                const VerticalDivider(width: 1, thickness: 1),
+                Expanded(
+                  child: Scaffold(
+                    appBar: AppBar(
+                      title: Text(_titles[_currentIndex]),
+                      actions: [
+                        if (currentUser?.isTeacher == true)
+                          IconButton(
+                            tooltip: 'Create Classroom',
+                            icon: const Icon(Icons.add_circle_outline_rounded),
+                            onPressed: () => showDialog<bool>(
+                              context: context,
+                              builder: (_) => const CreateClassDialog(),
+                            ),
+                          )
+                        else
+                          IconButton(
+                            tooltip: 'Join Classroom with Code',
+                            icon: const Icon(Icons.group_add_outlined),
+                            onPressed: () => showDialog<bool>(
+                              context: context,
+                              builder: (_) => const JoinClassDialog(),
+                            ),
+                          ),
+                        IconButton(
+                          tooltip: 'AI Mentor Assistant',
+                          icon: const Icon(Icons.auto_awesome_rounded),
+                          onPressed: () => context.push('/mentor'),
+                        ),
+                        IconButton(
+                          tooltip: _getThemeTooltip(currentThemeMode),
+                          icon: Icon(_getThemeIcon(currentThemeMode)),
+                          onPressed: _cycleTheme,
+                        ),
+                        IconButton(
+                          tooltip: 'Account Profile',
+                          icon: const Icon(Icons.account_circle_outlined),
+                          onPressed: () =>
+                              _showAccountSheet(context, currentUser),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                    body: _buildBody(),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Your classes, coursework, and resources will have one home.',
-                  style: TextStyle(color: colors.onPrimaryContainer),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => _message(
-                    'Classroom discovery will be added later.',
+              ],
+            ),
+          );
+        }
+
+        // Mobile layout: Bottom NavigationBar
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(_titles[_currentIndex]),
+            actions: [
+              if (currentUser?.isTeacher == true)
+                IconButton(
+                  tooltip: 'Create Classroom',
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  onPressed: () => showDialog<bool>(
+                    context: context,
+                    builder: (_) => const CreateClassDialog(),
                   ),
-                  child: const Text('Explore classrooms'),
+                )
+              else
+                IconButton(
+                  tooltip: 'Join Classroom with Code',
+                  icon: const Icon(Icons.group_add_outlined),
+                  onPressed: () => showDialog<bool>(
+                    context: context,
+                    builder: (_) => const JoinClassDialog(),
+                  ),
                 ),
-              ],
-            ),
+              IconButton(
+                tooltip: 'AI Mentor Assistant',
+                icon: const Icon(Icons.auto_awesome_rounded),
+                onPressed: () => context.push('/mentor'),
+              ),
+              IconButton(
+                tooltip: _getThemeTooltip(currentThemeMode),
+                icon: Icon(_getThemeIcon(currentThemeMode)),
+                onPressed: _cycleTheme,
+              ),
+              IconButton(
+                tooltip: 'Account Profile',
+                icon: const Icon(Icons.account_circle_outlined),
+                onPressed: () => _showAccountSheet(context, currentUser),
+              ),
+              const SizedBox(width: 4),
+            ],
           ),
-        ),
-        const SizedBox(height: 28),
-        Text(
-          'Your workspace',
-          style: textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
+          body: _buildBody(),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: _onTabSelect,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard_rounded),
+                label: 'Overview',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.school_outlined),
+                selectedIcon: Icon(Icons.school_rounded),
+                label: 'Classrooms',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.assignment_outlined),
+                selectedIcon: Icon(Icons.assignment_rounded),
+                label: 'Assignments',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.menu_book_outlined),
+                selectedIcon: Icon(Icons.menu_book_rounded),
+                label: 'Materials',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.calendar_month_outlined),
+                selectedIcon: Icon(Icons.calendar_month_rounded),
+                label: 'Schedule',
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 14),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 700 ? 3 : 2;
-            final width =
-                (constraints.maxWidth - (columns - 1) * 12) / columns;
-
-            return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _workspaceCard(
-                  width,
-                  context,
-                  'Classrooms',
-                  'Your learning communities',
-                  Icons.groups_rounded,
-                  () => _select(1),
-                ),
-                _workspaceCard(
-                  width,
-                  context,
-                  'Assignments',
-                  'Tasks and coursework',
-                  Icons.assignment_rounded,
-                  () => _select(2),
-                ),
-               _workspaceCard(
-  width,
-  context,
-  'Materials',
-  'Notes and resources',
-  Icons.menu_book_rounded,
-  () => _select(3),
-),
-_workspaceCard(
-  width,
-  context,
-  'AI Mentor',
-  'Get help with your studies',
-  Icons.auto_awesome_rounded,
-  () => context.push('/mentor'),
-),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 28),
-        Text(
-          'Coming up',
-          style: textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            leading: Icon(
-              Icons.event_available_rounded,
-              color: colors.primary,
-              size: 30,
-            ),
-            title: const Text('Your schedule starts here'),
-            subtitle: const Text(
-              'Classes, deadlines, and activities will appear here once connected.',
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _workspaceCard(
-    double width,
-    BuildContext context,
-    String title,
-    String description,
-    IconData icon,
-    VoidCallback onTap,
-  ) {
-    final colors = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      width: width,
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 30, color: colors.primary),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 5),
-                Text(description),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _placeholder(BuildContext context, String title) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.construction_rounded, size: 48),
-            const SizedBox(height: 16),
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            const Text(
-              'This section is part of the app shell. Its data and actions will be added in later phases.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => _select(0),
-              icon: const Icon(Icons.arrow_back_rounded),
-              label: const Text('Back to overview'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _select(int index) {
-    setState(() => _selectedIndex = index);
-  }
-
-  void _message(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+        );
+      },
     );
   }
 }

@@ -1,4 +1,6 @@
 const Material = require("../models/Material");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
+const { deleteFromCloudinary } = uploadToCloudinary;
 
 const detectType = (mimetype = "") => {
   if (mimetype.startsWith("image/")) return "image";
@@ -8,6 +10,9 @@ const detectType = (mimetype = "") => {
 
 // POST /api/materials  (form-data: classId, uploadedBy, title, description, file, link)
 exports.createMaterial = async (req, res) => {
+  let newlyUploadedPublicId = null;
+  let newlyUploadedResourceType = null;
+
   try {
     const { classId, uploadedBy, title, description, link, thumbnailUrl } = req.body || {};
     if (!classId || !title || !uploadedBy) {
@@ -19,20 +24,52 @@ exports.createMaterial = async (req, res) => {
       return res.status(400).json({ success: false, message: "Attach a file or give a link" });
     }
 
-    const type = req.file ? detectType(req.file.mimetype) : "link";
+    let type = "link";
+    let fileUrl = "";
+    let filePublicId = "";
+    let fileResourceType = "";
+    let generatedThumbnail = thumbnailUrl || "";
+
+    if (req.file) {
+      type = detectType(req.file.mimetype);
+      const result = await uploadToCloudinary(
+        req.file.buffer,
+        "learning-materials"
+      );
+      fileUrl = result.secure_url;
+      filePublicId = result.public_id;
+      fileResourceType = result.resource_type;
+      newlyUploadedPublicId = result.public_id;
+      newlyUploadedResourceType = result.resource_type;
+      if (type === "image") {
+        generatedThumbnail = result.secure_url;
+      }
+    }
+
     const material = await Material.create({
       classId,
       uploadedBy,
       title,
       description,
       type,
-      fileUrl: req.file ? `/uploads/${req.file.filename}` : "",
-      thumbnailUrl: type === "image" && req.file ? `/uploads/${req.file.filename}` : thumbnailUrl || "",
+      fileUrl,
+      filePublicId,
+      fileResourceType,
+      thumbnailUrl: generatedThumbnail,
       link,
     });
 
     res.status(201).json({ success: true, message: "Material added", data: material });
   } catch (error) {
+    if (newlyUploadedPublicId) {
+      await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
+    }
+    if (error.message && error.message.includes("Cloud storage is not configured")) {
+      return res.status(503).json({
+        success: false,
+        message: "Storage service not configured. Unable to upload file.",
+      });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -63,8 +100,16 @@ exports.getMaterialById = async (req, res) => {
 // DELETE /api/materials/:id
 exports.deleteMaterial = async (req, res) => {
   try {
-    const material = await Material.findByIdAndDelete(req.params.id);
+    const material = await Material.findById(req.params.id);
     if (!material) return res.status(404).json({ success: false, message: "Material not found" });
+
+    await Material.findByIdAndDelete(req.params.id);
+
+    // Safe cleanup: Only delete from Cloudinary AFTER DB deletion succeeds
+    if (material.filePublicId) {
+      await deleteFromCloudinary(material.filePublicId, material.fileResourceType);
+    }
+
     res.json({ success: true, message: "Material deleted" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
