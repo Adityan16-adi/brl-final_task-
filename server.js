@@ -32,7 +32,8 @@ app.use("/api/submissions", require("./src/routes/submissionRoutes"));
 app.use("/api/materials", require("./src/routes/materialRoutes"));
 app.use("/api/calendar", require("./src/routes/calendarRoutes"));
 app.use("/api/notifications", require("./src/routes/notificationRoutes"));
-console.log("Classroom routes mounted");
+app.use("/api/sessions", require("./src/routes/sessionRoutes"));
+ 
 
 app.get("/", (req, res) => {
     res.send("Smart Classroom Backend is running!");
