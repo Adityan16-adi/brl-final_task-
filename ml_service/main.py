@@ -4,6 +4,7 @@ Run:  uvicorn main:app --reload --port 8001
 Docs: http://localhost:8001/docs  (try every endpoint from the browser)
 """
 from dataclasses import asdict
+import logging
 
 from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
@@ -16,6 +17,8 @@ from mentor import Mentor
 from quiz import generate_quiz
 from spam import SpamDetector
 from summarizer import summarize_notes
+
+logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(title="Meet+Classroom ML service")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])  # restrict in prod
@@ -56,6 +59,9 @@ async def summarize(body: SummarizeIn):
         return {"summary": await run_in_threadpool(summarize_notes, body.text, body.style)}
     except ValueError as e:
         raise HTTPException(400, str(e))
+    except Exception as e:
+        logger.error(f"Summarizer service error: {e}")
+        raise HTTPException(502, "The summarizer service is currently unavailable. Please try again.")
 
 
 # ---------- quiz ----------
@@ -71,8 +77,9 @@ async def quiz(body: QuizIn):
         return await run_in_threadpool(generate_quiz, body.text, body.num_questions, body.difficulty)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    except RuntimeError as e:
-        raise HTTPException(502, str(e))
+    except Exception as e:
+        logger.error(f"Quiz service error: {e}")
+        raise HTTPException(502, "The quiz generation service is currently unavailable. Please try again.")
 
 
 # ---------- AI mentor ----------
@@ -89,7 +96,13 @@ class MaterialIn(BaseModel):
 
 @app.post("/mentor/chat")
 async def mentor_chat(body: ChatIn):
-    return {"reply": await run_in_threadpool(mentor.chat, body.session_id, body.message, body.course_id)}
+    try:
+        return {"reply": await run_in_threadpool(mentor.chat, body.session_id, body.message, body.course_id)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        logger.error(f"AI Mentor service error: {e}")
+        raise HTTPException(502, "The AI Mentor service is currently unavailable. Please try again.")
 
 
 @app.post("/mentor/materials")

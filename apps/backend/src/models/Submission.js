@@ -6,6 +6,8 @@ const submissionSchema = new mongoose.Schema(
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     text: { type: String, default: "" },
     fileUrl: { type: String, default: "" },
+    filePublicId: { type: String, default: "" },
+    fileResourceType: { type: String, default: "" },
     submittedAt: { type: Date, default: Date.now },
     isLate: { type: Boolean, default: false },
     marks: { type: Number, default: null },

@@ -21,6 +21,7 @@ socket.on("connect", () => {
             return;
         }
 
+
         socket.emit(
             "mic-status",
             { classroomId, enabled: false },
@@ -36,6 +37,7 @@ socket.on("connect", () => {
                 console.log("Camera status:", response);
             }
         );
+
 
         socket.emit("raise-hand", { classroomId }, (result) => {
             console.log("Raise hand:", result);

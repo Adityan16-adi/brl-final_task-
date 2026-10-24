@@ -6,6 +6,10 @@ module.exports = (io) => {
     // Firebase authentication
     io.use(async (socket, next) => {
         try {
+            if (!auth) {
+                return next(new Error("Authentication service unavailable. Firebase credentials not configured."));
+            }
+
             const token = socket.handshake.auth?.token;
 
             if (!token) {
@@ -159,6 +163,7 @@ module.exports = (io) => {
             });
         });
 
+
         // Microphone status
         socket.on("mic-status", (data, callback) => {
             if (
@@ -226,6 +231,7 @@ module.exports = (io) => {
                 message: "Camera status updated"
             });
         });
+
 
         // Disconnect
         socket.on("disconnect", () => {
