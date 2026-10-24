@@ -1,7 +1,6 @@
-﻿class AppBranding {
+class AppBranding {
   AppBranding._();
 
-  // Temporary product name; update it here when the final name is chosen.
-  static const String appName = 'Mobile';
-  static const String tagline = 'Your learning space';
+  static const String appName = 'Unified Learn';
+  static const String tagline = 'Virtual Classroom & Learning Hub';
 }

@@ -1,6 +1,7 @@
 
 const Material = require("../models/Material");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
+const { deleteFromCloudinary } = uploadToCloudinary;
 
 const detectType = (mimetype = "") => {
     if (mimetype.startsWith("image/")) return "image";
@@ -10,6 +11,9 @@ const detectType = (mimetype = "") => {
 
 // POST /api/materials
 exports.createMaterial = async (req, res) => {
+    let newlyUploadedPublicId = null;
+    let newlyUploadedResourceType = null;
+
     try {
         const {
             classId,
@@ -51,6 +55,8 @@ exports.createMaterial = async (req, res) => {
             fileUrl = result.secure_url;
             filePublicId = result.public_id;
             fileResourceType = result.resource_type;
+            newlyUploadedPublicId = result.public_id;
+            newlyUploadedResourceType = result.resource_type;
 
             if (type === "image") {
                 generatedThumbnail = result.secure_url;
@@ -76,6 +82,15 @@ exports.createMaterial = async (req, res) => {
             data: material,
         });
     } catch (error) {
+        if (newlyUploadedPublicId) {
+            await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
+        }
+        if (error.message && error.message.includes("Cloud storage is not configured")) {
+            return res.status(503).json({
+                success: false,
+                message: "Storage service not configured. Unable to upload file.",
+            });
+        }
         console.error("Create material error:", error);
         return res.status(500).json({
             success: false,
@@ -130,13 +145,20 @@ exports.getMaterialById = async (req, res) => {
 // DELETE /api/materials/:id
 exports.deleteMaterial = async (req, res) => {
     try {
-        const material = await Material.findByIdAndDelete(req.params.id);
+        const material = await Material.findById(req.params.id);
 
         if (!material) {
             return res.status(404).json({
                 success: false,
                 message: "Material not found",
             });
+        }
+
+        await Material.findByIdAndDelete(req.params.id);
+
+        // Safe cleanup: Only delete from Cloudinary AFTER DB deletion succeeds
+        if (material.filePublicId) {
+            await deleteFromCloudinary(material.filePublicId, material.fileResourceType);
         }
 
         return res.json({

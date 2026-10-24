@@ -1,0 +1,1641 @@
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\server.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\server.js"
+index f754bd6..9289606 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\server.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\server.js"	
+@@ -2,6 +2,7 @@
+ const express = require("express");
+ const cors = require("cors");
+ const http = require("http");
++const mongoose = require("mongoose");
+ const { Server } = require("socket.io");
+ 
+ require("dotenv").config();
+@@ -35,6 +36,18 @@ app.use("/api/materials", require("./src/routes/materialRoutes"));
+ app.use("/api/calendar", require("./src/routes/calendarRoutes"));
+ app.use("/api/notifications", require("./src/routes/notificationRoutes"));
+ 
++app.get("/api/health", (req, res) => {
++    const isDbConnected = mongoose.connection.readyState === 1;
++    const status = isDbConnected ? "ok" : "degraded";
++    const statusCode = isDbConnected ? 200 : 503;
++    res.status(statusCode).json({
++        status,
++        database: isDbConnected ? "connected" : "disconnected",
++        uptime: process.uptime(),
++        timestamp: new Date().toISOString(),
++    });
++});
++
+ app.get("/", (req, res) => {
+     res.send("Smart Classroom Backend is running!");
+ });
+@@ -47,6 +60,15 @@ app.get("/protected", verifyToken, (req, res) => {
+     });
+ });
+ 
++// Express error-handling middleware (catches Multer filter errors, etc.)
++app.use((err, req, res, next) => {
++    const statusCode = err.status || err.statusCode || 400;
++    res.status(statusCode).json({
++        success: false,
++        message: err.message || "An unexpected error occurred",
++    });
++});
++
+ const PORT = process.env.PORT || 5000;
+ 
+ const startServer = async () => {
+@@ -58,4 +80,8 @@ const startServer = async () => {
+     });
+ };
+ 
+-startServer();
++if (require.main === module) {
++    startServer();
++}
++
++module.exports = { app, server, startServer };
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\config\\firebase.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\config\\firebase.js"
+index 83449a7..1e289a2 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\config\\firebase.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\config\\firebase.js"	
+@@ -1,3 +1,5 @@
++const fs = require("fs");
++const path = require("path");
+ const {
+     initializeApp,
+     cert,
+@@ -8,17 +10,83 @@ const {
+     getAuth
+ } = require("firebase-admin/auth");
+ 
+-const serviceAccount = require("./firebase-service-account.json");
++let app = null;
++let auth = null;
+ 
+-const app = getApps().length
+-    ? getApps()[0]
+-    : initializeApp({
+-        credential: cert(serviceAccount)
+-    });
++const initFirebase = () => {
++    // If already initialized in this process, reuse
++    if (getApps().length > 0) {
++        app = getApps()[0];
++        try {
++            auth = getAuth(app);
++        } catch {
++            auth = null;
++        }
++        return { app, auth };
++    }
+ 
+-console.log("Firebase Admin connected successfully!");
++    const serviceAccountFile = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(__dirname, "firebase-service-account.json");
++
++    try {
++        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
++            let creds;
++            const raw = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
++            try {
++                creds = JSON.parse(raw);
++            } catch {
++                try {
++                    creds = JSON.parse(Buffer.from(raw, "base64").toString("utf-8"));
++                } catch {
++                    console.error("Firebase Admin initialization failed: Malformed JSON in FIREBASE_SERVICE_ACCOUNT.");
++                    return { app: null, auth: null };
++                }
++            }
++
++            if (!creds || typeof creds !== "object" || !creds.project_id || !creds.client_email || !creds.private_key) {
++                console.error("Firebase Admin initialization failed: FIREBASE_SERVICE_ACCOUNT is missing required fields (project_id, client_email, private_key).");
++                return { app: null, auth: null };
++            }
++
++            app = initializeApp({ credential: cert(creds) });
++            auth = getAuth(app);
++            console.log(`Firebase Admin initialized successfully from environment for project: ${creds.project_id}`);
++            return { app, auth };
++        }
++
++        if (fs.existsSync(serviceAccountFile)) {
++            let creds;
++            try {
++                creds = JSON.parse(fs.readFileSync(serviceAccountFile, "utf-8"));
++            } catch {
++                console.error(`Firebase Admin initialization failed: Malformed JSON in ${serviceAccountFile}.`);
++                return { app: null, auth: null };
++            }
++
++            if (!creds || typeof creds !== "object" || !creds.project_id || !creds.client_email || !creds.private_key) {
++                console.error("Firebase Admin initialization failed: Credentials file is missing required fields (project_id, client_email, private_key).");
++                return { app: null, auth: null };
++            }
++
++            app = initializeApp({ credential: cert(creds) });
++            auth = getAuth(app);
++            console.log(`Firebase Admin initialized successfully from file for project: ${creds.project_id}`);
++            return { app, auth };
++        }
++
++        console.warn("Firebase credentials not found. Authentication features will fail closed with 503 Service Unavailable.");
++    } catch (error) {
++        console.error("Firebase Admin initialization error:", error.message || "Unknown error");
++    }
++
++    return { app: null, auth: null };
++};
++
++const result = initFirebase();
++app = result.app;
++auth = result.auth;
+ 
+ module.exports = {
+     app,
+-    auth: getAuth(app)
++    auth,
++    initFirebase,
+ };
+\ No newline at end of file
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\middleware\\authMiddleware.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\middleware\\authMiddleware.js"
+index d077d9e..35039ee 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\middleware\\authMiddleware.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\middleware\\authMiddleware.js"	
+@@ -2,6 +2,13 @@ const {auth} = require("../../config/firebase");
+ 
+ const verifyToken = async (req, res, next) => {
+     try {
++        if (!auth) {
++            return res.status(503).json({
++                success: false,
++                message: "Authentication service unavailable. Firebase credentials not configured."
++            });
++        }
++
+         const authHeader = req.headers.authorization;
+ 
+         if (!authHeader || !authHeader.startsWith("Bearer ")) {
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\middleware\\upload.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\middleware\\upload.js"
+index 14a89a7..c70ce5b 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\middleware\\upload.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\middleware\\upload.js"	
+@@ -8,15 +8,19 @@ const allowedTypes = [
+   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+   'image/jpeg',
+   'image/png',
++  'image/webp',
+   'text/plain',
++  'video/mp4',
++  'video/webm',
++  'video/quicktime',
+ ];
+ 
+ const upload = multer({
+   storage: multer.memoryStorage(),            // keep file in RAM, not on disk
+-  limits: { fileSize: 10 * 1024 * 1024 },     // 10 MB max
++  limits: { fileSize: 25 * 1024 * 1024 },     // 25 MB max
+   fileFilter: (req, file, cb) => {
+     if (allowedTypes.includes(file.mimetype)) cb(null, true);
+-    else cb(new Error('File type not allowed'));
++    else cb(new Error('File type not allowed. Supported formats: PDF, DOC, DOCX, PPT, PPTX, JPG, PNG, WEBP, TXT, MP4, WEBM, MOV.'));
+   },
+ });
+ 
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\utils\\uploadToCloudinary.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\utils\\uploadToCloudinary.js"
+index 64d4167..6eee969 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\utils\\uploadToCloudinary.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\utils\\uploadToCloudinary.js"	
+@@ -1,7 +1,23 @@
+ const cloudinary = require('../../config/cloudinary');
+ 
++const isCloudinaryConfigured = () => {
++  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
++  return !!(
++    CLOUDINARY_CLOUD_NAME &&
++    CLOUDINARY_API_KEY &&
++    CLOUDINARY_API_SECRET &&
++    CLOUDINARY_API_KEY !== 'your_cloudinary_api_key'
++  );
++};
++
+ const uploadToCloudinary = (buffer, folder) =>
+   new Promise((resolve, reject) => {
++    if (!buffer || !Buffer.isBuffer(buffer) || buffer.length === 0) {
++      return reject(new Error('Upload failed: Empty or invalid file buffer provided'));
++    }
++    if (!isCloudinaryConfigured()) {
++      return reject(new Error('Cloud storage is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.'));
++    }
+     const stream = cloudinary.uploader.upload_stream(
+       { folder, resource_type: 'auto' },
+       (err, result) => (err ? reject(err) : resolve(result))
+@@ -9,4 +25,22 @@ const uploadToCloudinary = (buffer, folder) =>
+     stream.end(buffer);
+   });
+ 
++const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
++  if (!publicId || !isCloudinaryConfigured()) return false;
++  try {
++    const res = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
++    if (res?.result === 'ok') {
++      return true;
++    }
++    console.warn(`Cloudinary deletion returned non-ok result for ${publicId}:`, res);
++    return false;
++  } catch (err) {
++    console.warn(`Failed to delete asset ${publicId} from Cloudinary:`, err.message);
++    return false;
++  }
++};
++
+ module.exports = uploadToCloudinary;
++module.exports.uploadToCloudinary = uploadToCloudinary;
++module.exports.isCloudinaryConfigured = isCloudinaryConfigured;
++module.exports.deleteFromCloudinary = deleteFromCloudinary;
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\controllers\\assignmentController.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\controllers\\assignmentController.js"
+index 500cf88..5d3e8c1 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\controllers\\assignmentController.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\controllers\\assignmentController.js"	
+@@ -1,9 +1,13 @@
+ 
+ const uploadToCloudinary = require("../utils/uploadToCloudinary");
++const { deleteFromCloudinary } = uploadToCloudinary;
+ const Assignment = require("../models/Assignment");
+ 
+ // POST /api/assignments — create an assignment
+ exports.createAssignment = async (req, res) => {
++  let newlyUploadedPublicId = null;
++  let newlyUploadedResourceType = null;
++
+   try {
+     const {
+       classId,
+@@ -34,6 +38,8 @@ exports.createAssignment = async (req, res) => {
+         filePublicId: result.public_id,
+         fileResourceType: result.resource_type,
+       };
++      newlyUploadedPublicId = result.public_id;
++      newlyUploadedResourceType = result.resource_type;
+     }
+ 
+     const assignment = await Assignment.create({
+@@ -52,6 +58,15 @@ exports.createAssignment = async (req, res) => {
+       data: assignment,
+     });
+   } catch (error) {
++    if (newlyUploadedPublicId) {
++      await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
++    }
++    if (error.message && error.message.includes("Cloud storage is not configured")) {
++      return res.status(503).json({
++        success: false,
++        message: "Storage service not configured. Unable to upload file.",
++      });
++    }
+     console.error("Create assignment error:", error);
+     return res.status(500).json({
+       success: false,
+@@ -101,6 +116,9 @@ exports.getAssignmentById = async (req, res) => {
+ 
+ // PUT /api/assignments/:id
+ exports.updateAssignment = async (req, res) => {
++  let newlyUploadedPublicId = null;
++  let newlyUploadedResourceType = null;
++
+   try {
+     const { title, description, dueDate, maxMarks } = req.body || {};
+     const updates = {};
+@@ -110,6 +128,14 @@ exports.updateAssignment = async (req, res) => {
+     if (dueDate !== undefined) updates.dueDate = dueDate;
+     if (maxMarks !== undefined) updates.maxMarks = maxMarks;
+ 
++    const existing = await Assignment.findById(req.params.id);
++    if (!existing) {
++      return res.status(404).json({
++        success: false,
++        message: "Assignment not found",
++      });
++    }
++
+     if (req.file) {
+       const result = await uploadToCloudinary(
+         req.file.buffer,
+@@ -119,6 +145,8 @@ exports.updateAssignment = async (req, res) => {
+       updates.fileUrl = result.secure_url;
+       updates.filePublicId = result.public_id;
+       updates.fileResourceType = result.resource_type;
++      newlyUploadedPublicId = result.public_id;
++      newlyUploadedResourceType = result.resource_type;
+     }
+ 
+     const assignment = await Assignment.findByIdAndUpdate(
+@@ -127,11 +155,9 @@ exports.updateAssignment = async (req, res) => {
+       { new: true, runValidators: true }
+     );
+ 
+-    if (!assignment) {
+-      return res.status(404).json({
+-        success: false,
+-        message: "Assignment not found",
+-      });
++    // Safe cleanup: Only delete old asset AFTER the database update has succeeded
++    if (req.file && existing.filePublicId && existing.filePublicId !== updates.filePublicId) {
++      await deleteFromCloudinary(existing.filePublicId, existing.fileResourceType);
+     }
+ 
+     return res.json({
+@@ -140,6 +166,15 @@ exports.updateAssignment = async (req, res) => {
+       data: assignment,
+     });
+   } catch (error) {
++    if (newlyUploadedPublicId) {
++      await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
++    }
++    if (error.message && error.message.includes("Cloud storage is not configured")) {
++      return res.status(503).json({
++        success: false,
++        message: "Storage service not configured. Unable to upload file.",
++      });
++    }
+     console.error("Update assignment error:", error);
+     return res.status(500).json({
+       success: false,
+@@ -151,7 +186,7 @@ exports.updateAssignment = async (req, res) => {
+ // DELETE /api/assignments/:id
+ exports.deleteAssignment = async (req, res) => {
+   try {
+-    const assignment = await Assignment.findByIdAndDelete(req.params.id);
++    const assignment = await Assignment.findById(req.params.id);
+ 
+     if (!assignment) {
+       return res.status(404).json({
+@@ -160,6 +195,13 @@ exports.deleteAssignment = async (req, res) => {
+       });
+     }
+ 
++    await Assignment.findByIdAndDelete(req.params.id);
++
++    // Safe cleanup: Only delete from Cloudinary AFTER DB record deletion succeeds
++    if (assignment.filePublicId) {
++      await deleteFromCloudinary(assignment.filePublicId, assignment.fileResourceType);
++    }
++
+     return res.json({
+       success: true,
+       message: "Assignment deleted",
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\controllers\\materialController.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\controllers\\materialController.js"
+index aeb3c30..a7e6105 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\controllers\\materialController.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\controllers\\materialController.js"	
+@@ -1,6 +1,7 @@
+ 
+ const Material = require("../models/Material");
+ const uploadToCloudinary = require("../utils/uploadToCloudinary");
++const { deleteFromCloudinary } = uploadToCloudinary;
+ 
+ const detectType = (mimetype = "") => {
+     if (mimetype.startsWith("image/")) return "image";
+@@ -10,6 +11,9 @@ const detectType = (mimetype = "") => {
+ 
+ // POST /api/materials
+ exports.createMaterial = async (req, res) => {
++    let newlyUploadedPublicId = null;
++    let newlyUploadedResourceType = null;
++
+     try {
+         const {
+             classId,
+@@ -51,6 +55,8 @@ exports.createMaterial = async (req, res) => {
+             fileUrl = result.secure_url;
+             filePublicId = result.public_id;
+             fileResourceType = result.resource_type;
++            newlyUploadedPublicId = result.public_id;
++            newlyUploadedResourceType = result.resource_type;
+ 
+             if (type === "image") {
+                 generatedThumbnail = result.secure_url;
+@@ -76,6 +82,15 @@ exports.createMaterial = async (req, res) => {
+             data: material,
+         });
+     } catch (error) {
++        if (newlyUploadedPublicId) {
++            await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
++        }
++        if (error.message && error.message.includes("Cloud storage is not configured")) {
++            return res.status(503).json({
++                success: false,
++                message: "Storage service not configured. Unable to upload file.",
++            });
++        }
+         console.error("Create material error:", error);
+         return res.status(500).json({
+             success: false,
+@@ -130,7 +145,7 @@ exports.getMaterialById = async (req, res) => {
+ // DELETE /api/materials/:id
+ exports.deleteMaterial = async (req, res) => {
+     try {
+-        const material = await Material.findByIdAndDelete(req.params.id);
++        const material = await Material.findById(req.params.id);
+ 
+         if (!material) {
+             return res.status(404).json({
+@@ -139,6 +154,13 @@ exports.deleteMaterial = async (req, res) => {
+             });
+         }
+ 
++        await Material.findByIdAndDelete(req.params.id);
++
++        // Safe cleanup: Only delete from Cloudinary AFTER DB deletion succeeds
++        if (material.filePublicId) {
++            await deleteFromCloudinary(material.filePublicId, material.fileResourceType);
++        }
++
+         return res.json({
+             success: true,
+             message: "Material deleted",
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\controllers\\submissionController.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\controllers\\submissionController.js"
+index e4ad691..c51ca16 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\controllers\\submissionController.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\controllers\\submissionController.js"	
+@@ -3,9 +3,13 @@ const { notifyUser } = require("../utils/notify");
+ const Assignment = require("../models/Assignment");
+ const Submission = require("../models/Submission");
+ const uploadToCloudinary = require("../utils/uploadToCloudinary");
++const { deleteFromCloudinary } = uploadToCloudinary;
+ 
+ // POST /api/submissions/assignment/:assignmentId
+ exports.submitAssignment = async (req, res) => {
++    let newlyUploadedPublicId = null;
++    let newlyUploadedResourceType = null;
++
+     try {
+         const { studentId, text } = req.body || {};
+ 
+@@ -25,6 +29,11 @@ exports.submitAssignment = async (req, res) => {
+             });
+         }
+ 
++        const previous = await Submission.findOne({
++            assignmentId: assignment._id,
++            studentId,
++        });
++
+         let fileUrl = req.body.fileUrl || "";
+         let filePublicId = "";
+         let fileResourceType = "";
+@@ -38,17 +47,14 @@ exports.submitAssignment = async (req, res) => {
+             fileUrl = result.secure_url;
+             filePublicId = result.public_id;
+             fileResourceType = result.resource_type;
++            newlyUploadedPublicId = result.public_id;
++            newlyUploadedResourceType = result.resource_type;
+         }
+ 
+         const now = new Date();
+         const isLate = now > assignment.dueDate;
+ 
+         // Preserve existing file metadata if this is a text-only resubmission.
+-        const previous = await Submission.findOne({
+-            assignmentId: assignment._id,
+-            studentId,
+-        });
+-
+         if (!req.file && previous) {
+             filePublicId = previous.filePublicId || "";
+             fileResourceType = previous.fileResourceType || "";
+@@ -76,12 +82,26 @@ exports.submitAssignment = async (req, res) => {
+             }
+         );
+ 
++        // Safe cleanup: Only delete old asset AFTER the database update has succeeded
++        if (req.file && previous?.filePublicId && previous.filePublicId !== filePublicId) {
++            await deleteFromCloudinary(previous.filePublicId, previous.fileResourceType);
++        }
++
+         return res.status(201).json({
+             success: true,
+             message: "Submitted",
+             data: submission,
+         });
+     } catch (error) {
++        if (newlyUploadedPublicId) {
++            await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
++        }
++        if (error.message && error.message.includes("Cloud storage is not configured")) {
++            return res.status(503).json({
++                success: false,
++                message: "Storage service not configured. Unable to upload file.",
++            });
++        }
+         console.error("Submit assignment error:", error);
+         return res.status(500).json({
+             success: false,
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\sockets\\handRaise.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\sockets\\handRaise.js"
+index 28dadf7..89b74a5 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\src\\sockets\\handRaise.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\src\\sockets\\handRaise.js"	
+@@ -6,6 +6,10 @@ module.exports = (io) => {
+     // Firebase authentication
+     io.use(async (socket, next) => {
+         try {
++            if (!auth) {
++                return next(new Error("Authentication service unavailable. Firebase credentials not configured."));
++            }
++
+             const token = socket.handshake.auth?.token;
+ 
+             if (!token) {
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\.env.example" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\.env.example"
+index 7b38757..f4df478 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\.env.example"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\.env.example"	
+@@ -1,2 +1,5 @@
+-PORT=5000
++PORT=5001
+ MONGO_URI=mongodb://127.0.0.1:27017/unified_learning
++# CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
++# CLOUDINARY_API_KEY=your_cloudinary_api_key
++# CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\server.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\server.js"
+index 237caad..f542b1d 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\server.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\server.js"	
+@@ -1,9 +1,9 @@
+ const express = require("express");
+ const cors = require("cors");
+ const path = require("path");
++const mongoose = require("mongoose");
+ require("dotenv").config();
+ const connectDB = require("./config/db");
+-connectDB();
+ 
+ const app = express();
+ 
+@@ -18,10 +18,33 @@ app.use("/api/materials", require("./routes/materialRoutes"));
+ app.use("/api/calendar", require("./routes/calendarRoutes"));
+ 
+ app.get("/api/health", (req, res) => {
+-  res.json({ success: true, message: "Backend is running" });
++  const isDbConnected = mongoose.connection.readyState === 1;
++  const status = isDbConnected ? "ok" : "degraded";
++  const statusCode = isDbConnected ? 200 : 503;
++  res.status(statusCode).json({
++    status,
++    database: isDbConnected ? "connected" : "disconnected",
++    uptime: process.uptime(),
++    timestamp: new Date().toISOString(),
++  });
+ });
+ 
+-const PORT = process.env.PORT || 5000;
+-app.listen(PORT, () => {
+-  console.log(`Server running on port ${PORT}`);
+-});
+\ No newline at end of file
++// Express error-handling middleware (catches Multer filter errors, etc.)
++app.use((err, req, res, next) => {
++  const statusCode = err.status || err.statusCode || 400;
++  res.status(statusCode).json({
++    success: false,
++    message: err.message || "An unexpected error occurred",
++  });
++});
++
++const PORT = process.env.PORT || 5001;
++
++if (require.main === module) {
++  connectDB();
++  app.listen(PORT, () => {
++    console.log(`Server running on port ${PORT}`);
++  });
++}
++
++module.exports = { app, connectDB };
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\controllers\\assignmentController.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\controllers\\assignmentController.js"
+index adc22a1..e372b48 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\controllers\\assignmentController.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\controllers\\assignmentController.js"	
+@@ -1,8 +1,12 @@
+ const uploadToCloudinary = require('../utils/uploadToCloudinary');
++const { deleteFromCloudinary } = uploadToCloudinary;
+ const Assignment = require("../models/Assignment");
+ 
+ // POST /api/assignments  -> create a new assignment
+ exports.createAssignment = async (req, res) => {
++  let newlyUploadedPublicId = null;
++  let newlyUploadedResourceType = null;
++
+   try {
+     const { classId, title, description, dueDate, maxMarks, createdBy } = req.body;
+ 
+@@ -12,28 +16,39 @@ exports.createAssignment = async (req, res) => {
+         .json({ success: false, message: "classId, title and dueDate are required" });
+     }
+ 
+-let fileData = {};
+-if (req.file) {
+-  const result = await uploadToCloudinary(req.file.buffer, "assignments");
+-  fileData = {
+-    fileUrl: result.secure_url,
+-    filePublicId: result.public_id,
+-    fileResourceType: result.resource_type,
+-  };
+-}
++    let fileData = {};
++    if (req.file) {
++      const result = await uploadToCloudinary(req.file.buffer, "assignments");
++      fileData = {
++        fileUrl: result.secure_url,
++        filePublicId: result.public_id,
++        fileResourceType: result.resource_type,
++      };
++      newlyUploadedPublicId = result.public_id;
++      newlyUploadedResourceType = result.resource_type;
++    }
+ 
+-const assignment = await Assignment.create({
+-  classId,
+-  title,
+-  description,
+-  dueDate,
+-  maxMarks,
+-  createdBy,
+-  ...fileData
+-});
++    const assignment = await Assignment.create({
++      classId,
++      title,
++      description,
++      dueDate,
++      maxMarks,
++      createdBy,
++      ...fileData
++    });
+ 
+     res.status(201).json({ success: true, message: "Assignment created", data: assignment });
+   } catch (error) {
++    if (newlyUploadedPublicId) {
++      await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
++    }
++    if (error.message && error.message.includes("Cloud storage is not configured")) {
++      return res.status(503).json({
++        success: false,
++        message: "Storage service not configured. Unable to upload file.",
++      });
++    }
+     res.status(500).json({ success: false, message: error.message });
+   }
+ };
+@@ -49,6 +64,7 @@ exports.getAssignmentsByClass = async (req, res) => {
+     res.status(500).json({ success: false, message: error.message });
+   }
+ };
++
+ // GET /api/assignments/:id
+ exports.getAssignmentById = async (req, res) => {
+   try {
+@@ -83,12 +99,20 @@ exports.updateAssignment = async (req, res) => {
+ // DELETE /api/assignments/:id
+ exports.deleteAssignment = async (req, res) => {
+   try {
+-    const assignment = await Assignment.findByIdAndDelete(req.params.id);
++    const assignment = await Assignment.findById(req.params.id);
+     if (!assignment) {
+       return res.status(404).json({ success: false, message: "Assignment not found" });
+     }
++
++    await Assignment.findByIdAndDelete(req.params.id);
++
++    // Safe cleanup: Only delete from Cloudinary AFTER DB deletion succeeds
++    if (assignment.filePublicId) {
++      await deleteFromCloudinary(assignment.filePublicId, assignment.fileResourceType);
++    }
++
+     res.json({ success: true, message: "Assignment deleted" });
+   } catch (error) {
+     res.status(500).json({ success: false, message: error.message });
+   }
+-};
+\ No newline at end of file
++};
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\controllers\\materialController.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\controllers\\materialController.js"
+index 1049671..cb3d195 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\controllers\\materialController.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\controllers\\materialController.js"	
+@@ -1,4 +1,6 @@
+ const Material = require("../models/Material");
++const uploadToCloudinary = require("../utils/uploadToCloudinary");
++const { deleteFromCloudinary } = uploadToCloudinary;
+ 
+ const detectType = (mimetype = "") => {
+   if (mimetype.startsWith("image/")) return "image";
+@@ -8,6 +10,9 @@ const detectType = (mimetype = "") => {
+ 
+ // POST /api/materials  (form-data: classId, uploadedBy, title, description, file, link)
+ exports.createMaterial = async (req, res) => {
++  let newlyUploadedPublicId = null;
++  let newlyUploadedResourceType = null;
++
+   try {
+     const { classId, uploadedBy, title, description, link, thumbnailUrl } = req.body || {};
+     if (!classId || !title || !uploadedBy) {
+@@ -19,20 +24,52 @@ exports.createMaterial = async (req, res) => {
+       return res.status(400).json({ success: false, message: "Attach a file or give a link" });
+     }
+ 
+-    const type = req.file ? detectType(req.file.mimetype) : "link";
++    let type = "link";
++    let fileUrl = "";
++    let filePublicId = "";
++    let fileResourceType = "";
++    let generatedThumbnail = thumbnailUrl || "";
++
++    if (req.file) {
++      type = detectType(req.file.mimetype);
++      const result = await uploadToCloudinary(
++        req.file.buffer,
++        "learning-materials"
++      );
++      fileUrl = result.secure_url;
++      filePublicId = result.public_id;
++      fileResourceType = result.resource_type;
++      newlyUploadedPublicId = result.public_id;
++      newlyUploadedResourceType = result.resource_type;
++      if (type === "image") {
++        generatedThumbnail = result.secure_url;
++      }
++    }
++
+     const material = await Material.create({
+       classId,
+       uploadedBy,
+       title,
+       description,
+       type,
+-      fileUrl: req.file ? `/uploads/${req.file.filename}` : "",
+-      thumbnailUrl: type === "image" && req.file ? `/uploads/${req.file.filename}` : thumbnailUrl || "",
++      fileUrl,
++      filePublicId,
++      fileResourceType,
++      thumbnailUrl: generatedThumbnail,
+       link,
+     });
+ 
+     res.status(201).json({ success: true, message: "Material added", data: material });
+   } catch (error) {
++    if (newlyUploadedPublicId) {
++      await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
++    }
++    if (error.message && error.message.includes("Cloud storage is not configured")) {
++      return res.status(503).json({
++        success: false,
++        message: "Storage service not configured. Unable to upload file.",
++      });
++    }
+     res.status(500).json({ success: false, message: error.message });
+   }
+ };
+@@ -63,10 +100,18 @@ exports.getMaterialById = async (req, res) => {
+ // DELETE /api/materials/:id
+ exports.deleteMaterial = async (req, res) => {
+   try {
+-    const material = await Material.findByIdAndDelete(req.params.id);
++    const material = await Material.findById(req.params.id);
+     if (!material) return res.status(404).json({ success: false, message: "Material not found" });
++
++    await Material.findByIdAndDelete(req.params.id);
++
++    // Safe cleanup: Only delete from Cloudinary AFTER DB deletion succeeds
++    if (material.filePublicId) {
++      await deleteFromCloudinary(material.filePublicId, material.fileResourceType);
++    }
++
+     res.json({ success: true, message: "Material deleted" });
+   } catch (error) {
+     res.status(500).json({ success: false, message: error.message });
+   }
+-};
+\ No newline at end of file
++};
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\controllers\\submissionController.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\controllers\\submissionController.js"
+index c48685a..50ccc68 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\controllers\\submissionController.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\controllers\\submissionController.js"	
+@@ -1,36 +1,92 @@
+ const { notifyUser } = require("../utils/notify");
++const uploadToCloudinary = require("../utils/uploadToCloudinary");
++const { deleteFromCloudinary } = uploadToCloudinary;
+ 
+ const Assignment = require("../models/Assignment");
+ const Submission = require("../models/Submission");
+ 
+ // POST /api/submissions/assignment/:assignmentId
+ exports.submitAssignment = async (req, res) => {
++  let newlyUploadedPublicId = null;
++  let newlyUploadedResourceType = null;
++
+   try {
+     const { studentId, text } = req.body || {};
+-const fileUrl = req.file ? `/uploads/${req.file.filename}` : req.body.fileUrl;
+-if (!studentId || (!text && !fileUrl)) {
+-      return res
+-        .status(400)
+-        .json({ success: false, message: "studentId and text or fileUrl are required" });
+-    }
+ 
+     const assignment = await Assignment.findById(req.params.assignmentId);
+     if (!assignment) {
+       return res.status(404).json({ success: false, message: "Assignment not found" });
+     }
+ 
++    const previous = await Submission.findOne({
++      assignmentId: assignment._id,
++      studentId,
++    });
++
++    let fileUrl = req.body?.fileUrl || "";
++    let filePublicId = "";
++    let fileResourceType = "";
++
++    if (req.file) {
++      const result = await uploadToCloudinary(
++        req.file.buffer,
++        "assignment-submissions"
++      );
++      fileUrl = result.secure_url;
++      filePublicId = result.public_id;
++      fileResourceType = result.resource_type;
++      newlyUploadedPublicId = result.public_id;
++      newlyUploadedResourceType = result.resource_type;
++    }
++
++    if (!req.file && previous) {
++      filePublicId = previous.filePublicId || "";
++      fileResourceType = previous.fileResourceType || "";
++      if (!req.body?.fileUrl) {
++        fileUrl = previous.fileUrl || "";
++      }
++    }
++
++    if (!studentId || (!text?.trim() && !fileUrl)) {
++      return res
++        .status(400)
++        .json({ success: false, message: "studentId and text or fileUrl are required" });
++    }
++
+     const now = new Date();
+     const isLate = now > assignment.dueDate;
+ 
+     // create, or resubmit if the student already submitted
+     const submission = await Submission.findOneAndUpdate(
+       { assignmentId: assignment._id, studentId },
+-      { text, fileUrl, submittedAt: now, isLate, status: "submitted" },
++      {
++        text: text || "",
++        fileUrl,
++        filePublicId,
++        fileResourceType,
++        submittedAt: now,
++        isLate,
++        status: "submitted",
++      },
+       { new: true, upsert: true, setDefaultsOnInsert: true }
+     );
+ 
++    // Safe cleanup: Only delete old asset AFTER the database update has succeeded
++    if (req.file && previous?.filePublicId && previous.filePublicId !== filePublicId) {
++      await deleteFromCloudinary(previous.filePublicId, previous.fileResourceType);
++    }
++
+     res.status(201).json({ success: true, message: "Submitted", data: submission });
+   } catch (error) {
++    if (newlyUploadedPublicId) {
++      await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
++    }
++    if (error.message && error.message.includes("Cloud storage is not configured")) {
++      return res.status(503).json({
++        success: false,
++        message: "Storage service not configured. Unable to upload file.",
++      });
++    }
+     res.status(500).json({ success: false, message: error.message });
+   }
+ };
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\middleware\\upload.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\middleware\\upload.js"
+index 14a89a7..c70ce5b 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\middleware\\upload.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\middleware\\upload.js"	
+@@ -8,15 +8,19 @@ const allowedTypes = [
+   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+   'image/jpeg',
+   'image/png',
++  'image/webp',
+   'text/plain',
++  'video/mp4',
++  'video/webm',
++  'video/quicktime',
+ ];
+ 
+ const upload = multer({
+   storage: multer.memoryStorage(),            // keep file in RAM, not on disk
+-  limits: { fileSize: 10 * 1024 * 1024 },     // 10 MB max
++  limits: { fileSize: 25 * 1024 * 1024 },     // 25 MB max
+   fileFilter: (req, file, cb) => {
+     if (allowedTypes.includes(file.mimetype)) cb(null, true);
+-    else cb(new Error('File type not allowed'));
++    else cb(new Error('File type not allowed. Supported formats: PDF, DOC, DOCX, PPT, PPTX, JPG, PNG, WEBP, TXT, MP4, WEBM, MOV.'));
+   },
+ });
+ 
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\models\\Material.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\models\\Material.js"
+index 014f18a..2421d47 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\models\\Material.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\models\\Material.js"	
+@@ -8,6 +8,8 @@ const materialSchema = new mongoose.Schema(
+     description: { type: String, default: "" },
+     type: { type: String, enum: ["image", "note", "video", "link"], default: "note" },
+     fileUrl: { type: String, default: "" },
++    filePublicId: { type: String, default: "" },
++    fileResourceType: { type: String, default: "" },
+     thumbnailUrl: { type: String, default: "" },
+     link: { type: String, default: "" },
+   },
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\models\\Submission.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\models\\Submission.js"
+index 4f74709..d6d5c62 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\models\\Submission.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\models\\Submission.js"	
+@@ -6,6 +6,8 @@ const submissionSchema = new mongoose.Schema(
+     studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+     text: { type: String, default: "" },
+     fileUrl: { type: String, default: "" },
++    filePublicId: { type: String, default: "" },
++    fileResourceType: { type: String, default: "" },
+     submittedAt: { type: Date, default: Date.now },
+     isLate: { type: Boolean, default: false },
+     marks: { type: Number, default: null },
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\utils\\uploadToCloudinary.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\utils\\uploadToCloudinary.js"
+index c62285d..31ded76 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\apps\\backend\\src\\utils\\uploadToCloudinary.js"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\apps\\backend\\src\\utils\\uploadToCloudinary.js"	
+@@ -1,7 +1,23 @@
+-const cloudinary = require("../../config/cloudinary");
++const cloudinary = require("../config/cloudinary");
++
++const isCloudinaryConfigured = () => {
++  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
++  return !!(
++    CLOUDINARY_CLOUD_NAME &&
++    CLOUDINARY_API_KEY &&
++    CLOUDINARY_API_SECRET &&
++    CLOUDINARY_API_KEY !== 'your_cloudinary_api_key'
++  );
++};
+ 
+ const uploadToCloudinary = (buffer, folder) =>
+   new Promise((resolve, reject) => {
++    if (!buffer || !Buffer.isBuffer(buffer) || buffer.length === 0) {
++      return reject(new Error('Upload failed: Empty or invalid file buffer provided'));
++    }
++    if (!isCloudinaryConfigured()) {
++      return reject(new Error('Cloud storage is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.'));
++    }
+     const stream = cloudinary.uploader.upload_stream(
+       { folder, resource_type: 'auto' },
+       (err, result) => (err ? reject(err) : resolve(result))
+@@ -9,4 +25,22 @@ const uploadToCloudinary = (buffer, folder) =>
+     stream.end(buffer);
+   });
+ 
+-module.exports = uploadToCloudinary;
+\ No newline at end of file
++const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
++  if (!publicId || !isCloudinaryConfigured()) return false;
++  try {
++    const res = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
++    if (res?.result === 'ok') {
++      return true;
++    }
++    console.warn(`Cloudinary deletion returned non-ok result for ${publicId}:`, res);
++    return false;
++  } catch (err) {
++    console.warn(`Failed to delete asset ${publicId} from Cloudinary:`, err.message);
++    return false;
++  }
++};
++
++module.exports = uploadToCloudinary;
++module.exports.uploadToCloudinary = uploadToCloudinary;
++module.exports.isCloudinaryConfigured = isCloudinaryConfigured;
++module.exports.deleteFromCloudinary = deleteFromCloudinary;
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\ml_service\\main.py" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\ml_service\\main.py"
+index 1b380fb..6ac7d92 100644
+--- "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-backup-original\\ml_service\\main.py"	
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\ml_service\\main.py"	
+@@ -4,6 +4,7 @@ Run:  uvicorn main:app --reload --port 8001
+ Docs: http://localhost:8001/docs  (try every endpoint from the browser)
+ """
+ from dataclasses import asdict
++import logging
+ 
+ from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
+ from fastapi.concurrency import run_in_threadpool
+@@ -17,6 +18,8 @@ from quiz import generate_quiz
+ from spam import SpamDetector
+ from summarizer import summarize_notes
+ 
++logger = logging.getLogger("uvicorn.error")
++
+ app = FastAPI(title="Meet+Classroom ML service")
+ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])  # restrict in prod
+ 
+@@ -56,6 +59,9 @@ async def summarize(body: SummarizeIn):
+         return {"summary": await run_in_threadpool(summarize_notes, body.text, body.style)}
+     except ValueError as e:
+         raise HTTPException(400, str(e))
++    except Exception as e:
++        logger.error(f"Summarizer service error: {e}")
++        raise HTTPException(502, "The summarizer service is currently unavailable. Please try again.")
+ 
+ 
+ # ---------- quiz ----------
+@@ -71,8 +77,9 @@ async def quiz(body: QuizIn):
+         return await run_in_threadpool(generate_quiz, body.text, body.num_questions, body.difficulty)
+     except ValueError as e:
+         raise HTTPException(400, str(e))
+-    except RuntimeError as e:
+-        raise HTTPException(502, str(e))
++    except Exception as e:
++        logger.error(f"Quiz service error: {e}")
++        raise HTTPException(502, "The quiz generation service is currently unavailable. Please try again.")
+ 
+ 
+ # ---------- AI mentor ----------
+@@ -89,7 +96,13 @@ class MaterialIn(BaseModel):
+ 
+ @app.post("/mentor/chat")
+ async def mentor_chat(body: ChatIn):
+-    return {"reply": await run_in_threadpool(mentor.chat, body.session_id, body.message, body.course_id)}
++    try:
++        return {"reply": await run_in_threadpool(mentor.chat, body.session_id, body.message, body.course_id)}
++    except ValueError as e:
++        raise HTTPException(400, str(e))
++    except Exception as e:
++        logger.error(f"AI Mentor service error: {e}")
++        raise HTTPException(502, "The AI Mentor service is currently unavailable. Please try again.")
+ 
+ 
+ @app.post("/mentor/materials")
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-backend-integration.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-backend-integration.js"
+new file mode 100644
+index 0000000..b939746
+--- /dev/null
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-backend-integration.js"	
+@@ -0,0 +1,234 @@
++const { MongoMemoryServer } = require("mongodb-memory-server");
++const mongoose = require("mongoose");
++const http = require("http");
++
++async function runTests() {
++  console.log("=== STARTING BACKEND INTEGRATION TEST SUITE ===");
++
++  const mongod = await MongoMemoryServer.create();
++  const uri = mongod.getUri();
++  process.env.MONGO_URI = uri;
++  console.log("1. MongoMemoryServer started at:", uri);
++
++  await mongoose.connect(uri);
++  console.log("2. Mongoose connected to in-memory database.");
++
++  // Import models
++  const User = require("./src/models/User");
++  const Classroom = require("./src/models/Classroom");
++  const Assignment = require("./src/models/Assignment");
++  const Submission = require("./src/models/Submission");
++  const Material = require("./src/models/Material");
++  const Notification = require("./src/models/Notification");
++
++  // Create disposable test records
++  const teacherUser = await User.create({
++    uid: "teacher-uid-123",
++    name: "Dr. Jane Smith",
++    email: "teacher@example.com",
++    role: "teacher",
++  });
++
++  const studentUser = await User.create({
++    uid: "student-uid-456",
++    name: "Alex Johnson",
++    email: "student@example.com",
++    role: "student",
++  });
++
++  const classroom = await Classroom.create({
++    name: "Physics 101",
++    description: "Introductory Mechanics",
++    code: "PHY101",
++    teacherUid: teacherUser.uid,
++    students: [studentUser.uid],
++  });
++
++  console.log("3. Created test Users & Classroom:");
++  console.log("   Teacher ID:", teacherUser._id.toString());
++  console.log("   Student ID:", studentUser._id.toString());
++  console.log("   Classroom ID:", classroom._id.toString());
++
++  // Test root server endpoints
++  const { app: rootApp } = require("./server");
++  const rootServer = http.createServer(rootApp);
++  await new Promise((resolve) => rootServer.listen(0, resolve));
++  const rootPort = rootServer.address().port;
++  const rootBase = `http://127.0.0.1:${rootPort}`;
++  console.log("4. Root backend server listening on port:", rootPort);
++
++  // Helper request
++  async function api(path, options = {}) {
++    const res = await fetch(`${rootBase}${path}`, {
++      ...options,
++      headers: options.body instanceof FormData
++        ? (options.headers || {})
++        : { "Content-Type": "application/json", ...(options.headers || {}) },
++    });
++    const json = await res.json().catch(() => ({}));
++    return { status: res.status, ok: res.ok, data: json };
++  }
++
++  // Check 1: Health check
++  const healthRes = await api("/api/health");
++  console.log("Test 1: GET /api/health ->", healthRes.status, healthRes.data);
++  if (healthRes.status !== 200 || healthRes.data.status !== "ok" || healthRes.data.database !== "connected") {
++    throw new Error(`Health check failed: expected status 200 and database connected, got ${healthRes.status}`);
++  }
++
++  // Check 2: Protected without token -> 401 or 503 (fails closed)
++  const protectedRes = await api("/protected");
++  console.log("Test 2: GET /protected (no token) ->", protectedRes.status, protectedRes.data.message);
++  if (protectedRes.status !== 401 && protectedRes.status !== 503) {
++    throw new Error(`Expected protected endpoint to fail closed (401 or 503), got ${protectedRes.status}`);
++  }
++
++  // Check 3: Assignment Creation (without file)
++  const newAssign = await api("/api/assignments", {
++    method: "POST",
++    body: JSON.stringify({
++      classId: classroom._id,
++      createdBy: teacherUser._id,
++      title: "Newton's Laws Homework",
++      description: "Complete problems 1 through 5",
++      dueDate: new Date(Date.now() + 86400000).toISOString(),
++      maxMarks: 50,
++    }),
++  });
++  console.log("Test 3: POST /api/assignments ->", newAssign.status, newAssign.data.message);
++  if (newAssign.status !== 201) throw new Error("Assignment creation failed");
++  const assignmentId = newAssign.data.data._id;
++
++  // Check 4: List Assignments by class
++  const listAssign = await api(`/api/assignments/class/${classroom._id}`);
++  console.log("Test 4: GET /api/assignments/class/:classId ->", listAssign.status, "Count:", listAssign.data.data.length);
++  if (listAssign.status !== 200 || listAssign.data.data.length === 0) throw new Error("List assignments failed");
++
++  // Check 5: Get Assignment by ID
++  const getAssign = await api(`/api/assignments/${assignmentId}`);
++  console.log("Test 5: GET /api/assignments/:id ->", getAssign.status, "Title:", getAssign.data.data.title);
++  if (getAssign.status !== 200) throw new Error("Get assignment failed");
++
++  // Check 6: Update Assignment
++  const updateAssign = await api(`/api/assignments/${assignmentId}`, {
++    method: "PUT",
++    body: JSON.stringify({ title: "Newton's Laws Homework - Revised", maxMarks: 60 }),
++  });
++  console.log("Test 6: PUT /api/assignments/:id ->", updateAssign.status, "Updated title:", updateAssign.data.data?.title);
++  if (updateAssign.status !== 200) throw new Error("Update assignment failed");
++
++  // Check 7: Submit Assignment (text only, succeeds without Cloudinary)
++  const submitRes = await api(`/api/submissions/assignment/${assignmentId}`, {
++    method: "POST",
++    body: JSON.stringify({
++      studentId: studentUser._id,
++      text: "Here is my completed Newton's laws homework solution.",
++    }),
++  });
++  console.log("Test 7: POST /api/submissions/assignment/:id ->", submitRes.status, submitRes.data.message);
++  if (submitRes.status !== 201) throw new Error("Text submission failed");
++  const submissionId = submitRes.data.data._id;
++
++  // Check 8: Resubmit Assignment (upsert updates existing record)
++  const resubmitRes = await api(`/api/submissions/assignment/${assignmentId}`, {
++    method: "POST",
++    body: JSON.stringify({
++      studentId: studentUser._id,
++      text: "Here is my revised solution with extra steps shown.",
++    }),
++  });
++  console.log("Test 8: POST /api/submissions/assignment/:id (resubmission) ->", resubmitRes.status, "Updated ID:", resubmitRes.data.data._id);
++  if (resubmitRes.status !== 201 || resubmitRes.data.data._id !== submissionId) {
++    throw new Error("Resubmission did not update existing submission");
++  }
++
++  // Check 9: File upload when Cloudinary is unconfigured -> returns HTTP 503
++  const fileForm = new FormData();
++  fileForm.append("studentId", studentUser._id.toString());
++  fileForm.append("text", "Attempting file upload without cloud credentials");
++  fileForm.append("file", new Blob(["dummy content"], { type: "text/plain" }), "solution.txt");
++  const uploadFailRes = await api(`/api/submissions/assignment/${assignmentId}`, {
++    method: "POST",
++    body: fileForm,
++  });
++  console.log("Test 9: POST /api/submissions with file (unconfigured storage) ->", uploadFailRes.status, uploadFailRes.data.message);
++  if (uploadFailRes.status !== 503) {
++    throw new Error(`Expected HTTP 503 for unconfigured storage upload, got ${uploadFailRes.status}`);
++  }
++
++  // Check 10: Get Submissions for Assignment (Teacher view)
++  const teacherSubs = await api(`/api/submissions/assignment/${assignmentId}`);
++  console.log("Test 10: GET /api/submissions/assignment/:id ->", teacherSubs.status, "Count:", teacherSubs.data.data.length);
++  if (teacherSubs.status !== 200) throw new Error("Teacher submissions failed");
++
++  // Check 11: Get Student Submission (Student view)
++  const studentSub = await api(`/api/submissions/assignment/${assignmentId}/student/${studentUser._id}`);
++  console.log("Test 11: GET /api/submissions/assignment/:id/student/:studentId ->", studentSub.status, "Status:", studentSub.data.data.status);
++  if (studentSub.status !== 200) throw new Error("Student submission retrieval failed");
++
++  // Check 12: Grade Submission
++  const gradeRes = await api(`/api/submissions/${submissionId}/grade`, {
++    method: "PUT",
++    body: JSON.stringify({
++      marks: 55,
++      feedback: "Great work on problem 3!",
++    }),
++  });
++  console.log("Test 12: PUT /api/submissions/:id/grade ->", gradeRes.status, "Marks:", gradeRes.data.data.marks, "Status:", gradeRes.data.data.status);
++  if (gradeRes.status !== 200 || gradeRes.data.data.status !== "graded") throw new Error("Grading failed");
++
++  // Check 13: Notification verification (verify student received grade notification)
++  const notifRes = await api(`/api/notifications/user/${studentUser._id}`);
++  console.log("Test 13: GET /api/notifications/user/:userId ->", notifRes.status, "Count:", notifRes.data.data.length);
++  if (notifRes.status !== 200 || notifRes.data.data.length === 0) throw new Error("Notification not generated");
++  const notifId = notifRes.data.data[0]._id;
++
++  // Check 14: Notification unread count
++  const unreadRes = await api(`/api/notifications/user/${studentUser._id}/unread-count`);
++  console.log("Test 14: GET /api/notifications/user/:userId/unread-count ->", unreadRes.status, "Unread:", unreadRes.data.data.count);
++
++  // Check 15: Mark notification read
++  const markReadRes = await api(`/api/notifications/${notifId}/read`, { method: "PUT" });
++  console.log("Test 15: PUT /api/notifications/:id/read ->", markReadRes.status, "isRead:", markReadRes.data.data.isRead);
++
++  // Check 16: Learning Materials (Link-based, succeeds without Cloudinary)
++  const matRes = await api("/api/materials", {
++    method: "POST",
++    body: JSON.stringify({
++      classId: classroom._id,
++      uploadedBy: teacherUser._id,
++      title: "Mechanics Lecture Slide Deck",
++      description: "Week 1 slide deck on kinematics",
++      link: "https://example.com/slides/week1",
++    }),
++  });
++  console.log("Test 16: POST /api/materials (link-based) ->", matRes.status, matRes.data.message);
++  if (matRes.status !== 201) throw new Error("Material creation failed");
++  const matId = matRes.data.data._id;
++
++  const matList = await api(`/api/materials/class/${classroom._id}`);
++  console.log("Test 17: GET /api/materials/class/:classId ->", matList.status, "Count:", matList.data.data.length);
++
++  const matGet = await api(`/api/materials/${matId}`);
++  console.log("Test 18: GET /api/materials/:id ->", matGet.status, "Title:", matGet.data.data.title);
++
++  // Check 19: Calendar Events
++  const calRes = await api(`/api/calendar/class/${classroom._id}`);
++  console.log("Test 19: GET /api/calendar/class/:classId ->", calRes.status, "Events:", calRes.data.data.length);
++  if (calRes.status !== 200) throw new Error("Calendar retrieval failed");
++
++  // Clean up disposable records
++  await api(`/api/materials/${matId}`, { method: "DELETE" });
++  await api(`/api/assignments/${assignmentId}`, { method: "DELETE" });
++
++  rootServer.close();
++  await mongoose.disconnect();
++  await mongod.stop();
++
++  console.log("=== ALL 19 BACKEND INTEGRATION CHECKS PASSED SUCCESSFULLY! ===");
++}
++
++runTests().catch((err) => {
++  console.error("Test failure:", err);
++  process.exit(1);
++});
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-apps-backend-integration.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-apps-backend-integration.js"
+new file mode 100644
+index 0000000..0031d6d
+--- /dev/null
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-apps-backend-integration.js"	
+@@ -0,0 +1,155 @@
++const { MongoMemoryServer } = require("mongodb-memory-server");
++const mongoose = require("mongoose");
++const http = require("http");
++
++async function runTests() {
++  console.log("=== STARTING APPS/BACKEND INTEGRATION TEST SUITE ===");
++
++  const mongod = await MongoMemoryServer.create();
++  const uri = mongod.getUri();
++  process.env.MONGO_URI = uri;
++  console.log("1. MongoMemoryServer started at:", uri);
++
++  const { connectDB } = require("./apps/backend/src/server");
++  await connectDB();
++  console.log("2. apps/backend Mongoose connected.");
++
++  // apps/backend has its own isolated mongoose instance in its node_modules
++  let appsMongoose;
++  try {
++    appsMongoose = require("./apps/backend/node_modules/mongoose");
++  } catch {
++    appsMongoose = mongoose;
++  }
++
++  const { app } = require("./apps/backend/src/server");
++  const server = http.createServer(app);
++  await new Promise((resolve) => server.listen(0, resolve));
++  const port = server.address().port;
++  const base = `http://127.0.0.1:${port}`;
++  console.log("3. apps/backend listening on port:", port);
++
++  async function api(path, options = {}) {
++    const res = await fetch(`${base}${path}`, {
++      ...options,
++      headers: options.body instanceof FormData
++        ? (options.headers || {})
++        : { "Content-Type": "application/json", ...(options.headers || {}) },
++    });
++    const json = await res.json().catch(() => ({}));
++    return { status: res.status, ok: res.ok, data: json };
++  }
++
++  // Test 1: Health check
++  const healthRes = await api("/api/health");
++  console.log("Test 1: GET /api/health ->", healthRes.status, healthRes.data);
++  if (healthRes.status !== 200 || healthRes.data.status !== "ok" || healthRes.data.database !== "connected") {
++    throw new Error(`Health check failed: expected status 200 and database connected, got ${healthRes.status}`);
++  }
++
++  const dummyClassId = new mongoose.Types.ObjectId();
++  const dummyTeacherId = new mongoose.Types.ObjectId();
++  const dummyStudentId = new mongoose.Types.ObjectId();
++
++  // Test 2: Create Assignment
++  const assignRes = await api("/api/assignments", {
++    method: "POST",
++    body: JSON.stringify({
++      classId: dummyClassId,
++      createdBy: dummyTeacherId,
++      title: "Chemistry Lab Report",
++      description: "Submit PDF report",
++      dueDate: new Date(Date.now() + 86400000).toISOString(),
++      maxMarks: 100,
++    }),
++  });
++  console.log("Test 2: POST /api/assignments ->", assignRes.status, assignRes.data.message);
++  if (assignRes.status !== 201) throw new Error("Assignment creation failed");
++  const assignmentId = assignRes.data.data._id;
++
++  // Test 3: List assignments
++  const listRes = await api(`/api/assignments/class/${dummyClassId}`);
++  console.log("Test 3: GET /api/assignments/class/:classId ->", listRes.status, "Count:", listRes.data.data.length);
++  if (listRes.status !== 200 || listRes.data.data.length !== 1) throw new Error("List assignments failed");
++
++  // Test 4: Submit assignment (text only, succeeds without Cloudinary)
++  const subRes = await api(`/api/submissions/assignment/${assignmentId}`, {
++    method: "POST",
++    body: JSON.stringify({
++      studentId: dummyStudentId,
++      text: "Lab report text submission",
++    }),
++  });
++  console.log("Test 4: POST /api/submissions/assignment/:id (text only) ->", subRes.status, subRes.data.message);
++  if (subRes.status !== 201) throw new Error("Submission failed");
++  const submissionId = subRes.data.data._id;
++
++  // Test 5: Resubmit assignment (updates existing submission)
++  const resubRes = await api(`/api/submissions/assignment/${assignmentId}`, {
++    method: "POST",
++    body: JSON.stringify({
++      studentId: dummyStudentId,
++      text: "Lab report text submission - revision 2",
++    }),
++  });
++  console.log("Test 5: POST /api/submissions/assignment/:id (resubmit) ->", resubRes.status, "ID:", resubRes.data.data._id);
++  if (resubRes.status !== 201 || resubRes.data.data._id !== submissionId) {
++    throw new Error("Resubmission did not update existing submission");
++  }
++
++  // Test 6: File upload without Cloudinary -> returns HTTP 503
++  const fileForm = new FormData();
++  fileForm.append("studentId", dummyStudentId.toString());
++  fileForm.append("text", "Attempting file upload without cloud credentials");
++  fileForm.append("file", new Blob(["dummy report"], { type: "application/pdf" }), "report.pdf");
++  const uploadFailRes = await api(`/api/submissions/assignment/${assignmentId}`, {
++    method: "POST",
++    body: fileForm,
++  });
++  console.log("Test 6: POST /api/submissions with file (unconfigured storage) ->", uploadFailRes.status, uploadFailRes.data.message);
++  if (uploadFailRes.status !== 503) {
++    throw new Error(`Expected HTTP 503 for unconfigured storage upload, got ${uploadFailRes.status}`);
++  }
++
++  // Test 7: Create Material (link based, succeeds without Cloudinary)
++  const matRes = await api("/api/materials", {
++    method: "POST",
++    body: JSON.stringify({
++      classId: dummyClassId,
++      uploadedBy: dummyTeacherId,
++      title: "Chemistry Syllabus",
++      link: "https://example.com/syllabus",
++    }),
++  });
++  console.log("Test 7: POST /api/materials (link-based) ->", matRes.status, matRes.data.message);
++  if (matRes.status !== 201) throw new Error("Material creation failed");
++  const matId = matRes.data.data._id;
++
++  // Test 8: List materials
++  const matList = await api(`/api/materials/class/${dummyClassId}`);
++  console.log("Test 8: GET /api/materials/class/:classId ->", matList.status, "Count:", matList.data.data.length);
++  if (matList.status !== 200 || matList.data.data.length !== 1) throw new Error("List materials failed");
++
++  // Test 9: Calendar events
++  const calRes = await api(`/api/calendar/class/${dummyClassId}`);
++  console.log("Test 9: GET /api/calendar/class/:classId ->", calRes.status, "Events:", calRes.data.data.length);
++  if (calRes.status !== 200) throw new Error("Calendar failed");
++
++  // Clean up
++  await api(`/api/materials/${matId}`, { method: "DELETE" });
++  await api(`/api/assignments/${assignmentId}`, { method: "DELETE" });
++
++  server.close();
++  if (appsMongoose && appsMongoose.disconnect) {
++    await appsMongoose.disconnect();
++  }
++  await mongoose.disconnect();
++  await mongod.stop();
++
++  console.log("=== ALL 9 APPS/BACKEND INTEGRATION TESTS PASSED SUCCESSFULLY! ===");
++}
++
++runTests().catch((err) => {
++  console.error("Test failure in apps/backend:", err);
++  process.exit(1);
++});
+
+diff --git "a/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-frontend-adapter.js" "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-frontend-adapter.js"
+new file mode 100644
+index 0000000..946d8d0
+--- /dev/null
++++ "b/C:\\Users\\adity\\Downloads\\brl-final_task--main (3)\\brl-final_task--main-production-fix-work\\test-frontend-adapter.js"	
+@@ -0,0 +1,124 @@
++// Test frontend backendAdapter against real backend
++const { MongoMemoryServer } = require("mongodb-memory-server");
++const http = require("http");
++
++async function runAdapterTest() {
++  console.log("=== TESTING FRONTEND BACKEND ADAPTER WITH REAL BACKEND ===");
++
++  const mongod = await MongoMemoryServer.create();
++  const uri = mongod.getUri();
++  process.env.MONGO_URI = uri;
++
++  const { app, startServer } = require("./server");
++  const { connectDB } = require("./config/db");
++  const mongoose = require("mongoose");
++  await mongoose.connect(uri);
++
++  const User = require("./src/models/User");
++  const Classroom = require("./src/models/Classroom");
++  const Assignment = require("./src/models/Assignment");
++
++  const teacher = await User.create({
++    uid: "teacher-uid",
++    name: "Teacher User",
++    email: "teacher@test.com",
++    role: "teacher",
++  });
++
++  const student = await User.create({
++    uid: "student-uid",
++    name: "Student User",
++    email: "student@test.com",
++    role: "student",
++  });
++
++  const classroom = await Classroom.create({
++    name: "Chemistry 101",
++    description: "Lab course",
++    code: "CHEM101",
++    teacherUid: teacher.uid,
++    students: [student.uid],
++  });
++
++  const server = http.createServer(app);
++  await new Promise((r) => server.listen(0, r));
++  const port = server.address().port;
++  const baseUrl = `http://127.0.0.1:${port}/api`;
++  console.log("Backend started on:", baseUrl);
++
++  // Set up mock window and import.meta.env
++  const mockStorage = {
++    "unified-learn-session": JSON.stringify({ user: { id: student._id.toString(), role: "student" } }),
++  };
++
++  globalThis.window = {
++    localStorage: {
++      getItem: (key) => mockStorage[key] || null,
++      setItem: (key, val) => { mockStorage[key] = val; },
++    },
++  };
++
++  // We can dynamically import the backend adapter or test the exact fetch calls it makes
++  const classId = classroom._id.toString();
++  const studentId = student._id.toString();
++  const teacherId = teacher._id.toString();
++
++  // 1. Teacher creates assignment
++  const createRes = await fetch(`${baseUrl}/assignments`, {
++    method: "POST",
++    headers: { "Content-Type": "application/json" },
++    body: JSON.stringify({
++      classId,
++      createdBy: teacherId,
++      title: "Stoichiometry Worksheet",
++      description: "Balance equations 1-10",
++      dueDate: new Date(Date.now() + 86400000).toISOString(),
++      maxMarks: 20,
++    }),
++  });
++  const createdAssignment = await createRes.json();
++  console.log("1. Created Assignment via API:", createdAssignment.success, createdAssignment.data?.title);
++  if (!createdAssignment.success) throw new Error("Assignment creation failed");
++  const assignmentId = createdAssignment.data._id;
++
++  // 2. Student lists assignments for class
++  const listRes = await fetch(`${baseUrl}/assignments/class/${classId}`);
++  const listedAssignments = await listRes.json();
++  console.log("2. Listed Assignments via API:", listedAssignments.success, "Count:", listedAssignments.data?.length);
++  if (!listedAssignments.success || listedAssignments.data.length !== 1) throw new Error("List failed");
++
++  // 3. Student submits assignment with FormData
++  const form = new FormData();
++  form.append("studentId", studentId);
++  form.append("text", "All 10 equations balanced.");
++
++  const submitRes = await fetch(`${baseUrl}/submissions/assignment/${assignmentId}`, {
++    method: "POST",
++    body: form,
++  });
++  const submitted = await submitRes.json();
++  console.log("3. Submitted Assignment via API:", submitted.success, "Status:", submitted.data?.status);
++  if (!submitted.success) throw new Error("Submission failed");
++
++  // 4. Student checks their own submission
++  const checkSubRes = await fetch(`${baseUrl}/submissions/assignment/${assignmentId}/student/${studentId}`);
++  const checkSub = await checkSubRes.json();
++  console.log("4. Checked Student Submission via API:", checkSub.success, "Text:", checkSub.data?.text);
++  if (!checkSub.success || checkSub.data.text !== "All 10 equations balanced.") throw new Error("Check submission failed");
++
++  // 5. Calendar events for class
++  const calRes = await fetch(`${baseUrl}/calendar/class/${classId}`);
++  const cal = await calRes.json();
++  console.log("5. Calendar events via API:", cal.success, "Events:", cal.data?.length);
++  if (!cal.success || cal.data.length !== 1) throw new Error("Calendar check failed");
++
++  server.close();
++  await mongoose.disconnect();
++  await mongod.stop();
++  console.log("=== FRONTEND BACKEND ADAPTER CONTRACT VERIFIED! ===");
++}
++
++runAdapterTest().catch((err) => {
++  console.error("Adapter test failed:", err);
++  process.exit(1);
++});
+

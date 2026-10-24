@@ -6,6 +6,16 @@ const classroomSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    subject: {
+        type: String,
+        default: "General",
+        trim: true
+    },
+    schedule: {
+        type: String,
+        default: "",
+        trim: true
+    },
     description: {
         type: String,
         default: ""

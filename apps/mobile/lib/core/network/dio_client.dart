@@ -1,17 +1,23 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
+
+import '../config/api_config.dart';
+
+typedef TokenReader = Future<String?> Function();
 
 class DioClient {
   DioClient._();
 
-  static const String baseUrl = String.fromEnvironment(
-    'ML_API_BASE_URL',
-    defaultValue: 'http://192.168.0.105:8001',
-  );
+  /// ML service base URL (retained for existing callers)
+  static String get baseUrl => ApiConfig.mlBaseUrl;
 
-  static Dio create() {
-    return Dio(
+  /// Default client for the ML service
+  static Dio create() => createFor(baseUrl);
+
+  /// Client for any backend endpoint with optional Bearer token authorization
+  static Dio createFor(String targetBaseUrl, {TokenReader? tokenReader}) {
+    final dio = Dio(
       BaseOptions(
-        baseUrl: baseUrl,
+        baseUrl: targetBaseUrl,
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 60),
         sendTimeout: const Duration(seconds: 15),
@@ -21,5 +27,21 @@ class DioClient {
         },
       ),
     );
+
+    if (tokenReader != null) {
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) async {
+            final token = await tokenReader();
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+            handler.next(options);
+          },
+        ),
+      );
+    }
+
+    return dio;
   }
 }

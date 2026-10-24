@@ -7,27 +7,37 @@ const createClassroom = async (req, res) => {
     try {
         const user = await User.findOne({ uid: req.user.uid });
 
-if (!user || user.role !== "teacher") {
-    return res.status(403).json({
-        success: false,
-        message: "Only teachers can create classrooms"
-    });
-}
+        if (!user || user.role !== "teacher") {
+            return res.status(403).json({
+                success: false,
+                message: "Only teachers can create classrooms"
+            });
+        }
 
-        const { name, description } = req.body;
+        const { name, subject, description, schedule } = req.body;
 
-        if (!name) {
+        if (!name || !name.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Classroom name is required"
             });
         }
 
+        if (!subject || !subject.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Subject is required"
+            });
+        }
+
         const classroom = await Classroom.create({
-            name,
-            description,
+            name: name.trim(),
+            subject: subject.trim(),
+            description: (description || "").trim(),
+            schedule: (schedule || "").trim(),
             code: crypto.randomBytes(4).toString("hex").toUpperCase(),
-            teacherUid: user.uid
+            teacherUid: user.uid,
+            students: []
         });
 
         res.status(201).json({
@@ -36,6 +46,7 @@ if (!user || user.role !== "teacher") {
             classroom
         });
     } catch (error) {
+        console.error("Create classroom error:", error);
         res.status(500).json({
             success: false,
             message: "Failed to create classroom"
@@ -50,15 +61,22 @@ const joinClassroom = async (req, res) => {
 
         const user = await User.findOne({ uid: req.user.uid });
 
-if (!user || user.role !== "student") {
-    return res.status(403).json({
-        success: false,
-        message: "Only students can join classrooms"
-    });
-}
+        if (!user || user.role !== "student") {
+            return res.status(403).json({
+                success: false,
+                message: "Only students can join classrooms"
+            });
+        }
+
+        if (!code || !code.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Classroom code is required"
+            });
+        }
 
         const classroom = await Classroom.findOne({
-            code: code?.trim().toUpperCase()
+            code: code.trim().toUpperCase()
         });
 
         if (!classroom) {
@@ -68,7 +86,7 @@ if (!user || user.role !== "student") {
             });
         }
 
-        if (classroom.students.includes(user.uid)) {
+        if (classroom.students && classroom.students.includes(user.uid)) {
             return res.status(409).json({
                 success: false,
                 message: "Already joined this classroom"
@@ -84,12 +102,14 @@ if (!user || user.role !== "student") {
             classroom
         });
     } catch (error) {
+        console.error("Join classroom error:", error);
         res.status(500).json({
             success: false,
             message: "Failed to join classroom"
         });
     }
 };
+
 // Get classrooms
 const getClassrooms = async (req, res) => {
     try {
@@ -107,19 +127,34 @@ const getClassrooms = async (req, res) => {
         if (user.role === "teacher") {
             classrooms = await Classroom.find({
                 teacherUid: user.uid
-            });
+            }).sort({ createdAt: -1 });
         } else {
             classrooms = await Classroom.find({
                 students: user.uid
-            });
+            }).sort({ createdAt: -1 });
         }
+
+        // Enrich classrooms with teacher name and student count
+        const teacherUids = [...new Set(classrooms.map((c) => c.teacherUid))];
+        const teachers = await User.find({ uid: { $in: teacherUids } });
+        const teacherMap = {};
+        teachers.forEach((t) => {
+            teacherMap[t.uid] = t.name;
+        });
+
+        const formatted = classrooms.map((c) => ({
+            ...c.toObject(),
+            teacherName: teacherMap[c.teacherUid] || "Instructor",
+            studentCount: (c.students || []).length
+        }));
 
         res.status(200).json({
             success: true,
-            count: classrooms.length,
-            classrooms
+            count: formatted.length,
+            classrooms: formatted
         });
     } catch (error) {
+        console.error("Get classrooms error:", error);
         res.status(500).json({
             success: false,
             message: "Failed to fetch classrooms"
@@ -153,7 +188,7 @@ const getClassroomById = async (req, res) => {
         }
 
         const isTeacher = classroom.teacherUid === user.uid;
-        const isStudent = classroom.students.includes(user.uid);
+        const isStudent = (classroom.students || []).includes(user.uid);
 
         if (!isTeacher && !isStudent) {
             return res.status(403).json({
@@ -162,11 +197,24 @@ const getClassroomById = async (req, res) => {
             });
         }
 
+        const teacher = await User.findOne({ uid: classroom.teacherUid });
+        const students = await User.find(
+            { uid: { $in: classroom.students || [] } },
+            "uid name email"
+        );
+
+        const classroomData = classroom.toObject();
+        classroomData.teacherName = teacher ? teacher.name : "Instructor";
+        classroomData.studentProfiles = students;
+        classroomData.studentCount = (classroom.students || []).length;
+        classroomData.isTeacher = isTeacher;
+
         res.status(200).json({
             success: true,
-            classroom
+            classroom: classroomData
         });
     } catch (error) {
+        console.error("Get classroom by ID error:", error);
         res.status(400).json({
             success: false,
             message: "Invalid classroom ID or request"

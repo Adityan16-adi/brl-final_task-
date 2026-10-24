@@ -3,7 +3,7 @@
 export * from "./mock/mockAuthService.js";
 export * from "./mock/mockLearningService.js";
 export * from "./mock/mockCommunicationService.js";
-export * from "./mock/mockStudyService.js";
+export { askMentor, generateQuiz, checkMessage } from "./api/mlServiceAdapter.js";
 
 import { isBackendMode, dataModeError, apiListAssignments, apiGetAssignment, apiCreateAssignment, apiSubmitAssignment, apiListMaterials, apiAddMaterial, apiListNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiListCalendarEvents, apiListCalendarMonth } from "./api/backendAdapter.js";
 import { listAssignments as mockListAssignments, getAssignment as mockGetAssignment, createAssignment as mockCreateAssignment, submitAssignment as mockSubmitAssignment, listMaterials as mockListMaterials, addMaterial as mockAddMaterial, listCalendarEvents as mockListCalendarEvents } from "./mock/mockLearningService.js";
