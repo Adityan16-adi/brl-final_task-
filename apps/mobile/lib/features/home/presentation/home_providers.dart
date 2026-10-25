@@ -101,3 +101,22 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
   ThemeModeNotifier.new,
 );
+
+final classroomAttendanceProvider =
+    FutureProvider.family.autoDispose<List<AttendanceSession>, String>((
+  ref,
+  classId,
+) async {
+  final repo = ref.watch(homeRepositoryProvider);
+  return repo.getClassAttendance(classId);
+});
+
+final studentAttendanceSummaryProvider =
+    FutureProvider.family.autoDispose<StudentAttendanceSummary, String>((
+  ref,
+  studentUid,
+) async {
+  final repo = ref.watch(homeRepositoryProvider);
+  return repo.getStudentAttendance(studentUid);
+});
+

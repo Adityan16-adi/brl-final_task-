@@ -28,7 +28,24 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
   bool _cameraEnabled = true;
   bool _isSessionActive = false;
   bool _handRaised = false;
-  int _activeTabIndex = 0; // 0: Meeting Room, 1: Coursework, 2: Learners
+  int _activeTabIndex = 0; // 0: Meeting Room, 1: Coursework, 2: Attendance, 3: Learners
+
+  DateTime _attendanceDate = DateTime.now();
+  final TextEditingController _attendanceTopicCtrl =
+      TextEditingController(text: 'Regular Session');
+  final Map<String, String> _attendanceStatuses = {};
+  final Map<String, TextEditingController> _attendanceRemarks = {};
+  bool _isSavingAttendance = false;
+  int _attendanceRefreshKey = 0;
+
+  @override
+  void dispose() {
+    _attendanceTopicCtrl.dispose();
+    for (final ctrl in _attendanceRemarks.values) {
+      ctrl.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -359,28 +376,36 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
           const SizedBox(height: 18),
 
           // Tab Navigation Bar
-          SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(
-                value: 0,
-                icon: Icon(Icons.meeting_room_rounded),
-                label: Text('Meeting Lobby'),
-              ),
-              ButtonSegment(
-                value: 1,
-                icon: Icon(Icons.assignment_rounded),
-                label: Text('Coursework'),
-              ),
-              ButtonSegment(
-                value: 2,
-                icon: Icon(Icons.people_rounded),
-                label: Text('Learners'),
-              ),
-            ],
-            selected: {_activeTabIndex},
-            onSelectionChanged: (set) {
-              setState(() => _activeTabIndex = set.first);
-            },
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(
+                  value: 0,
+                  icon: Icon(Icons.meeting_room_rounded),
+                  label: Text('Meeting Lobby'),
+                ),
+                ButtonSegment(
+                  value: 1,
+                  icon: Icon(Icons.assignment_rounded),
+                  label: Text('Coursework'),
+                ),
+                ButtonSegment(
+                  value: 2,
+                  icon: Icon(Icons.how_to_reg_rounded),
+                  label: Text('Attendance'),
+                ),
+                ButtonSegment(
+                  value: 3,
+                  icon: Icon(Icons.people_rounded),
+                  label: Text('Learners'),
+                ),
+              ],
+              selected: {_activeTabIndex},
+              onSelectionChanged: (set) {
+                setState(() => _activeTabIndex = set.first);
+              },
+            ),
           ),
           const SizedBox(height: 18),
 
@@ -389,6 +414,8 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
             _buildMeetingRoomSection(context, isTeacher),
           ] else if (_activeTabIndex == 1) ...[
             _buildCourseworkSection(context, isTeacher, assignmentsAsync),
+          ] else if (_activeTabIndex == 2) ...[
+            _buildAttendanceSection(context, isTeacher),
           ] else ...[
             _buildLearnersSection(context),
           ],
@@ -885,6 +912,797 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildAttendanceSection(BuildContext context, bool isTeacher) {
+    final currentUser = ref.watch(currentUserProvider);
+
+    if (isTeacher) {
+      return _buildTeacherAttendanceSection(context);
+    } else {
+      return _buildStudentAttendanceSection(
+        context,
+        currentUser?.id ?? 'student-mock-1',
+      );
+    }
+  }
+
+  Widget _buildTeacherAttendanceSection(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final formattedDate =
+        '${_attendanceDate.year}-${_attendanceDate.month.toString().padLeft(2, '0')}-${_attendanceDate.day.toString().padLeft(2, '0')}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Attendance Header Card with Date & Topic
+        ClayCard(
+          depth: 3,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.how_to_reg_rounded,
+                    color: ClayTokens.deepIndigo,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Attendance Register',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Date picker button
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                      label: Text('Date: $formattedDate'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colors.onSurface,
+                        side: BorderSide(color: colors.outlineVariant),
+                        alignment: Alignment.centerLeft,
+                      ),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _attendanceDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setState(() => _attendanceDate = picked);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _attendanceTopicCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Session Topic / Remarks',
+                  hintText: 'e.g. Chapter 3: Thermodynamics',
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.topic_outlined, size: 18),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Enrolled Students list for marking
+        FutureBuilder<ClassroomDetails>(
+          future: ref
+              .read(homeRepositoryProvider)
+              .getClassroomDetails(widget.classroom.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            final students = snapshot.data?.students ?? [];
+            if (students.isEmpty) {
+              return ClayCard(
+                depth: 2,
+                padding: const EdgeInsets.all(18),
+                child: Center(
+                  child: Text(
+                    'No enrolled students found to mark attendance.',
+                    style: TextStyle(color: colors.onSurfaceVariant),
+                  ),
+                ),
+              );
+            }
+
+            // Initialize default 'present' for any new students
+            for (final s in students) {
+              _attendanceStatuses.putIfAbsent(s.id, () => 'present');
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Quick actions row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Roster (${students.length})',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Expanded(
+                      child: Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 4,
+                        children: [
+                        TextButton.icon(
+                          icon: const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 16,
+                            color: Colors.green,
+                          ),
+                          label: const Text(
+                            'All Present',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              for (final s in students) {
+                                _attendanceStatuses[s.id] = 'present';
+                              }
+                            });
+                          },
+                        ),
+                        TextButton.icon(
+                          icon: const Icon(
+                            Icons.cancel_outlined,
+                            size: 16,
+                            color: Colors.redAccent,
+                          ),
+                          label: const Text(
+                            'All Absent',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              for (final s in students) {
+                                _attendanceStatuses[s.id] = 'absent';
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+                const SizedBox(height: 8),
+
+                ...students.map((student) {
+                  final status =
+                      _attendanceStatuses[student.id] ?? 'present';
+                  return ClayCard(
+                    depth: 2,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: ClayTokens.softLavender,
+                              child: Text(
+                                student.name.isNotEmpty
+                                    ? student.name[0].toUpperCase()
+                                    : 'S',
+                                style: const TextStyle(
+                                  color: ClayTokens.deepIndigo,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    student.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    student.email,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        // Choice chips for Present / Late / Absent
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Center(
+                                  child: Text(
+                                    'Present',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                selected: status == 'present',
+                                selectedColor: Colors.green.shade100,
+                                labelStyle: TextStyle(
+                                  color: status == 'present'
+                                      ? Colors.green.shade900
+                                      : colors.onSurface,
+                                  fontWeight: status == 'present'
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                                onSelected: (val) {
+                                  if (val) {
+                                    setState(
+                                      () => _attendanceStatuses[student.id] =
+                                          'present',
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Center(
+                                  child: Text(
+                                    'Late',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                selected: status == 'late',
+                                selectedColor: Colors.orange.shade100,
+                                labelStyle: TextStyle(
+                                  color: status == 'late'
+                                      ? Colors.orange.shade900
+                                      : colors.onSurface,
+                                  fontWeight: status == 'late'
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                                onSelected: (val) {
+                                  if (val) {
+                                    setState(
+                                      () => _attendanceStatuses[student.id] =
+                                          'late',
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Center(
+                                  child: Text(
+                                    'Absent',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                selected: status == 'absent',
+                                selectedColor: Colors.red.shade100,
+                                labelStyle: TextStyle(
+                                  color: status == 'absent'
+                                      ? Colors.red.shade900
+                                      : colors.onSurface,
+                                  fontWeight: status == 'absent'
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                                onSelected: (val) {
+                                  if (val) {
+                                    setState(
+                                      () => _attendanceStatuses[student.id] =
+                                          'absent',
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+
+                const SizedBox(height: 10),
+                // Save attendance record button
+                SizedBox(
+                  width: double.infinity,
+                  child: ClayButton(
+                    onPressed: _isSavingAttendance
+                        ? null
+                        : () async {
+                            setState(() => _isSavingAttendance = true);
+                            try {
+                              final records = students.map((s) {
+                                return AttendanceRecordItem(
+                                  studentUid: s.id,
+                                  studentName: s.name,
+                                  status:
+                                      _attendanceStatuses[s.id] ?? 'present',
+                                  remarks: _attendanceRemarks[s.id]?.text
+                                          .trim() ??
+                                      '',
+                                );
+                              }).toList();
+
+                              final ok = await ref
+                                  .read(homeRepositoryProvider)
+                                  .takeAttendance(
+                                    classId: widget.classroom.id,
+                                    sessionDate: _attendanceDate,
+                                    records: records,
+                                    topic: _attendanceTopicCtrl.text
+                                            .trim()
+                                            .isEmpty
+                                        ? 'Regular Session'
+                                        : _attendanceTopicCtrl.text.trim(),
+                                  );
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      ok
+                                          ? 'Attendance recorded successfully!'
+                                          : 'Failed to record attendance.',
+                                    ),
+                                    backgroundColor: ok
+                                        ? ClayTokens.mintDark
+                                        : Colors.red,
+                                  ),
+                                );
+                              }
+                              setState(() {
+                                _isSavingAttendance = false;
+                                _attendanceRefreshKey++;
+                              });
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error saving attendance: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                              setState(() => _isSavingAttendance = false);
+                            }
+                          },
+                    child: Center(
+                      child: _isSavingAttendance
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Save Attendance Record',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+
+        const SizedBox(height: 24),
+        // Past Classroom Attendance History
+        const Text(
+          'Past Attendance Sessions',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+        ),
+        const SizedBox(height: 10),
+        FutureBuilder<List<AttendanceSession>>(
+          key: ValueKey(_attendanceRefreshKey),
+          future: ref
+              .read(homeRepositoryProvider)
+              .getClassAttendance(widget.classroom.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            final sessions = snapshot.data ?? [];
+            if (sessions.isEmpty) {
+              return ClayCard(
+                depth: 1,
+                padding: const EdgeInsets.all(14),
+                child: Center(
+                  child: Text(
+                    'No past attendance records found for this class.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: sessions.map((s) {
+                final dateStr =
+                    '${s.sessionDate.year}-${s.sessionDate.month.toString().padLeft(2, '0')}-${s.sessionDate.day.toString().padLeft(2, '0')}';
+                return ClayCard(
+                  depth: 2,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.event_note_rounded,
+                        color: ClayTokens.deepIndigo,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.topic.isNotEmpty ? s.topic : 'Session',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              dateStr,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Wrap(
+                        spacing: 4,
+                        children: [
+                          ClayBadge(
+                            label: '${s.presentCount}P',
+                            backgroundColor: Colors.green.shade50,
+                            textColor: Colors.green.shade800,
+                          ),
+                          ClayBadge(
+                            label: '${s.lateCount}L',
+                            backgroundColor: Colors.orange.shade50,
+                            textColor: Colors.orange.shade800,
+                          ),
+                          ClayBadge(
+                            label: '${s.absentCount}A',
+                            backgroundColor: Colors.red.shade50,
+                            textColor: Colors.red.shade800,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStudentAttendanceSection(
+    BuildContext context,
+    String studentUid,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+
+    return FutureBuilder<StudentAttendanceSummary>(
+      future:
+          ref.read(homeRepositoryProvider).getStudentAttendance(studentUid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        final summary = snapshot.data ??
+            const StudentAttendanceSummary(
+              totalSessions: 0,
+              presentCount: 0,
+              absentCount: 0,
+              lateCount: 0,
+              percentage: 100,
+            );
+
+        final pctColor = summary.percentage >= 80
+            ? Colors.green
+            : (summary.percentage >= 65 ? Colors.orange : Colors.red);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClayCard(
+              depth: 3,
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'My Attendance Summary',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Overall standing across all classes',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: pctColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: pctColor.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Text(
+                          '${summary.percentage}%',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: pctColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMetricMiniCard(
+                          context,
+                          label: 'Total',
+                          value: '${summary.totalSessions}',
+                          color: ClayTokens.deepIndigo,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildMetricMiniCard(
+                          context,
+                          label: 'Present',
+                          value: '${summary.presentCount}',
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildMetricMiniCard(
+                          context,
+                          label: 'Late',
+                          value: '${summary.lateCount}',
+                          color: Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildMetricMiniCard(
+                          context,
+                          label: 'Absent',
+                          value: '${summary.absentCount}',
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Session Records (${summary.sessions.length})',
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            ),
+            const SizedBox(height: 10),
+            if (summary.sessions.isEmpty)
+              ClayCard(
+                depth: 1,
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    'No attendance session history recorded yet.',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...summary.sessions.map((sess) {
+                final status =
+                    (sess['status'] ?? 'present').toString().toLowerCase();
+                final badgeColor = status == 'present'
+                    ? Colors.green
+                    : (status == 'late' ? Colors.orange : Colors.red);
+                final topic = sess['topic']?.toString() ?? 'Class Session';
+                final date =
+                    sess['sessionDate']?.toString().split('T').first ?? '';
+
+                return ClayCard(
+                  depth: 2,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        status == 'present'
+                            ? Icons.check_circle_rounded
+                            : (status == 'late'
+                                ? Icons.access_time_rounded
+                                : Icons.cancel_rounded),
+                        color: badgeColor,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              topic,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (date.isNotEmpty)
+                              Text(
+                                date,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      ClayBadge(
+                        label: status.toUpperCase(),
+                        backgroundColor: badgeColor.withValues(alpha: 0.15),
+                        textColor: badgeColor,
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricMiniCard(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

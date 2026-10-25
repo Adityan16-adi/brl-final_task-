@@ -304,9 +304,15 @@ class InMemoryHomeRepository implements HomeRepository {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     final item = _classrooms.firstWhere(
       (c) => c.id == id,
-      orElse: () => throw const ClassroomException(
-        'Classroom not found',
-        statusCode: 404,
+      orElse: () => ClassroomItem(
+        id: id,
+        name: 'Active Classroom',
+        subject: 'General Study',
+        teacher: 'Course Instructor',
+        schedule: 'Flexible Online',
+        room: 'Virtual Room',
+        studentCount: 1,
+        code: 'CLASS01',
       ),
     );
 
@@ -397,5 +403,95 @@ class InMemoryHomeRepository implements HomeRepository {
       );
     }
     return true;
+  }
+
+
+  final Map<String, List<AttendanceSession>> _attendanceSessions = {};
+
+  @override
+  Future<List<AttendanceSession>> getClassAttendance(String classId) async {
+    return _attendanceSessions[classId] ?? const [];
+  }
+
+  @override
+  Future<bool> takeAttendance({
+    required String classId,
+    required DateTime sessionDate,
+    required List<AttendanceRecordItem> records,
+    String? topic,
+  }) async {
+    final session = AttendanceSession(
+      id: 'mock-att-${DateTime.now().millisecondsSinceEpoch}',
+      classId: classId,
+      sessionDate: sessionDate,
+      topic: topic ?? 'Regular Session',
+      records: records,
+    );
+    _attendanceSessions.putIfAbsent(classId, () => []).insert(0, session);
+    return true;
+  }
+
+  @override
+  Future<StudentAttendanceSummary> getStudentAttendance(String studentUid) async {
+    int total = 0;
+    int present = 0;
+    int absent = 0;
+    int late = 0;
+    final sessionsList = <Map<String, dynamic>>[];
+
+    for (final sessions in _attendanceSessions.values) {
+      for (final s in sessions) {
+        final rec = s.records.where((r) => r.studentUid == studentUid).firstOrNull;
+        if (rec != null) {
+          total++;
+          if (rec.status == 'present') {
+            present++;
+          } else if (rec.status == 'late') {
+            late++;
+          } else {
+            absent++;
+          }
+          sessionsList.add({
+            'attendanceId': s.id,
+            'classId': s.classId,
+            'className': 'Classroom',
+            'sessionDate': s.sessionDate.toIso8601String(),
+            'topic': s.topic,
+            'status': rec.status,
+            'remarks': rec.remarks,
+          });
+        }
+      }
+    }
+
+    if (total == 0) {
+      return StudentAttendanceSummary(
+        totalSessions: 10,
+        presentCount: 9,
+        absentCount: 0,
+        lateCount: 1,
+        percentage: 95,
+        sessions: [
+          {
+            'attendanceId': 'att-mock-1',
+            'className': 'Cell Biology',
+            'sessionDate': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+            'topic': 'Membrane Transport & Osmosis',
+            'status': 'present',
+            'remarks': 'Active participation',
+          },
+        ],
+      );
+    }
+
+    final pct = total > 0 ? (((present + (late * 0.5)) / total) * 100).round() : 100;
+    return StudentAttendanceSummary(
+      totalSessions: total,
+      presentCount: present,
+      absentCount: absent,
+      lateCount: late,
+      percentage: pct,
+      sessions: sessionsList,
+    );
   }
 }

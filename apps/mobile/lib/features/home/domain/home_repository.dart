@@ -35,6 +35,14 @@ abstract interface class HomeRepository {
     required int marks,
     String? feedback,
   });
+  Future<List<AttendanceSession>> getClassAttendance(String classId);
+  Future<bool> takeAttendance({
+    required String classId,
+    required DateTime sessionDate,
+    required List<AttendanceRecordItem> records,
+    String? topic,
+  });
+  Future<StudentAttendanceSummary> getStudentAttendance(String studentUid);
 }
 
 class ClassroomException implements Exception {
@@ -117,6 +125,8 @@ class EnrolledStudent {
   final String uid;
   final String name;
   final String email;
+
+  String get id => uid;
 
   factory EnrolledStudent.fromJson(Map<String, dynamic> json) {
     return EnrolledStudent(
@@ -294,4 +304,108 @@ class ScheduleItem {
   final String location;
   final String type; // Lecture, Lab, Deadline
   final bool isToday;
+}
+
+
+class AttendanceRecordItem {
+  const AttendanceRecordItem({
+    required this.studentUid,
+    required this.studentName,
+    required this.status,
+    this.remarks = '',
+  });
+
+  final String studentUid;
+  final String studentName;
+  final String status; // present, absent, late, excused
+  final String remarks;
+
+  Map<String, dynamic> toJson() => {
+        'studentUid': studentUid,
+        'studentName': studentName,
+        'status': status,
+        'remarks': remarks,
+      };
+
+  factory AttendanceRecordItem.fromJson(Map<String, dynamic> json) =>
+      AttendanceRecordItem(
+        studentUid: json['studentUid']?.toString() ??
+            json['uid']?.toString() ??
+            '',
+        studentName: json['studentName']?.toString() ??
+            json['name']?.toString() ??
+            'Student',
+        status: json['status']?.toString() ?? 'present',
+        remarks: json['remarks']?.toString() ?? '',
+      );
+}
+
+class AttendanceSession {
+  const AttendanceSession({
+    required this.id,
+    required this.classId,
+    required this.sessionDate,
+    required this.topic,
+    required this.records,
+  });
+
+  final String id;
+  final String classId;
+  final DateTime sessionDate;
+  final String topic;
+  final List<AttendanceRecordItem> records;
+
+  int get presentCount =>
+      records.where((r) => r.status.toLowerCase() == 'present').length;
+  int get lateCount =>
+      records.where((r) => r.status.toLowerCase() == 'late').length;
+  int get absentCount =>
+      records.where((r) => r.status.toLowerCase() == 'absent').length;
+
+  factory AttendanceSession.fromJson(Map<String, dynamic> json) {
+    final recordsRaw = json['records'] as List<dynamic>? ?? [];
+    return AttendanceSession(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      classId: json['classId'] is Map
+          ? (json['classId']['_id']?.toString() ?? '')
+          : (json['classId']?.toString() ?? ''),
+      sessionDate: json['sessionDate'] != null
+          ? DateTime.tryParse(json['sessionDate'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      topic: json['topic']?.toString() ?? 'Regular Session',
+      records: recordsRaw
+          .map((r) => AttendanceRecordItem.fromJson(r as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class StudentAttendanceSummary {
+  const StudentAttendanceSummary({
+    required this.totalSessions,
+    required this.presentCount,
+    required this.absentCount,
+    required this.lateCount,
+    required this.percentage,
+    this.sessions = const [],
+  });
+
+  final int totalSessions;
+  final int presentCount;
+  final int absentCount;
+  final int lateCount;
+  final int percentage;
+  final List<Map<String, dynamic>> sessions;
+
+  factory StudentAttendanceSummary.fromJson(Map<String, dynamic> json) {
+    final list = json['sessions'] as List<dynamic>? ?? [];
+    return StudentAttendanceSummary(
+      totalSessions: (json['totalSessions'] as num?)?.toInt() ?? 0,
+      presentCount: (json['presentCount'] as num?)?.toInt() ?? 0,
+      absentCount: (json['absentCount'] as num?)?.toInt() ?? 0,
+      lateCount: (json['lateCount'] as num?)?.toInt() ?? 0,
+      percentage: (json['percentage'] as num?)?.toInt() ?? 100,
+      sessions: list.map((s) => s as Map<String, dynamic>).toList(),
+    );
+  }
 }

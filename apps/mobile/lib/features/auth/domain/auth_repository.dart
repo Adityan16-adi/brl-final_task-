@@ -21,6 +21,8 @@ class AppUser {
   final UserRole role;
   final bool isDemo;
 
+  String get id => uid;
+
   bool get isTeacher => role == UserRole.teacher;
   bool get isStudent => role == UserRole.student;
 

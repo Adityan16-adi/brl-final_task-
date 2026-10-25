@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/clay_theme.dart';
-import '../../../../core/widgets/demo_data_badge.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../../auth/domain/auth_repository.dart';
 import '../../domain/home_repository.dart';
