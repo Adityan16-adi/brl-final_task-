@@ -386,6 +386,70 @@ class PersistentAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AppUser> updateProfile({String? name, String? avatarUrl}) async {
+    if (_current == null) {
+      throw const AuthFailure('No active user session to update.');
+    }
+
+    if (_current!.isDemo) {
+      final updated = _current!.copyWith(
+        name: name ?? _current!.name,
+        avatarUrl: avatarUrl ?? _current!.avatarUrl,
+      );
+      _set(updated);
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      await prefs.setString(keyUser, jsonEncode(updated.toJson()));
+      return updated;
+    }
+
+    try {
+      final token = await getIdToken();
+      final dio = DioClient.createFor(
+        ApiConfig.coreBaseUrl,
+        tokenReader: () async => token,
+      );
+
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name.trim();
+      if (avatarUrl != null) body['avatarUrl'] = avatarUrl.trim();
+
+      final res = await dio.put<Map<String, dynamic>>(
+        '/api/auth/profile',
+        data: body,
+      );
+
+      if (res.statusCode == 200 && res.data != null) {
+        final userData = res.data!['user'] as Map<String, dynamic>?;
+        if (userData != null) {
+          final updated = AppUser.fromJson(userData);
+          _set(updated);
+          final prefs = _prefs ?? await SharedPreferences.getInstance();
+          await prefs.setString(keyUser, jsonEncode(updated.toJson()));
+          return updated;
+        }
+      }
+
+      final fallback = _current!.copyWith(
+        name: name ?? _current!.name,
+        avatarUrl: avatarUrl ?? _current!.avatarUrl,
+      );
+      _set(fallback);
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      await prefs.setString(keyUser, jsonEncode(fallback.toJson()));
+      return fallback;
+    } on DioException catch (dioErr) {
+      final msg = dioErr.response?.data is Map &&
+              dioErr.response?.data['message'] != null
+          ? dioErr.response!.data['message'] as String
+          : 'Could not connect to profile service (${dioErr.message}).';
+      throw AuthFailure(msg);
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure('Failed to update profile: $e');
+    }
+  }
+
+  @override
   Future<void> signOut() async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     try {

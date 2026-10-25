@@ -13,6 +13,24 @@ import '../widgets/create_assignment_dialog.dart';
 import '../widgets/submit_assignment_dialog.dart';
 import 'live_meeting_screen.dart';
 
+class ClassroomAnnouncement {
+  const ClassroomAnnouncement({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.author,
+    required this.createdAt,
+    this.isPinned = false,
+  });
+
+  final String id;
+  final String title;
+  final String content;
+  final String author;
+  final DateTime createdAt;
+  final bool isPinned;
+}
+
 class ClassroomDetailScreen extends ConsumerStatefulWidget {
   const ClassroomDetailScreen({required this.classroom, super.key});
 
@@ -29,6 +47,8 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
   bool _isSessionActive = false;
   bool _handRaised = false;
   int _activeTabIndex = 0; // 0: Meeting Room, 1: Coursework, 2: Attendance, 3: Chat, 4: Learners
+
+  late List<ClassroomAnnouncement> _announcements;
 
   DateTime _attendanceDate = DateTime.now();
   final TextEditingController _attendanceTopicCtrl =
@@ -55,6 +75,29 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _announcements = [
+      ClassroomAnnouncement(
+        id: 'ann-1',
+        title: 'Welcome to ${widget.classroom.name}!',
+        content:
+            'Please review the attached materials, verify submission deadlines, and reach out in class chat for any questions.',
+        author: widget.classroom.teacher.isNotEmpty
+            ? widget.classroom.teacher
+            : 'Course Instructor',
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        isPinned: true,
+      ),
+      ClassroomAnnouncement(
+        id: 'ann-2',
+        title: 'Live Interactive Session',
+        content:
+            'Join the meeting lobby with your microphone and camera configured. Live video calling is supported.',
+        author: widget.classroom.teacher.isNotEmpty
+            ? widget.classroom.teacher
+            : 'Course Instructor',
+        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+      ),
+    ];
     // If the classroom was started now, mark session active
     final sched = widget.classroom.schedule.toLowerCase();
     if (sched.contains('now') ||
@@ -909,7 +952,210 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 18),
+
+        // Classroom Announcements Feed
+        _buildAnnouncementsSection(context, isTeacher),
       ],
+    );
+  }
+
+  void _showPostAnnouncementDialog(BuildContext context) {
+    final titleCtrl = TextEditingController();
+    final contentCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.campaign_rounded, color: ClayTokens.deepIndigo),
+            SizedBox(width: 8),
+            Text('Post Class Announcement', style: TextStyle(fontSize: 17)),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Announcement Title',
+                  hintText: 'e.g. Exam Schedule Update',
+                ),
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Title is required'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: contentCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Announcement Content',
+                  hintText: 'Type your message to the class...',
+                ),
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Message content is required'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            style:
+                FilledButton.styleFrom(backgroundColor: ClayTokens.deepIndigo),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Publish'),
+            onPressed: () {
+              if (!formKey.currentState!.validate()) return;
+              final user = ref.read(currentUserProvider);
+              final newAnn = ClassroomAnnouncement(
+                id: 'ann-${DateTime.now().millisecondsSinceEpoch}',
+                title: titleCtrl.text.trim(),
+                content: contentCtrl.text.trim(),
+                author: user?.name ??
+                    (widget.classroom.teacher.isNotEmpty
+                        ? widget.classroom.teacher
+                        : 'Teacher'),
+                createdAt: DateTime.now(),
+              );
+              setState(() => _announcements.insert(0, newAnn));
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Announcement published to classroom!'),
+                  backgroundColor: ClayTokens.mintDark,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnnouncementsSection(BuildContext context, bool isTeacher) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(Icons.campaign_rounded,
+                      color: ClayTokens.deepIndigo, size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Class Bulletin (${_announcements.length})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isTeacher) ...[
+              const SizedBox(width: 8),
+              FilledButton.tonalIcon(
+                onPressed: () => _showPostAnnouncementDialog(context),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('New Notice', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (_announcements.isEmpty)
+          const ClayCard(
+            depth: 2,
+            padding: EdgeInsets.all(16),
+            child: Center(
+              child: Text(
+                'No announcements posted for this classroom yet.',
+                style: TextStyle(color: ClayTokens.secondaryText),
+              ),
+            ),
+          )
+        else
+          ..._announcements.map((ann) => _buildAnnouncementCard(context, ann)),
+      ],
+    );
+  }
+
+  Widget _buildAnnouncementCard(
+    BuildContext context,
+    ClassroomAnnouncement ann,
+  ) {
+    return ClayCard(
+      depth: 4,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClayBadge(
+                label: ann.author,
+                icon: Icons.person_rounded,
+                backgroundColor: ClayTokens.softLavender,
+                textColor: ClayTokens.deepIndigo,
+                fontSize: 10,
+              ),
+              if (ann.isPinned) ...[
+                const SizedBox(width: 6),
+                const ClayBadge(
+                  label: 'PINNED',
+                  icon: Icons.push_pin_rounded,
+                  backgroundColor: Color(0xFFFEF3C7),
+                  textColor: Color(0xFFD97706),
+                  fontSize: 10,
+                ),
+              ],
+              const Spacer(),
+              Text(
+                '${ann.createdAt.hour.toString().padLeft(2, '0')}:${ann.createdAt.minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: ClayTokens.secondaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            ann.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            ann.content,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

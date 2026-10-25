@@ -443,4 +443,67 @@ const googleLogin = async (req, res) => {
     }
 };
 
-module.exports = { register, login, getMe, syncUser, googleLogin, generateToken, getJwtSecret };
+const updateProfile = async (req, res) => {
+    try {
+        const { name, avatarUrl } = req.body || {};
+        const uid = req.user?.uid;
+
+        if (!uid) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required to update profile."
+            });
+        }
+
+        const updateData = {};
+        if (typeof name === "string" && name.trim()) {
+            updateData.name = name.trim();
+        }
+
+        if (req.file) {
+            try {
+                const uploadToCloudinary = require("../utils/uploadToCloudinary");
+                const result = await uploadToCloudinary(req.file.buffer, "avatars");
+                updateData.avatarUrl = result.url;
+            } catch (uploadErr) {
+                console.warn("Avatar Cloudinary upload error:", uploadErr.message);
+            }
+        } else if (typeof avatarUrl === "string" && avatarUrl.trim()) {
+            updateData.avatarUrl = avatarUrl.trim();
+        }
+
+        const user = await User.findOneAndUpdate(
+            { uid },
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found."
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully.",
+            user: {
+                _id: user._id,
+                uid: user.uid,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                avatarUrl: user.avatarUrl
+            }
+        });
+    } catch (error) {
+        console.error("Update Profile Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to update profile."
+        });
+    }
+};
+
+module.exports = { register, login, getMe, syncUser, googleLogin, updateProfile, generateToken, getJwtSecret };

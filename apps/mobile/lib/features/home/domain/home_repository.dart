@@ -254,6 +254,41 @@ class AssignmentItem {
   final int? marks;
   final String? feedback;
 
+  bool get isDueIn24h {
+    if (status == AssignmentStatus.submitted ||
+        status == AssignmentStatus.graded) {
+      return false;
+    }
+    try {
+      final parsed = DateTime.tryParse(dueDate);
+      if (parsed != null) {
+        final diff = parsed.difference(DateTime.now());
+        return diff.inHours >= 0 && diff.inHours <= 24;
+      }
+    } catch (_) {}
+    return dueDate.toLowerCase().contains('today') ||
+        dueDate.toLowerCase().contains('in 24h');
+  }
+
+  bool get isDueSoon {
+    if (status == AssignmentStatus.submitted ||
+        status == AssignmentStatus.graded) {
+      return false;
+    }
+    if (isDueIn24h) return true;
+    try {
+      final parsed = DateTime.tryParse(dueDate);
+      if (parsed != null) {
+        final diff = parsed.difference(DateTime.now());
+        return diff.inHours >= 0 && diff.inHours <= 48;
+      }
+    } catch (_) {}
+    final lower = dueDate.toLowerCase();
+    return lower.contains('tomorrow') ||
+        lower.contains('soon') ||
+        lower.contains('due tomorrow');
+  }
+
   AssignmentItem copyWith({
     AssignmentStatus? status,
     String? classId,

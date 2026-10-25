@@ -122,6 +122,19 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AppUser> updateProfile({String? name, String? avatarUrl}) async {
+    if (_current == null) {
+      throw const AuthFailure('No active user session to update.');
+    }
+    final updated = _current!.copyWith(
+      name: name ?? _current!.name,
+      avatarUrl: avatarUrl ?? _current!.avatarUrl,
+    );
+    _set(updated);
+    return updated;
+  }
+
+  @override
   Future<void> signOut() async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     _set(null);

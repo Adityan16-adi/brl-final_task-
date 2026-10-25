@@ -315,14 +315,30 @@ class _AssignmentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Top Row: Subject & Status Chip
-          Row(
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               ClayBadge(
                 label: assignment.subject,
                 backgroundColor: ClayTokens.softLavender,
                 textColor: ClayTokens.deepIndigo,
               ),
-              const Spacer(),
+              if (assignment.isDueIn24h)
+                const ClayBadge(
+                  label: 'DUE IN 24H',
+                  icon: Icons.access_time_filled_rounded,
+                  backgroundColor: Color(0xFFFEE2E2),
+                  textColor: Color(0xFFDC2626),
+                )
+              else if (assignment.isDueSoon)
+                const ClayBadge(
+                  label: 'DUE SOON',
+                  icon: Icons.schedule_rounded,
+                  backgroundColor: Color(0xFFFEF3C7),
+                  textColor: Color(0xFFD97706),
+                ),
               ClayBadge(
                 label: statusLabel,
                 icon: _getStatusIcon(assignment.status),

@@ -45,6 +45,23 @@ class AppUser {
         isDemo: json['isDemo'] == true,
         avatarUrl: json['avatarUrl']?.toString(),
       );
+
+  AppUser copyWith({
+    String? uid,
+    String? email,
+    String? name,
+    UserRole? role,
+    bool? isDemo,
+    String? avatarUrl,
+  }) =>
+      AppUser(
+        uid: uid ?? this.uid,
+        email: email ?? this.email,
+        name: name ?? this.name,
+        role: role ?? this.role,
+        isDemo: isDemo ?? this.isDemo,
+        avatarUrl: avatarUrl ?? this.avatarUrl,
+      );
 }
 
 /// Result returned from a Google Sign-In attempt
@@ -99,6 +116,9 @@ abstract interface class AuthRepository {
     String? teacherCode,
     String? idTokenOverride,
   });
+
+  /// Update the current user's display name or avatar URL.
+  Future<AppUser> updateProfile({String? name, String? avatarUrl});
 
   Future<void> signOut();
 

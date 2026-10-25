@@ -14,10 +14,24 @@ import 'create_class_dialog.dart';
 import 'join_class_dialog.dart';
 import 'submit_assignment_dialog.dart';
 
-class OverviewView extends ConsumerWidget {
+class OverviewView extends ConsumerStatefulWidget {
   const OverviewView({required this.onNavigateToTab, super.key});
 
   final void Function(int tabIndex) onNavigateToTab;
+
+  @override
+  ConsumerState<OverviewView> createState() => _OverviewViewState();
+}
+
+class _OverviewViewState extends ConsumerState<OverviewView> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _showTeacherGradingDialog(
     BuildContext context,
@@ -273,7 +287,7 @@ class OverviewView extends ConsumerWidget {
                 isFullWidth: true,
                 onPressed: () {
                   Navigator.of(ctx).pop();
-                  onNavigateToTab(1);
+                  widget.onNavigateToTab(1);
                 },
                 child: const Text('Manage All Classrooms'),
               ),
@@ -285,7 +299,7 @@ class OverviewView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final summaryAsync = ref.watch(homeSummaryProvider);
     final assignmentsAsync = ref.watch(assignmentsProvider);
     final scheduleAsync = ref.watch(scheduleProvider);
@@ -305,46 +319,90 @@ class OverviewView extends ConsumerWidget {
         ref.invalidate(materialsProvider);
       },
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 60),
         children: [
           // Personalized Claymorphic Greeting Header
           _buildPersonalizedHeader(context, currentUser, isTeacher),
-          const SizedBox(height: 18),
+          const SizedBox(height: 8),
 
-          // Role-specific Metric Grid
-          summaryAsync.when(
-            data: (summary) => _buildMetricGrid(context, summary, isTeacher),
-            loading: () => _buildSkeletonMetricGrid(context),
-            error: (err, _) => ClayCard(
-              color: colors.errorContainer,
-              child: Text('Unable to load learning summary: $err'),
+          // Cross-entity Universal Search Input
+          ClayCard(
+            depth: 3,
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            child: Row(
+              children: [
+                const Icon(Icons.search_rounded,
+                    color: ClayTokens.deepIndigo, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) =>
+                        setState(() => _searchQuery = val.trim()),
+                    decoration: const InputDecoration(
+                      hintText: 'Search classrooms, assignments, materials...',
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                    ),
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 8),
 
-          // Role-specific Teacher Notice Card
-          if (isTeacher) ...[
-            _buildTeacherNoticeCard(context),
-            const SizedBox(height: 18),
-          ],
-
-          // Role-Specific Quick Actions Bar
-          _buildQuickActionsBar(context, isTeacher, ref),
-          const SizedBox(height: 18),
-
-          // Student: Attendance & Learning Streak Progress Card
-          if (!isTeacher) ...[
-            _buildStudentProgressCard(
+          if (_searchQuery.isNotEmpty) ...[
+            _buildSearchResults(
               context,
-              assignmentsAsync,
               classroomsAsync,
+              assignmentsAsync,
+              materialsAsync,
             ),
-            const SizedBox(height: 18),
-          ],
+          ] else ...[
+            // Role-specific Metric Grid
+            summaryAsync.when(
+              data: (summary) => _buildMetricGrid(context, summary, isTeacher),
+              loading: () => _buildSkeletonMetricGrid(context),
+              error: (err, _) => ClayCard(
+                color: colors.errorContainer,
+                child: Text('Unable to load learning summary: $err'),
+              ),
+            ),
+            const SizedBox(height: 8),
 
-          // AI Mentor Quick-Launch Clay Banner
-          _buildAiMentorBanner(context),
-          const SizedBox(height: 22),
+            // Role-specific Teacher Notice Card
+            if (isTeacher) ...[
+              _buildTeacherNoticeCard(context),
+              const SizedBox(height: 8),
+            ],
+
+            // Role-Specific Quick Actions Bar
+            _buildQuickActionsBar(context, isTeacher, ref),
+            const SizedBox(height: 8),
+
+            // Student: Attendance & Learning Streak Progress Card
+            if (!isTeacher) ...[
+              _buildStudentProgressCard(
+                context,
+                assignmentsAsync,
+                classroomsAsync,
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // AI Mentor Quick-Launch Clay Banner
+            _buildAiMentorBanner(context),
+            const SizedBox(height: 14),
 
           // Urgent Assignments / Grading Queue Section
           _buildSectionHeader(
@@ -353,7 +411,7 @@ class OverviewView extends ConsumerWidget {
                 ? 'Course Submissions & Grading'
                 : 'Assignments & Deadlines',
             actionText: 'View All',
-            onAction: () => onNavigateToTab(2), // Assignments Tab
+            onAction: () => widget.onNavigateToTab(2), // Assignments Tab
           ),
           const SizedBox(height: 10),
           assignmentsAsync.when(
@@ -407,7 +465,7 @@ class OverviewView extends ConsumerWidget {
             context,
             title: isTeacher ? 'Teaching Timetable' : 'Upcoming Schedule',
             actionText: 'Full Schedule',
-            onAction: () => onNavigateToTab(4), // Schedule Tab
+            onAction: () => widget.onNavigateToTab(4), // Schedule Tab
           ),
           const SizedBox(height: 10),
           scheduleAsync.when(
@@ -441,7 +499,7 @@ class OverviewView extends ConsumerWidget {
             context,
             title: isTeacher ? 'My Classrooms & Codes' : 'Enrolled Classrooms',
             actionText: 'All Classes',
-            onAction: () => onNavigateToTab(1), // Classrooms Tab
+            onAction: () => widget.onNavigateToTab(1), // Classrooms Tab
           ),
           const SizedBox(height: 10),
           classroomsAsync.when(
@@ -489,7 +547,7 @@ class OverviewView extends ConsumerWidget {
                 ? 'Published Study Materials'
                 : 'Recent Learning Materials',
             actionText: 'Library',
-            onAction: () => onNavigateToTab(3), // Materials Tab
+            onAction: () => widget.onNavigateToTab(3), // Materials Tab
           ),
           const SizedBox(height: 10),
           materialsAsync.when(
@@ -514,9 +572,130 @@ class OverviewView extends ConsumerWidget {
             error: (err, _) => Text('Could not load materials: $err'),
           ),
         ],
+      ],
+    ),
+  );
+}
+
+Widget _buildSearchResults(
+  BuildContext context,
+  AsyncValue<List<ClassroomItem>> classroomsAsync,
+  AsyncValue<List<AssignmentItem>> assignmentsAsync,
+  AsyncValue<List<MaterialItem>> materialsAsync,
+) {
+  final q = _searchQuery.toLowerCase();
+
+  final classes = classroomsAsync.asData?.value ?? [];
+  final matchingClasses = classes
+      .where((c) =>
+          c.name.toLowerCase().contains(q) ||
+          c.subject.toLowerCase().contains(q) ||
+          (c.code != null && c.code!.toLowerCase().contains(q)))
+      .toList();
+
+  final assignments = assignmentsAsync.asData?.value ?? [];
+  final matchingAssignments = assignments
+      .where((a) =>
+          a.title.toLowerCase().contains(q) ||
+          a.subject.toLowerCase().contains(q) ||
+          a.description.toLowerCase().contains(q))
+      .toList();
+
+  final materials = materialsAsync.asData?.value ?? [];
+  final matchingMaterials = materials
+      .where((m) =>
+          m.title.toLowerCase().contains(q) ||
+          m.subject.toLowerCase().contains(q) ||
+          m.details.toLowerCase().contains(q))
+      .toList();
+
+  final totalCount = matchingClasses.length +
+      matchingAssignments.length +
+      matchingMaterials.length;
+
+  if (totalCount == 0) {
+    return ClayCard(
+      depth: 3,
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(Icons.search_off_rounded,
+                size: 44, color: ClayTokens.secondaryText),
+            const SizedBox(height: 12),
+            Text(
+              'No results for "$_searchQuery"',
+              style:
+                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Try searching with a different course title, subject or assignment name.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: ClayTokens.secondaryText),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Text(
+            'Search Results ($totalCount)',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const Spacer(),
+          const ClayBadge(
+            label: 'FILTERED',
+            backgroundColor: ClayTokens.softLavender,
+            textColor: ClayTokens.deepIndigo,
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      if (matchingClasses.isNotEmpty) ...[
+        _buildSectionHeader(
+          context,
+          title: 'Matching Classrooms (${matchingClasses.length})',
+          actionText: 'View All',
+          onAction: () => widget.onNavigateToTab(1),
+        ),
+        const SizedBox(height: 8),
+        ...matchingClasses.map((c) => _buildClassroomTile(context, c, false)),
+        const SizedBox(height: 16),
+      ],
+      if (matchingAssignments.isNotEmpty) ...[
+        _buildSectionHeader(
+          context,
+          title: 'Matching Assignments (${matchingAssignments.length})',
+          actionText: 'View All',
+          onAction: () => widget.onNavigateToTab(2),
+        ),
+        const SizedBox(height: 8),
+        ...matchingAssignments.map((a) => _buildAssignmentCard(context, a)),
+        const SizedBox(height: 16),
+      ],
+      if (matchingMaterials.isNotEmpty) ...[
+        _buildSectionHeader(
+          context,
+          title: 'Matching Materials (${matchingMaterials.length})',
+          actionText: 'View All',
+          onAction: () => widget.onNavigateToTab(3),
+        ),
+        const SizedBox(height: 8),
+        ...matchingMaterials.map((m) => _buildMaterialTile(context, m)),
+      ],
+    ],
+  );
+}
 
   Widget _buildTeacherNoticeCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -580,12 +759,12 @@ class OverviewView extends ConsumerWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
           ClayContainer(
-            width: 52,
-            height: 52,
+            width: 46,
+            height: 46,
             depth: 4,
             padding: EdgeInsets.zero,
             gradient: LinearGradient(
@@ -777,7 +956,7 @@ class OverviewView extends ConsumerWidget {
               child: ClayButton(
                 icon: Icons.calendar_month_rounded,
                 color: const Color(0xFF0D9488),
-                onPressed: () => onNavigateToTab(4),
+                onPressed: () => widget.onNavigateToTab(4),
                 child: const Text('Schedule'),
               ),
             ),
@@ -803,7 +982,7 @@ class OverviewView extends ConsumerWidget {
 
     return ClayCard(
       depth: 5,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -972,7 +1151,7 @@ class OverviewView extends ConsumerWidget {
               color: isTeacher
                   ? const Color(0xFF8B5CF6)
                   : ClayTokens.deepIndigo,
-              onTap: () => onNavigateToTab(1),
+              onTap: () => widget.onNavigateToTab(1),
             ),
             _metricCard(
               context,
@@ -987,7 +1166,7 @@ class OverviewView extends ConsumerWidget {
               color: summary.pendingAssignmentsCount > 0
                   ? ClayTokens.peachDark
                   : const Color(0xFF10B981),
-              onTap: () => onNavigateToTab(2),
+              onTap: () => widget.onNavigateToTab(2),
             ),
             _metricCard(
               context,
@@ -996,7 +1175,7 @@ class OverviewView extends ConsumerWidget {
               subtitle: isTeacher ? 'Resources shared' : 'Notes & recordings',
               icon: Icons.menu_book_rounded,
               color: const Color(0xFF0EA5E9),
-              onTap: () => onNavigateToTab(3),
+              onTap: () => widget.onNavigateToTab(3),
             ),
             _metricCard(
               context,
@@ -1093,7 +1272,7 @@ class OverviewView extends ConsumerWidget {
         end: Alignment.bottomRight,
       ),
       borderRadius: BorderRadius.circular(20),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
           ClayContainer(
@@ -1357,13 +1536,36 @@ class OverviewView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  'Due: ${assignment.dueDate}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: ClayTokens.peachDark,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Due: ${assignment.dueDate}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: ClayTokens.peachDark,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (assignment.isDueIn24h)
+                      const ClayBadge(
+                        label: 'DUE IN 24H',
+                        fontSize: 9.0,
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        backgroundColor: Color(0xFFFEE2E2),
+                        textColor: Color(0xFFDC2626),
+                      )
+                    else if (assignment.isDueSoon)
+                      const ClayBadge(
+                        label: 'DUE SOON',
+                        fontSize: 9.0,
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        backgroundColor: Color(0xFFFEF3C7),
+                        textColor: Color(0xFFD97706),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -1603,7 +1805,7 @@ class OverviewView extends ConsumerWidget {
 
     return ClayCard(
       depth: 4,
-      onTap: () => onNavigateToTab(3),
+      onTap: () => widget.onNavigateToTab(3),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
