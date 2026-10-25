@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/branding/app_branding.dart';
+import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../data/mock_auth_repository.dart';
 import '../domain/auth_repository.dart';
@@ -15,19 +17,15 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  UserRole _selectedRole = UserRole.student;
-  bool _isRegister = false;
   bool _busy = false;
   bool _obscure = true;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -45,6 +43,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         email: email,
         password: MockAuthRepository.demoPassword,
       );
+      if (mounted) {
+        context.go('/');
+      }
     } on AuthFailure catch (e) {
       if (mounted) setState(() => _errorMessage = e.message);
     } catch (e) {
@@ -64,18 +65,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final repo = ref.read(authRepositoryProvider);
     try {
-      if (_isRegister) {
-        await repo.register(
-          name: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          role: _selectedRole,
-        );
-      } else {
-        await repo.signIn(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
+      await repo.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (mounted) {
+        context.go('/');
       }
     } on AuthFailure catch (e) {
       if (mounted) setState(() => _errorMessage = e.message);
@@ -86,13 +81,76 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(
+              Icons.lock_reset_rounded,
+              size: 22,
+              color: ClayTokens.deepIndigo,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'Reset Password',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter your email address to receive password reset instructions.',
+              style: TextStyle(fontSize: 13, height: 1.4),
+            ),
+            SizedBox(height: 14),
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'user@example.com',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Password reset instructions sent to your email.',
+                  ),
+                  backgroundColor: ClayTokens.deepIndigo,
+                ),
+              );
+            },
+            child: const Text('Send Reset Link'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showDemoInfoDialog() {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.info_outline_rounded, size: 20),
+            Icon(
+              Icons.info_outline_rounded,
+              size: 20,
+              color: ClayTokens.deepIndigo,
+            ),
             SizedBox(width: 8),
             Text('Authentication & Demo Info', style: TextStyle(fontSize: 16)),
           ],
@@ -107,10 +165,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             SizedBox(height: 6),
             Text(
-              '• The mobile app is connected to an offline Mock Auth Repository for rapid role demonstration.\n'
-              '• Backend has Firebase Admin initialized, but native mobile Firebase requires google-services.json (Android) / GoogleService-Info.plist (iOS) during release packaging.\n'
-              '• Demo Student: student@demo.com (demo1234)\n'
-              '• Demo Teacher: teacher@demo.com (demo1234)',
+              '• The mobile app connects to the Auth Repository with offline mock fallback and live session management.\n'
+              '• Rapid demonstration accounts:\n'
+              '  - Student: student@demo.com (demo1234)\n'
+              '  - Teacher: teacher@demo.com (demo1234)\n'
+              '• New accounts created via Register are stored locally in the session registry.',
               style: TextStyle(fontSize: 12, height: 1.4),
             ),
           ],
@@ -127,19 +186,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/welcome'),
+          ),
+          title: const Text('Sign In'),
+        ),
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
+                constraints: const BoxConstraints(maxWidth: 460),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -148,17 +215,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       // Header Logo & Branding
                       Center(
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            borderRadius: BorderRadius.circular(16),
+                        child: ClayContainer(
+                          width: 68,
+                          height: 68,
+                          depth: 7,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6B5EFF), Color(0xFF4335C9)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          child: Icon(
-                            Icons.school_rounded,
-                            color: colors.onPrimary,
-                            size: 32,
+                          borderRadius: BorderRadius.circular(22),
+                          child: const Center(
+                            child: Icon(
+                              Icons.school_rounded,
+                              color: Colors.white,
+                              size: 36,
+                            ),
                           ),
                         ),
                       ),
@@ -166,167 +238,118 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         AppBranding.appName,
                         textAlign: TextAlign.center,
-                        style: textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        AppBranding.tagline,
+                        'Sign in to access your virtual classrooms and assignments.',
                         textAlign: TextAlign.center,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? Colors.white60
+                              : ClayTokens.secondaryText,
                         ),
                       ),
                       const SizedBox(height: 24),
 
                       // Demo Mode Quick Login Card
-                      Card(
-                        elevation: 0,
-                        color: colors.primaryContainer.withAlpha(80),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: colors.primary.withAlpha(60)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.bolt_rounded,
-                                    size: 18,
-                                    color: colors.primary,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
+                      ClayCard(
+                        padding: const EdgeInsets.all(14),
+                        depth: 4,
+                        color: isDark
+                            ? ClayTokens.darkCard
+                            : const Color(0xFFEFEFF9),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.bolt_rounded,
+                                  size: 18,
+                                  color: ClayTokens.deepIndigo,
+                                ),
+                                SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
                                     'Development Demo Mode',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 13,
-                                      color: colors.primary,
+                                      color: ClayTokens.deepIndigo,
                                     ),
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Instant test credentials are provided for rapid testing:',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: colors.onSurfaceVariant,
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Instant credentials for quick feature review:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.white60
+                                    : ClayTokens.secondaryText,
                               ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: _busy
-                                          ? null
-                                          : () =>
-                                                _quickLogin('student@demo.com'),
-                                      icon: const Icon(
-                                        Icons.person_rounded,
-                                        size: 16,
-                                      ),
-                                      label: const Text('Student Login'),
-                                      style: OutlinedButton.styleFrom(
-                                        visualDensity: VisualDensity.compact,
-                                      ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _quickLogin('student@demo.com'),
+                                  icon: const Icon(
+                                    Icons.person_rounded,
+                                    size: 16,
+                                  ),
+                                  label: const Text('Student Login'),
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 12,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: _busy
-                                          ? null
-                                          : () =>
-                                                _quickLogin('teacher@demo.com'),
-                                      icon: const Icon(
-                                        Icons.co_present_rounded,
-                                        size: 16,
-                                      ),
-                                      label: const Text('Teacher Login'),
-                                      style: OutlinedButton.styleFrom(
-                                        visualDensity: VisualDensity.compact,
-                                      ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _quickLogin('teacher@demo.com'),
+                                  icon: const Icon(
+                                    Icons.co_present_rounded,
+                                    size: 16,
+                                  ),
+                                  label: const Text('Teacher Login'),
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 12,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
 
-                      // Manual Form
-                      if (_isRegister) ...[
-                        TextFormField(
-                          controller: _nameController,
-                          textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Full Name',
-                            hintText: 'e.g. Alex Johnson',
-                            prefixIcon: Icon(Icons.badge_outlined),
-                          ),
-                          validator: (val) =>
-                              (val == null || val.trim().isEmpty)
-                              ? 'Please enter your name'
-                              : null,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Text(
-                              'Account Role:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ChoiceChip(
-                              label: const Text('Student'),
-                              selected: _selectedRole == UserRole.student,
-                              onSelected: (sel) {
-                                if (sel) {
-                                  setState(
-                                    () => _selectedRole = UserRole.student,
-                                  );
-                                }
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            ChoiceChip(
-                              label: const Text('Teacher'),
-                              selected: _selectedRole == UserRole.teacher,
-                              onSelected: (sel) {
-                                if (sel) {
-                                  setState(
-                                    () => _selectedRole = UserRole.teacher,
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      TextFormField(
+                      // Email Field
+                      ClayTextField(
                         controller: _emailController,
+                        labelText: 'Email Address',
+                        hintText: 'e.g. student@demo.com',
+                        prefixIcon: const Icon(Icons.email_outlined, size: 20),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Email Address',
-                          hintText: 'e.g. student@demo.com',
-                          prefixIcon: Icon(Icons.email_outlined),
-                        ),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return 'Please enter an email';
@@ -337,100 +360,116 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
-                      TextFormField(
+                      // Password Field
+                      ClayTextField(
                         controller: _passwordController,
+                        labelText: 'Password',
+                        hintText: 'e.g. demo1234',
                         obscureText: _obscure,
-                        textInputAction: TextInputAction.done,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'e.g. demo1234',
-                          prefixIcon: const Icon(Icons.lock_outline_rounded),
-                          suffixIcon: IconButton(
-                            tooltip: _obscure
-                                ? 'Show password'
-                                : 'Hide password',
-                            icon: Icon(
-                              _obscure
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          size: 20,
                         ),
+                        suffixIcon: IconButton(
+                          tooltip: _obscure ? 'Show password' : 'Hide password',
+                          icon: Icon(
+                            _obscure
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            size: 18,
+                          ),
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                        ),
+                        textInputAction: TextInputAction.done,
                         validator: (val) => (val == null || val.length < 6)
                             ? 'Password must be at least 6 characters'
                             : null,
                         onFieldSubmitted: (_) => _submit(),
                       ),
 
+                      // Forgot Password Link
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _showForgotPasswordDialog,
+                          child: const Text(
+                            'Forgot Password?',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+
                       if (_errorMessage != null) ...[
-                        const SizedBox(height: 12),
-                        Container(
+                        const SizedBox(height: 6),
+                        ClayContainer(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colors.errorContainer.withAlpha(120),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: colors.error.withAlpha(80),
-                            ),
+                          color: isDark
+                              ? const Color(0xFF421D24)
+                              : const Color(0xFFFFECEE),
+                          borderRadius: BorderRadius.circular(
+                            ClayTokens.radiusSmall,
                           ),
                           child: Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.error_outline_rounded,
                                 size: 18,
-                                color: colors.error,
+                                color: Colors.redAccent,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   _errorMessage!,
-                                  style: TextStyle(
-                                    color: colors.error,
-                                    fontSize: 13,
+                                  style: const TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        const SizedBox(height: 12),
                       ],
-
-                      const SizedBox(height: 20),
-
-                      FilledButton(
-                        onPressed: _busy ? null : _submit,
-                        child: _busy
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(_isRegister ? 'Create Account' : 'Sign In'),
-                      ),
 
                       const SizedBox(height: 10),
 
-                      TextButton(
+                      // Submit Clay Button
+                      ClayButton(
+                        isFullWidth: true,
+                        isLoading: _busy,
+                        onPressed: _busy ? null : _submit,
+                        icon: Icons.login_rounded,
+                        child: const Text('Sign In'),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Create Account Button
+                      ClayButton(
+                        isFullWidth: true,
+                        color: isDark ? ClayTokens.darkSurface : Colors.white,
+                        textColor: isDark ? Colors.white : ClayTokens.darkInk,
+                        gradient: LinearGradient(
+                          colors: isDark
+                              ? [
+                                  const Color(0xFF292742),
+                                  const Color(0xFF1E1C30),
+                                ]
+                              : [Colors.white, const Color(0xFFF7F6FC)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         onPressed: _busy
                             ? null
-                            : () => setState(() {
-                                _isRegister = !_isRegister;
-                                _errorMessage = null;
-                              }),
-                        child: Text(
-                          _isRegister
-                              ? 'Already have an account? Sign In'
-                              : 'New to Unified Learn? Create an Account',
-                          style: const TextStyle(fontSize: 13),
-                        ),
+                            : () => context.push('/register'),
+                        icon: Icons.person_add_outlined,
+                        child: const Text('New to Unified Learn? Register'),
                       ),
+
+                      const SizedBox(height: 12),
 
                       TextButton.icon(
                         onPressed: _showDemoInfoDialog,
