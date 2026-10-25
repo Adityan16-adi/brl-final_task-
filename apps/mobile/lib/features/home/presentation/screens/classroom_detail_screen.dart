@@ -77,6 +77,125 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
     );
   }
 
+  String? _customMeetingUrl;
+
+  String get _meetingUrl {
+    if (_customMeetingUrl != null && _customMeetingUrl!.trim().isNotEmpty) {
+      return _customMeetingUrl!.trim();
+    }
+    final rawCode = widget.classroom.code?.trim().isNotEmpty == true
+        ? widget.classroom.code!.trim()
+        : widget.classroom.id.trim();
+    final sanitized = rawCode.replaceAll(RegExp(r'[^a-zA-Z0-9-]'), '');
+    return 'https://meet.jit.si/UnifiedLearn-${sanitized.isNotEmpty ? sanitized : "Class"}';
+  }
+
+  void _copyMeetingLink(BuildContext context, {bool launch = false}) {
+    final link = _meetingUrl;
+    Clipboard.setData(ClipboardData(text: link));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          launch
+              ? 'Meeting link copied to clipboard! Open in any browser:\n$link'
+              : 'Meeting link copied to clipboard: $link',
+        ),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'DISMISS',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSetCustomLinkDialog(BuildContext context) async {
+    final ctrl = TextEditingController(text: _customMeetingUrl ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Custom Meeting Link'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter a custom Google Meet, Zoom, or Jitsi room URL for this class:',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Meeting URL',
+                  hintText: 'https://meet.google.com/xyz-abcd-efg',
+                  prefixIcon: Icon(Icons.link_rounded),
+                ),
+                validator: (val) {
+                  if (val != null && val.trim().isNotEmpty) {
+                    if (!val.trim().startsWith('http://') &&
+                        !val.trim().startsWith('https://')) {
+                      return 'URL must start with http:// or https://';
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          if (_customMeetingUrl != null && _customMeetingUrl!.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                setState(() => _customMeetingUrl = null);
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Reset to default Jitsi room.')),
+                );
+              },
+              child: const Text('Reset Default'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ClayTokens.deepIndigo,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final url = ctrl.text.trim();
+                setState(() {
+                  _customMeetingUrl = url.isEmpty ? null : url;
+                });
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      url.isEmpty
+                          ? 'Reset to default Jitsi room.'
+                          : 'Custom meeting link saved!',
+                    ),
+                    backgroundColor: ClayTokens.mintDark,
+                  ),
+                );
+              }
+            },
+            child: const Text('Save Link'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showGradingDialog(
     BuildContext context,
     AssignmentItem assignment,
@@ -635,6 +754,154 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                         Icons.front_hand_rounded,
                         color: _handRaised ? Colors.amber.shade800 : null,
                       ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Web Meeting Link (Jitsi / Google Meet Fallback)
+        ClayCard(
+          depth: 4,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        ClayContainer(
+                          width: 36,
+                          height: 36,
+                          depth: 2,
+                          borderRadius: BorderRadius.circular(10),
+                          child: const Center(
+                            child: Icon(
+                              Icons.link_rounded,
+                              color: ClayTokens.deepIndigo,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Web Meeting Link',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              Text(
+                                'Jitsi / Google Meet Fallback',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: ClayTokens.secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const ClayBadge(
+                    label: 'ZERO-CONFIG',
+                    backgroundColor: ClayTokens.mint,
+                    textColor: ClayTokens.mintDark,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Direct browser-ready video conference. Instant one-click join with no server credentials required.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Meeting URL box
+              GestureDetector(
+                onTap: () => _copyMeetingLink(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colors.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.video_camera_front_rounded, size: 16, color: colors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _meetingUrl,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: colors.primary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.copy_rounded, size: 14, color: colors.onSurfaceVariant),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (isTeacher) ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _copyMeetingLink(context, launch: true),
+                      icon: const Icon(Icons.rocket_launch_rounded, size: 16),
+                      label: const Text('Launch Zero-Config Meeting'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _copyMeetingLink(context),
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text('Copy Meeting Link'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _showSetCustomLinkDialog(context),
+                      icon: const Icon(Icons.add_link_rounded, size: 16),
+                      label: const Text('Set Custom Meet / Zoom Link'),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _copyMeetingLink(context, launch: true),
+                      icon: const Icon(Icons.open_in_browser_rounded, size: 16),
+                      label: const Text('Join via Web / Meet Link'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _copyMeetingLink(context),
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text('Copy Link'),
                     ),
                   ],
                 ),
@@ -2092,6 +2359,18 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Got it'),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.video_call_rounded, size: 18),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ClayTokens.deepIndigo,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _copyMeetingLink(context, launch: true);
+            },
+            label: const Text('Join Jitsi Meeting Instead'),
           ),
         ],
       ),
