@@ -28,7 +28,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
   bool _cameraEnabled = true;
   bool _isSessionActive = false;
   bool _handRaised = false;
-  int _activeTabIndex = 0; // 0: Meeting Room, 1: Coursework, 2: Attendance, 3: Learners
+  int _activeTabIndex = 0; // 0: Meeting Room, 1: Coursework, 2: Attendance, 3: Chat, 4: Learners
 
   DateTime _attendanceDate = DateTime.now();
   final TextEditingController _attendanceTopicCtrl =
@@ -38,12 +38,17 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
   bool _isSavingAttendance = false;
   int _attendanceRefreshKey = 0;
 
+  final TextEditingController _chatCtrl = TextEditingController();
+  bool _isSendingChat = false;
+  int _chatRefreshKey = 0;
+
   @override
   void dispose() {
     _attendanceTopicCtrl.dispose();
     for (final ctrl in _attendanceRemarks.values) {
       ctrl.dispose();
     }
+    _chatCtrl.dispose();
     super.dispose();
   }
 
@@ -397,6 +402,11 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                 ),
                 ButtonSegment(
                   value: 3,
+                  icon: Icon(Icons.chat_bubble_outline_rounded),
+                  label: Text('Chat'),
+                ),
+                ButtonSegment(
+                  value: 4,
                   icon: Icon(Icons.people_rounded),
                   label: Text('Learners'),
                 ),
@@ -416,6 +426,8 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
             _buildCourseworkSection(context, isTeacher, assignmentsAsync),
           ] else if (_activeTabIndex == 2) ...[
             _buildAttendanceSection(context, isTeacher),
+          ] else if (_activeTabIndex == 3) ...[
+            _buildChatSection(context, isTeacher),
           ] else ...[
             _buildLearnersSection(context),
           ],
@@ -1704,6 +1716,282 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildChatSection(BuildContext context, bool isTeacher) {
+    final colors = Theme.of(context).colorScheme;
+    final currentUser = ref.watch(currentUserProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ML Spam Protected Classroom Chat Header Card
+        ClayCard(
+          depth: 2,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              const Icon(Icons.security_rounded, size: 18, color: Colors.green),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ML Spam Filter Active · Secure Channel',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                tooltip: 'Refresh messages',
+                onPressed: () => setState(() => _chatRefreshKey++),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Message List
+        FutureBuilder<List<ChatMessageItem>>(
+          key: ValueKey(_chatRefreshKey),
+          future: ref
+              .read(homeRepositoryProvider)
+              .getClassMessages(widget.classroom.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            final messages = snapshot.data ?? [];
+            if (messages.isEmpty) {
+              return ClayCard(
+                depth: 1,
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      const Icon(Icons.chat_bubble_outline_rounded, size: 36),
+                      const SizedBox(height: 10),
+                      Text(
+                        'No messages yet.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Start the classroom conversation below!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: messages.map((msg) {
+                final isMe = currentUser != null &&
+                    (currentUser.id == msg.senderUid ||
+                        currentUser.name == msg.senderName);
+                final timeStr =
+                    '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}';
+
+                return ClayCard(
+                  depth: isMe ? 3 : 1,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: msg.isTeacher
+                                      ? ClayTokens.softLavender
+                                      : Colors.blue.shade50,
+                                  child: Text(
+                                    msg.senderName.isNotEmpty
+                                        ? msg.senderName[0].toUpperCase()
+                                        : 'U',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      color: msg.isTeacher
+                                          ? ClayTokens.deepIndigo
+                                          : Colors.blue.shade800,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    msg.senderName,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                ClayBadge(
+                                  label: msg.isTeacher ? 'TEACHER' : 'STUDENT',
+                                  backgroundColor: msg.isTeacher
+                                      ? ClayTokens.softLavender
+                                      : Colors.blue.shade50,
+                                  textColor: msg.isTeacher
+                                      ? ClayTokens.deepIndigo
+                                      : Colors.blue.shade800,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        msg.text,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+
+        // Message input row with ML spam check
+        ClayCard(
+          depth: 3,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Type a classroom message...',
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                  ),
+                  onSubmitted: (_) => _sendClassroomChat(context),
+                ),
+              ),
+              IconButton(
+                icon: _isSendingChat
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(
+                        Icons.send_rounded,
+                        color: ClayTokens.deepIndigo,
+                      ),
+                onPressed:
+                    _isSendingChat ? null : () => _sendClassroomChat(context),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _sendClassroomChat(BuildContext context) async {
+    final text = _chatCtrl.text.trim();
+    if (text.isEmpty || _isSendingChat) return;
+
+    final currentUser = ref.read(currentUserProvider);
+    final isTeacher = ref.read(isTeacherProvider);
+    final homeRepo = ref.read(homeRepositoryProvider);
+
+    setState(() => _isSendingChat = true);
+
+    try {
+      // 1. ML Spam Filter Pre-flight Check
+      final spamCheck = await homeRepo.checkSpam(
+        meetingId: widget.classroom.id,
+        userId: currentUser?.id ?? 'student-mock-1',
+        message: text,
+      );
+
+      if (spamCheck.isSpam) {
+        if (context.mounted) {
+          final reasonsMsg = spamCheck.reasons.isNotEmpty
+              ? spamCheck.reasons.join(', ')
+              : 'Spam detected';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Message blocked by spam filter: $reasonsMsg'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() => _isSendingChat = false);
+        return;
+      }
+
+      // 2. Send message
+      await homeRepo.sendChatMessage(
+        classId: widget.classroom.id,
+        text: text,
+        senderUid: currentUser?.id ?? 'student-mock-1',
+        senderName: currentUser?.name ?? (isTeacher ? 'Teacher' : 'Student'),
+        senderRole: isTeacher ? 'teacher' : 'student',
+      );
+
+      _chatCtrl.clear();
+      setState(() {
+        _isSendingChat = false;
+        _chatRefreshKey++;
+      });
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() => _isSendingChat = false);
+    }
   }
 
   Future<void> _joinLiveVideoCall(BuildContext context, bool isTeacher) async {

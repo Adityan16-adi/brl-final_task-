@@ -63,6 +63,7 @@ app.use("/api/calendar", require("./src/routes/calendarRoutes"));
 app.use("/api/notifications", require("./src/routes/notificationRoutes"));
 app.use("/api/attendance", require("./src/routes/attendanceRoutes"));
 app.use("/api/meetings", require("./src/routes/meetingRoutes"));
+app.use("/api/chat", require("./src/routes/chatRoutes"));
 
 const healthHandler = (req, res) => {
     const isDbConnected = mongoose.connection.readyState === 1;

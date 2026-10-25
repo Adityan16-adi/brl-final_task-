@@ -1,12 +1,15 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/network/dio_client.dart';
 import '../domain/home_repository.dart';
 
 /// Live HTTP implementation of [HomeRepository] targeting the Node.js/Express backend.
 class HttpHomeRepository implements HomeRepository {
-  HttpHomeRepository({required this.dio});
+  HttpHomeRepository({required this.dio, Dio? mlDio})
+      : _mlDio = mlDio ?? DioClient.create();
 
   final Dio dio;
+  final Dio _mlDio;
 
   // Local submission registry so student submissions persist across provider invalidations
   final Map<String, ({String text, String? fileUrl, DateTime submittedAt})>
@@ -660,6 +663,133 @@ class HttpHomeRepository implements HomeRepository {
       lateCount: late,
       percentage: pct,
       sessions: sessionsList,
+    );
+  }
+
+  final Map<String, List<ChatMessageItem>> _chatMessagesByClass = {};
+
+  @override
+  Future<List<ChatMessageItem>> getClassMessages(String classId) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>('/api/chat/$classId');
+      final data = response.data;
+      if (data != null && data['success'] == true && data['data'] is List) {
+        final list = (data['data'] as List)
+            .map((item) => ChatMessageItem.fromJson(item as Map<String, dynamic>))
+            .toList();
+        _chatMessagesByClass[classId] = list;
+        return list;
+      }
+    } catch (_) {}
+
+    return _chatMessagesByClass[classId] ?? [
+      ChatMessageItem(
+        id: 'mock-chat-1',
+        classId: classId,
+        senderUid: 'teacher-uid',
+        senderName: 'Prof. Kepler',
+        senderRole: 'teacher',
+        text: 'Welcome everyone! Please review Chapter 3 before our next session.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      ),
+      ChatMessageItem(
+        id: 'mock-chat-2',
+        classId: classId,
+        senderUid: 'mock-student-01',
+        senderName: 'Alice',
+        senderRole: 'student',
+        text: 'Thank you Professor! Will the assignment solutions be posted today?',
+        createdAt: DateTime.now().subtract(const Duration(minutes: 45)),
+      ),
+    ];
+  }
+
+  @override
+  Future<ChatMessageItem> sendChatMessage({
+    required String classId,
+    required String text,
+    String? senderUid,
+    String? senderName,
+    String? senderRole,
+  }) async {
+    try {
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/chat/$classId',
+        data: {
+          'text': text.trim(),
+          'senderUid': ?senderUid,
+          'senderName': ?senderName,
+          'senderRole': ?senderRole,
+        },
+      );
+      final data = response.data;
+      if (data != null && data['success'] == true && data['data'] is Map) {
+        final item = ChatMessageItem.fromJson(data['data'] as Map<String, dynamic>);
+        _chatMessagesByClass.putIfAbsent(classId, () => []).add(item);
+        return item;
+      }
+    } catch (_) {}
+
+    final localMsg = ChatMessageItem(
+      id: 'chat-${DateTime.now().millisecondsSinceEpoch}',
+      classId: classId,
+      senderUid: senderUid ?? 'current-user',
+      senderName: senderName ?? 'You',
+      senderRole: senderRole ?? 'student',
+      text: text.trim(),
+      createdAt: DateTime.now(),
+    );
+    _chatMessagesByClass.putIfAbsent(classId, () => []).add(localMsg);
+    return localMsg;
+  }
+
+  @override
+  Future<SpamCheckResult> checkSpam({
+    required String meetingId,
+    required String userId,
+    required String message,
+  }) async {
+    try {
+      final response = await _mlDio.post<Map<String, dynamic>>(
+        '/spam/check',
+        data: {
+          'meeting_id': meetingId,
+          'user_id': userId,
+          'message': message.trim(),
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 3),
+        ),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return SpamCheckResult.fromJson(response.data!);
+      }
+    } catch (_) {}
+
+    final trimmed = message.trim();
+    final isRepeatedChar = RegExp(r'(.)\1{7,}').hasMatch(trimmed);
+    final isUrlFlood = RegExp(r'(https?://|www\.)\S+').allMatches(trimmed).length > 2;
+    final isTooLong = trimmed.length > 500;
+
+    if (isRepeatedChar || isUrlFlood || isTooLong) {
+      final reasons = <String>[];
+      if (isRepeatedChar) reasons.add('Repeated characters');
+      if (isUrlFlood) reasons.add('Excessive external links');
+      if (isTooLong) reasons.add('Message too long');
+      return SpamCheckResult(
+        isSpam: true,
+        score: 3,
+        action: 'block',
+        reasons: reasons,
+      );
+    }
+
+    return const SpamCheckResult(
+      isSpam: false,
+      score: 0,
+      action: 'allow',
+      reasons: [],
     );
   }
 }

@@ -494,4 +494,83 @@ class InMemoryHomeRepository implements HomeRepository {
       sessions: sessionsList,
     );
   }
+
+  final Map<String, List<ChatMessageItem>> _chatMessagesByClass = {};
+
+  @override
+  Future<List<ChatMessageItem>> getClassMessages(String classId) async {
+    return _chatMessagesByClass[classId] ?? [
+      ChatMessageItem(
+        id: 'mock-chat-1',
+        classId: classId,
+        senderUid: 'teacher-uid',
+        senderName: 'Course Instructor',
+        senderRole: 'teacher',
+        text: 'Welcome to our class! Feel free to ask questions here.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+      ),
+      ChatMessageItem(
+        id: 'mock-chat-2',
+        classId: classId,
+        senderUid: 'mock-student-01',
+        senderName: 'Student',
+        senderRole: 'student',
+        text: 'Thank you! Excited for this course.',
+        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+      ),
+    ];
+  }
+
+  @override
+  Future<ChatMessageItem> sendChatMessage({
+    required String classId,
+    required String text,
+    String? senderUid,
+    String? senderName,
+    String? senderRole,
+  }) async {
+    final item = ChatMessageItem(
+      id: 'chat-${DateTime.now().millisecondsSinceEpoch}',
+      classId: classId,
+      senderUid: senderUid ?? 'student-mock-1',
+      senderName: senderName ?? 'Student',
+      senderRole: senderRole ?? 'student',
+      text: text.trim(),
+      createdAt: DateTime.now(),
+    );
+    _chatMessagesByClass.putIfAbsent(classId, () => []).add(item);
+    return item;
+  }
+
+  @override
+  Future<SpamCheckResult> checkSpam({
+    required String meetingId,
+    required String userId,
+    required String message,
+  }) async {
+    final trimmed = message.trim();
+    final isRepeatedChar = RegExp(r'(.)\1{7,}').hasMatch(trimmed);
+    final isUrlFlood = RegExp(r'(https?://|www\.)\S+').allMatches(trimmed).length > 2;
+    final isTooLong = trimmed.length > 500;
+
+    if (isRepeatedChar || isUrlFlood || isTooLong) {
+      final reasons = <String>[];
+      if (isRepeatedChar) reasons.add('Repeated characters');
+      if (isUrlFlood) reasons.add('Excessive external links');
+      if (isTooLong) reasons.add('Message too long');
+      return SpamCheckResult(
+        isSpam: true,
+        score: 3,
+        action: 'block',
+        reasons: reasons,
+      );
+    }
+
+    return const SpamCheckResult(
+      isSpam: false,
+      score: 0,
+      action: 'allow',
+      reasons: [],
+    );
+  }
 }

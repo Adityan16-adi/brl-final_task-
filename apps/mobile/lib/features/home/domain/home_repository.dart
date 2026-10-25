@@ -43,6 +43,19 @@ abstract interface class HomeRepository {
     String? topic,
   });
   Future<StudentAttendanceSummary> getStudentAttendance(String studentUid);
+  Future<List<ChatMessageItem>> getClassMessages(String classId);
+  Future<ChatMessageItem> sendChatMessage({
+    required String classId,
+    required String text,
+    String? senderUid,
+    String? senderName,
+    String? senderRole,
+  });
+  Future<SpamCheckResult> checkSpam({
+    required String meetingId,
+    required String userId,
+    required String message,
+  });
 }
 
 class ClassroomException implements Exception {
@@ -408,4 +421,78 @@ class StudentAttendanceSummary {
       sessions: list.map((s) => s as Map<String, dynamic>).toList(),
     );
   }
+}
+
+class ChatMessageItem {
+  const ChatMessageItem({
+    required this.id,
+    required this.classId,
+    required this.senderUid,
+    required this.senderName,
+    required this.senderRole,
+    required this.text,
+    required this.createdAt,
+    this.isSpam = false,
+  });
+
+  final String id;
+  final String classId;
+  final String senderUid;
+  final String senderName;
+  final String senderRole; // 'teacher' | 'student'
+  final String text;
+  final DateTime createdAt;
+  final bool isSpam;
+
+  bool get isTeacher => senderRole.toLowerCase() == 'teacher';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'classId': classId,
+        'senderUid': senderUid,
+        'senderName': senderName,
+        'senderRole': senderRole,
+        'text': text,
+        'createdAt': createdAt.toIso8601String(),
+        'isSpam': isSpam,
+      };
+
+  factory ChatMessageItem.fromJson(Map<String, dynamic> json) =>
+      ChatMessageItem(
+        id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+        classId: json['classId']?.toString() ?? '',
+        senderUid: json['senderUid']?.toString() ?? '',
+        senderName: json['senderName']?.toString() ?? 'User',
+        senderRole: json['senderRole']?.toString() ?? 'student',
+        text: json['text']?.toString() ?? '',
+        createdAt: json['createdAt'] != null
+            ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+        isSpam: json['isSpam'] == true,
+      );
+}
+
+class SpamCheckResult {
+  const SpamCheckResult({
+    required this.isSpam,
+    required this.score,
+    required this.action,
+    this.reasons = const [],
+  });
+
+  final bool isSpam;
+  final int score;
+  final String action; // 'allow', 'warn', 'block', 'blocked'
+  final List<String> reasons;
+
+  factory SpamCheckResult.fromJson(Map<String, dynamic> json) =>
+      SpamCheckResult(
+        isSpam: json['is_spam'] == true,
+        score: (json['score'] as num?)?.toInt() ?? 0,
+        action: json['action']?.toString() ?? 'allow',
+        reasons: (json['reasons'] as List<dynamic>?)
+                ?.map((r) => r.toString())
+                .toList() ??
+            const [],
+      );
 }

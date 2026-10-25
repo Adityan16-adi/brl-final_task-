@@ -120,3 +120,12 @@ final studentAttendanceSummaryProvider =
   return repo.getStudentAttendance(studentUid);
 });
 
+final classMessagesProvider =
+    FutureProvider.family.autoDispose<List<ChatMessageItem>, String>((
+  ref,
+  classId,
+) async {
+  final repo = ref.watch(homeRepositoryProvider);
+  return repo.getClassMessages(classId);
+});
+
