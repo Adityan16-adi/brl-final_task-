@@ -178,10 +178,20 @@ class HttpHomeRepository implements HomeRepository {
           var submittedText = localSub?.text;
           var submittedFileUrl = localSub?.fileUrl;
           var submittedAt = localSub?.submittedAt;
+          String? submittedLink;
+          bool isLate = false;
+          List<SubmissionAttachment> attachments = const [];
 
           if (s != null) {
             submittedText = s['text']?.toString() ?? submittedText;
+            submittedLink = s['link']?.toString();
             submittedFileUrl = s['fileUrl']?.toString() ?? submittedFileUrl;
+            isLate = s['isLate'] == true;
+            if (s['attachments'] is List) {
+              attachments = (s['attachments'] as List)
+                  .map((att) => SubmissionAttachment.fromJson(att as Map<String, dynamic>))
+                  .toList();
+            }
             if (s['submittedAt'] != null) {
               submittedAt = DateTime.tryParse(s['submittedAt'].toString()) ?? submittedAt;
             }
@@ -209,8 +219,11 @@ class HttpHomeRepository implements HomeRepository {
             description: m['description']?.toString() ?? '',
             attachmentUrl: m['fileUrl']?.toString(),
             submittedText: submittedText,
+            submittedLink: submittedLink,
             submittedFileUrl: submittedFileUrl,
+            attachments: attachments,
             submittedAt: submittedAt,
+            isLate: isLate,
             marks: marks,
             feedback: feedback,
           );
@@ -261,10 +274,21 @@ class HttpHomeRepository implements HomeRepository {
       final s = serverSubmissions[a.id];
       final sub = _submittedMap[a.id];
       if (s != null) {
+        final attList = (s['attachments'] is List)
+            ? (s['attachments'] as List)
+                .map((att) => SubmissionAttachment.fromJson(att as Map<String, dynamic>))
+                .toList()
+            : <SubmissionAttachment>[];
         return a.copyWith(
           status: s['status'] == 'graded' ? AssignmentStatus.graded : AssignmentStatus.submitted,
           submittedText: s['text']?.toString() ?? sub?.text,
+          submittedLink: s['link']?.toString(),
           submittedFileUrl: s['fileUrl']?.toString() ?? sub?.fileUrl,
+          attachments: attList,
+          submittedAt: s['submittedAt'] != null
+              ? DateTime.tryParse(s['submittedAt'].toString())
+              : sub?.submittedAt,
+          isLate: s['isLate'] == true,
           marks: (s['marks'] as num?)?.toInt() ?? a.marks,
           feedback: s['feedback']?.toString() ?? a.feedback,
         );
@@ -361,6 +385,10 @@ class HttpHomeRepository implements HomeRepository {
     String? link,
     String? thumbnailUrl,
     String? uploadedBy,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
   }) async {
     final typeStr = switch (type) {
       CourseMaterialType.video => 'video',
@@ -369,18 +397,51 @@ class HttpHomeRepository implements HomeRepository {
     };
 
     try {
-      final response = await dio.post<Map<String, dynamic>>(
-        '/api/materials',
-        data: {
+      dynamic requestData;
+      if (filePath != null || fileBytes != null) {
+        MultipartFile multipartFile;
+        if (filePath != null) {
+          multipartFile = await MultipartFile.fromFile(
+            filePath,
+            filename: fileName,
+          );
+        } else {
+          multipartFile = MultipartFile.fromBytes(
+            fileBytes!,
+            filename: fileName ?? 'material_file',
+          );
+        }
+
+        requestData = FormData.fromMap({
           'classId': classId,
           'title': title.trim(),
           'subject': subject.trim(),
           'type': typeStr,
           'description': details.trim(),
-          'link': ?link?.trim(),
-          'thumbnailUrl': ?thumbnailUrl?.trim(),
+          if (link != null && link.trim().isNotEmpty) 'link': link.trim(),
+          if (thumbnailUrl != null && thumbnailUrl.trim().isNotEmpty)
+            'thumbnailUrl': thumbnailUrl.trim(),
           'uploadedBy': ?uploadedBy,
-        },
+          'file': multipartFile,
+        });
+      } else {
+        requestData = {
+          'classId': classId,
+          'title': title.trim(),
+          'subject': subject.trim(),
+          'type': typeStr,
+          'description': details.trim(),
+          if (link != null && link.trim().isNotEmpty) 'link': link.trim(),
+          if (thumbnailUrl != null && thumbnailUrl.trim().isNotEmpty)
+            'thumbnailUrl': thumbnailUrl.trim(),
+          'uploadedBy': ?uploadedBy,
+        };
+      }
+
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/materials',
+        data: requestData,
+        onSendProgress: onProgress,
       );
       final data = response.data;
       if (data != null && data['success'] == true && data['data'] != null) {
@@ -398,20 +459,13 @@ class HttpHomeRepository implements HomeRepository {
         _uploadedMaterials.insert(0, item);
         return item;
       }
-    } catch (_) {}
-
-    final item = MaterialItem(
-      id: 'mat-local-${DateTime.now().millisecondsSinceEpoch}',
-      title: title.trim(),
-      subject: subject.trim(),
-      type: type,
-      details: details.trim(),
-      link: link?.trim(),
-      thumbnailUrl: thumbnailUrl?.trim(),
-      createdAt: 'Today',
-    );
-    _uploadedMaterials.insert(0, item);
-    return item;
+      throw const ClassroomException('Unexpected response from server');
+    } on DioException catch (e) {
+      final msg = (e.response?.data is Map && e.response?.data['message'] != null)
+          ? e.response?.data['message'].toString()
+          : (e.message ?? 'Failed to upload material');
+      throw ClassroomException(msg!, statusCode: e.response?.statusCode);
+    }
   }
 
   @override
@@ -498,18 +552,60 @@ class HttpHomeRepository implements HomeRepository {
     String assignmentId,
     String text, {
     String? studentId,
+    String? link,
     String? fileUrl,
     String? fileName,
+    String? filePath,
+    List<int>? fileBytes,
+    List<SelectedAttachmentItem>? localFiles,
+    void Function(int sent, int total)? onProgress,
   }) async {
     try {
+      final filesToUpload = <MultipartFile>[];
+      if (filePath != null) {
+        filesToUpload.add(await MultipartFile.fromFile(filePath, filename: fileName));
+      } else if (fileBytes != null) {
+        filesToUpload.add(MultipartFile.fromBytes(fileBytes, filename: fileName ?? 'attachment'));
+      }
+      if (localFiles != null) {
+        for (final lf in localFiles) {
+          if (lf.path != null) {
+            filesToUpload.add(await MultipartFile.fromFile(lf.path!, filename: lf.name));
+          } else if (lf.bytes != null) {
+            filesToUpload.add(MultipartFile.fromBytes(lf.bytes!, filename: lf.name));
+          }
+        }
+      }
+
+      dynamic requestData;
+      if (filesToUpload.isNotEmpty) {
+        final formDataMap = <String, dynamic>{
+          'studentId': studentId ?? 'mock-student-01',
+          'text': text.trim(),
+          if (link != null && link.trim().isNotEmpty) 'link': link.trim(),
+          if (fileUrl != null && fileUrl.trim().isNotEmpty) 'fileUrl': fileUrl.trim(),
+        };
+        if (filesToUpload.length == 1) {
+          formDataMap['file'] = filesToUpload.first;
+        } else {
+          formDataMap['files'] = filesToUpload;
+        }
+        requestData = FormData.fromMap(formDataMap);
+      } else {
+        requestData = {
+          'studentId': studentId ?? 'mock-student-01',
+          'text': text.trim(),
+          if (link != null && link.trim().isNotEmpty) 'link': link.trim(),
+          if (fileUrl != null && fileUrl.trim().isNotEmpty) 'fileUrl': fileUrl.trim(),
+        };
+      }
+
       final response = await dio.post<Map<String, dynamic>>(
         '/api/submissions/assignment/$assignmentId',
-        data: {
-          'text': text.trim(),
-          'studentId': studentId ?? 'mock-student-01',
-          if (fileUrl != null && fileUrl.isNotEmpty) 'fileUrl': fileUrl.trim(),
-        },
+        data: requestData,
+        onSendProgress: onProgress,
       );
+
       final ok = response.statusCode == 200 || response.statusCode == 201;
       if (ok) {
         _submittedMap[assignmentId] = (
@@ -519,14 +615,11 @@ class HttpHomeRepository implements HomeRepository {
         );
       }
       return ok;
-    } catch (_) {
-      // Optimistic fallback for demo / test mode
-      _submittedMap[assignmentId] = (
-        text: text.trim(),
-        fileUrl: fileUrl?.trim(),
-        submittedAt: DateTime.now(),
-      );
-      return true;
+    } on DioException catch (e) {
+      final message = (e.response?.data is Map && e.response?.data['message'] != null)
+          ? e.response?.data['message'].toString()
+          : (e.message ?? 'Unable to submit assignment');
+      throw ClassroomException(message!, statusCode: e.response?.statusCode);
     }
   }
 

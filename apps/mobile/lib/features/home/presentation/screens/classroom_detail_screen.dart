@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/network/dio_client.dart';
@@ -239,6 +240,22 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
     );
   }
 
+  Future<void> _launchResourceUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+    await Clipboard.setData(ClipboardData(text: url));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attachment link copied to clipboard.')),
+      );
+    }
+  }
+
   Future<void> _showGradingDialog(
     BuildContext context,
     AssignmentItem assignment,
@@ -252,6 +269,16 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
 
+    final submittedAtStr = assignment.submittedAt != null
+        ? '${assignment.submittedAt!.year}-${assignment.submittedAt!.month.toString().padLeft(2, '0')}-${assignment.submittedAt!.day.toString().padLeft(2, '0')} ${assignment.submittedAt!.hour.toString().padLeft(2, '0')}:${assignment.submittedAt!.minute.toString().padLeft(2, '0')}'
+        : null;
+
+    final submissionLink = assignment.submittedLink ??
+        (assignment.submittedFileUrl != null &&
+                assignment.submittedFileUrl!.startsWith('http')
+            ? assignment.submittedFileUrl
+            : null);
+
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -264,15 +291,194 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Maximum Points: ${assignment.points}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: ClayTokens.secondaryText,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Maximum Points: ${assignment.points}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: ClayTokens.secondaryText,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (submittedAtStr != null)
+                        Text(
+                          '• Submitted: $submittedAtStr',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: ClayTokens.secondaryText,
+                          ),
+                        ),
+                      if (assignment.isLate)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'LATE SUBMISSION',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.red.shade900,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
+
+                  // Student's written solution
+                  if (assignment.submittedText != null &&
+                      assignment.submittedText!.isNotEmpty) ...[
+                    const Text(
+                      'Student Solution / Notes:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: ClayTokens.lightSurface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                      child: Text(
+                        assignment.submittedText!,
+                        style: const TextStyle(fontSize: 13, height: 1.3),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Student's submission link
+                  if (submissionLink != null && submissionLink.isNotEmpty) ...[
+                    const Text(
+                      'Submission Link:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () => _launchResourceUrl(submissionLink),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.link_rounded, size: 16, color: Colors.blue),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                submissionLink,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Icon(Icons.open_in_new_rounded, size: 14, color: Colors.blue),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Attached files
+                  if (assignment.attachments.isNotEmpty) ...[
+                    const Text(
+                      'Attached Student Files:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...assignment.attachments.map((att) => Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: ClayTokens.mint.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.attachment_rounded, size: 16, color: ClayTokens.mintDark),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  att.name.isNotEmpty ? att.name : att.url,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                                tooltip: 'Open attachment',
+                                onPressed: () => _launchResourceUrl(att.url),
+                              ),
+                            ],
+                          ),
+                        )),
+                    const SizedBox(height: 12),
+                  ] else if (assignment.submittedFileUrl != null &&
+                      assignment.submittedFileUrl!.isNotEmpty &&
+                      submissionLink != assignment.submittedFileUrl) ...[
+                    const Text(
+                      'Attached File:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () => _launchResourceUrl(assignment.submittedFileUrl!),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.file_present_rounded, size: 16, color: Colors.blue),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              assignment.submittedFileUrl!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Icon(Icons.open_in_new_rounded, size: 14, color: Colors.blue),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  const Divider(height: 20),
                   TextFormField(
                     controller: marksCtrl,
                     keyboardType: TextInputType.number,

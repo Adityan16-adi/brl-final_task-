@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/clay_theme.dart';
 import '../../../../core/widgets/demo_data_badge.dart';
@@ -464,21 +465,30 @@ class _MaterialCard extends StatelessWidget {
               ],
               ClayButton(
                 isFullWidth: true,
-                onPressed: () {
+                onPressed: () async {
                   Navigator.of(sheetCtx).pop();
-                  if (item.link != null) {
-                    Clipboard.setData(ClipboardData(text: item.link!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Copied link for "${item.title}" to clipboard!',
+                  if (item.link != null && item.link!.isNotEmpty) {
+                    try {
+                      final uri = Uri.parse(item.link!);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        return;
+                      }
+                    } catch (_) {}
+                    await Clipboard.setData(ClipboardData(text: item.link!));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Copied link for "${item.title}" to clipboard!',
+                          ),
+                          backgroundColor: ClayTokens.deepIndigo,
                         ),
-                        backgroundColor: ClayTokens.deepIndigo,
-                      ),
-                    );
+                      );
+                    }
                   }
                 },
-                icon: Icons.download_rounded,
+                icon: Icons.open_in_new_rounded,
                 child: const Text('Access Material Resource'),
               ),
             ],

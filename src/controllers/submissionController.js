@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { notifyUser } = require("../utils/notify");
 const Assignment = require("../models/Assignment");
+const Classroom = require("../models/Classroom");
 const Submission = require("../models/Submission");
 const User = require("../models/User");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
@@ -8,23 +9,22 @@ const { deleteFromCloudinary } = uploadToCloudinary;
 
 // POST /api/submissions/assignment/:assignmentId
 exports.submitAssignment = async (req, res) => {
-    let newlyUploadedPublicId = null;
-    let newlyUploadedResourceType = null;
+    const uploadedPublicIds = [];
 
     try {
-        const rawStudentId = req.body?.studentId || req.user?._id || req.user?.uid || (process.env.NODE_ENV !== "production" ? "mock-student-01" : null);
-        const text = req.body?.text;
+        const rawStudentId =
+            req.body?.studentId ||
+            req.user?._id ||
+            req.user?.uid ||
+            (process.env.NODE_ENV !== "production" ? "mock-student-01" : null);
 
-        if (!rawStudentId || (!text?.trim() && !req.file && !req.body?.fileUrl)) {
-            return res.status(400).json({
-                success: false,
-                message: "studentId and text or a file are required",
-            });
-        }
+        const text = req.body?.text || "";
+        const link = req.body?.link || req.body?.submissionLink || "";
+        let fileUrl = req.body?.fileUrl || "";
 
         // Resolve studentId to a valid User ObjectId
         let studentId = rawStudentId;
-        if (!mongoose.Types.ObjectId.isValid(rawStudentId)) {
+        if (rawStudentId && !mongoose.Types.ObjectId.isValid(rawStudentId)) {
             let userDoc = await User.findOne({ uid: rawStudentId });
             if (!userDoc && process.env.NODE_ENV !== "production") {
                 userDoc = await User.create({
@@ -40,7 +40,6 @@ exports.submitAssignment = async (req, res) => {
         }
 
         const assignment = await Assignment.findById(req.params.assignmentId);
-
         if (!assignment) {
             return res.status(404).json({
                 success: false,
@@ -48,47 +47,116 @@ exports.submitAssignment = async (req, res) => {
             });
         }
 
+        // Enrollment validation: student must belong to the classroom
+        if (assignment.classId) {
+            const classroom = await Classroom.findById(assignment.classId);
+            if (classroom) {
+                const studentUid = req.user?.uid || (typeof rawStudentId === "string" ? rawStudentId : "");
+                const studentIdStr = studentId ? studentId.toString() : "";
+                const isTeacher = classroom.teacherUid === studentUid;
+                const isStudent = (classroom.students || []).some(
+                    (s) => s === studentUid || s === studentIdStr || s === rawStudentId
+                );
+                if (!isTeacher && !isStudent) {
+                    return res.status(403).json({
+                        success: false,
+                        message: "You are not enrolled in this classroom",
+                    });
+                }
+            }
+        }
+
         const previous = await Submission.findOne({
             assignmentId: assignment._id,
             studentId,
         });
 
-        let fileUrl = req.body?.fileUrl || "";
+        // Collect uploaded files from multipart req.file or req.files
+        const filesToUpload = [];
+        if (req.file) filesToUpload.push(req.file);
+        if (Array.isArray(req.files)) {
+            for (const f of req.files) {
+                if (!filesToUpload.includes(f)) filesToUpload.push(f);
+            }
+        }
+
+        // Parse any JSON attachments provided in body
+        let attachments = [];
+        if (Array.isArray(req.body?.attachments)) {
+            attachments = [...req.body.attachments];
+        } else if (typeof req.body?.attachments === "string" && req.body.attachments.trim().length > 0) {
+            try {
+                const parsed = JSON.parse(req.body.attachments);
+                if (Array.isArray(parsed)) attachments = [...parsed];
+            } catch (_) {}
+        }
+
+        // Process file uploads
+        for (const file of filesToUpload) {
+            const result = await uploadToCloudinary(
+                file.buffer,
+                "assignment-submissions",
+                {
+                    mimetype: file.mimetype,
+                    filename: file.originalname,
+                }
+            );
+
+            attachments.push({
+                url: result.secure_url || result.url,
+                name: file.originalname || "attachment",
+                publicId: result.public_id || "",
+                resourceType: result.resource_type || "raw",
+                fileType: file.mimetype || "",
+                size: file.size || (file.buffer ? file.buffer.length : 0),
+            });
+
+            uploadedPublicIds.push({
+                publicId: result.public_id,
+                resourceType: result.resource_type || "raw",
+            });
+        }
+
+        // Backward compatibility for fileUrl & filePublicId
         let filePublicId = "";
         let fileResourceType = "";
 
-        if (req.file) {
-            const result = await uploadToCloudinary(
-                req.file.buffer,
-                "assignment-submissions"
-            );
+        if (attachments.length > 0 && !fileUrl) {
+            fileUrl = attachments[0].url;
+            filePublicId = attachments[0].publicId || "";
+            fileResourceType = attachments[0].resourceType || "raw";
+        } else if (!req.file && filesToUpload.length === 0 && previous) {
+            filePublicId = previous.filePublicId || "";
+            fileResourceType = previous.fileResourceType || "";
+            if (!fileUrl) fileUrl = previous.fileUrl || "";
+            if (attachments.length === 0 && previous.attachments?.length > 0) {
+                attachments = previous.attachments;
+            }
+        }
 
-            fileUrl = result.secure_url;
-            filePublicId = result.public_id;
-            fileResourceType = result.resource_type;
-            newlyUploadedPublicId = result.public_id;
-            newlyUploadedResourceType = result.resource_type;
+        // Require at least text, link, or attachment
+        if (
+            !rawStudentId ||
+            (!text.trim() && !link.trim() && !fileUrl.trim() && attachments.length === 0)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Submission requires text, a link, or at least one attached file",
+            });
         }
 
         const now = new Date();
-        const isLate = now > assignment.dueDate;
-
-        // Preserve existing file metadata if this is a text-only resubmission.
-        if (!req.file && previous) {
-            filePublicId = previous.filePublicId || "";
-            fileResourceType = previous.fileResourceType || "";
-            if (!req.body?.fileUrl) {
-                fileUrl = previous.fileUrl || "";
-            }
-        }
+        const isLate = assignment.dueDate ? now > new Date(assignment.dueDate) : false;
 
         const submission = await Submission.findOneAndUpdate(
             { assignmentId: assignment._id, studentId },
             {
-                text: text || "",
+                text: text.trim(),
+                link: link.trim() || (previous?.link || ""),
                 fileUrl,
                 filePublicId,
                 fileResourceType,
+                attachments,
                 submittedAt: now,
                 isLate,
                 status: "submitted",
@@ -101,8 +169,13 @@ exports.submitAssignment = async (req, res) => {
             }
         );
 
-        // Safe cleanup: Only delete old asset AFTER the database update has succeeded
-        if (req.file && previous?.filePublicId && previous.filePublicId !== filePublicId) {
+        // Safe cleanup: Only delete old single asset if a new file replaced it
+        if (
+            filesToUpload.length > 0 &&
+            previous?.filePublicId &&
+            previous.filePublicId !== filePublicId &&
+            !previous.filePublicId.startsWith("local_")
+        ) {
             await deleteFromCloudinary(previous.filePublicId, previous.fileResourceType);
         }
 
@@ -112,8 +185,10 @@ exports.submitAssignment = async (req, res) => {
             data: submission,
         });
     } catch (error) {
-        if (newlyUploadedPublicId) {
-            await deleteFromCloudinary(newlyUploadedPublicId, newlyUploadedResourceType);
+        for (const item of uploadedPublicIds) {
+            if (item.publicId) {
+                await deleteFromCloudinary(item.publicId, item.resourceType);
+            }
         }
         if (error.message && error.message.includes("Cloud storage is not configured")) {
             return res.status(503).json({
@@ -134,7 +209,7 @@ exports.getSubmissionsByAssignment = async (req, res) => {
     try {
         const submissions = await Submission.find({
             assignmentId: req.params.assignmentId,
-        });
+        }).populate("studentId", "name email uid");
 
         return res.json({ success: true, data: submissions });
     } catch (error) {
@@ -160,7 +235,7 @@ exports.getMySubmission = async (req, res) => {
         const submission = await Submission.findOne({
             assignmentId: req.params.assignmentId,
             studentId,
-        });
+        }).populate("studentId", "name email uid");
 
         return res.json({ success: true, data: submission });
     } catch (error) {

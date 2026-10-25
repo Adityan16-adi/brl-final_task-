@@ -20,14 +20,23 @@ abstract interface class HomeRepository {
     String? link,
     String? thumbnailUrl,
     String? uploadedBy,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
   });
   Future<List<ScheduleItem>> getSchedule();
   Future<bool> submitAssignment(
     String assignmentId,
     String text, {
     String? studentId,
+    String? link,
     String? fileUrl,
     String? fileName,
+    String? filePath,
+    List<int>? fileBytes,
+    List<SelectedAttachmentItem>? localFiles,
+    void Function(int sent, int total)? onProgress,
   });
   Future<AssignmentItem> createAssignment({
     required String classId,
@@ -217,6 +226,59 @@ class ClassroomDetails {
 
 enum AssignmentStatus { pending, submitted, graded }
 
+class SubmissionAttachment {
+  const SubmissionAttachment({
+    required this.url,
+    this.name = '',
+    this.publicId = '',
+    this.resourceType = 'raw',
+    this.fileType = '',
+    this.size = 0,
+  });
+
+  final String url;
+  final String name;
+  final String publicId;
+  final String resourceType;
+  final String fileType;
+  final int size;
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'name': name,
+        'publicId': publicId,
+        'resourceType': resourceType,
+        'fileType': fileType,
+        'size': size,
+      };
+
+  factory SubmissionAttachment.fromJson(Map<String, dynamic> json) =>
+      SubmissionAttachment(
+        url: json['url']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        publicId: json['publicId']?.toString() ?? '',
+        resourceType: json['resourceType']?.toString() ?? 'raw',
+        fileType: json['fileType']?.toString() ?? '',
+        size: (json['size'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class SelectedAttachmentItem {
+  const SelectedAttachmentItem({
+    required this.name,
+    this.path,
+    this.bytes,
+    this.size = 0,
+    this.mimeType,
+  });
+
+  final String name;
+  final String? path;
+  final List<int>? bytes;
+  final int size;
+  final String? mimeType;
+}
+
 class AssignmentItem {
   const AssignmentItem({
     required this.id,
@@ -230,7 +292,9 @@ class AssignmentItem {
     this.attachmentUrl,
     this.attachmentName,
     this.submittedText,
+    this.submittedLink,
     this.submittedFileUrl,
+    this.attachments = const [],
     this.submittedAt,
     this.isLate = false,
     this.marks,
@@ -248,7 +312,9 @@ class AssignmentItem {
   final String? attachmentUrl;
   final String? attachmentName;
   final String? submittedText;
+  final String? submittedLink;
   final String? submittedFileUrl;
+  final List<SubmissionAttachment> attachments;
   final DateTime? submittedAt;
   final bool isLate;
   final int? marks;
@@ -295,7 +361,9 @@ class AssignmentItem {
     String? attachmentUrl,
     String? attachmentName,
     String? submittedText,
+    String? submittedLink,
     String? submittedFileUrl,
+    List<SubmissionAttachment>? attachments,
     DateTime? submittedAt,
     bool? isLate,
     int? marks,
@@ -313,7 +381,9 @@ class AssignmentItem {
       attachmentUrl: attachmentUrl ?? this.attachmentUrl,
       attachmentName: attachmentName ?? this.attachmentName,
       submittedText: submittedText ?? this.submittedText,
+      submittedLink: submittedLink ?? this.submittedLink,
       submittedFileUrl: submittedFileUrl ?? this.submittedFileUrl,
+      attachments: attachments ?? this.attachments,
       submittedAt: submittedAt ?? this.submittedAt,
       isLate: isLate ?? this.isLate,
       marks: marks ?? this.marks,

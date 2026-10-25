@@ -9,7 +9,23 @@ const {
   deleteMaterial,
 } = require("../controllers/materialController");
 
-router.post("/", upload.single("file"), createMaterial);
+const handleUpload = (req, res, next) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      const isSizeLimit = err.code === "LIMIT_FILE_SIZE";
+      return res.status(400).json({
+        success: false,
+        message: isSizeLimit
+          ? "File size exceeds the 25MB limit. Please select a smaller file."
+          : (err.message || "File upload error"),
+      });
+    }
+    next();
+  });
+};
+
+router.post("/", handleUpload, createMaterial);
+router.post("/upload", handleUpload, createMaterial);
 router.get("/", getAllMaterials);
 router.get("/class/:classId", getMaterialsByClass);
 router.get("/:id", getMaterialById);

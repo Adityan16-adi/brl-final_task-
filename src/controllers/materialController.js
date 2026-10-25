@@ -71,17 +71,21 @@ exports.createMaterial = async (req, res) => {
 
             const result = await uploadToCloudinary(
                 req.file.buffer,
-                "learning-materials"
+                "learning-materials",
+                {
+                    mimetype: req.file.mimetype,
+                    filename: req.file.originalname,
+                }
             );
 
-            fileUrl = result.secure_url;
+            fileUrl = result.secure_url || result.url;
             filePublicId = result.public_id;
             fileResourceType = result.resource_type;
             newlyUploadedPublicId = result.public_id;
             newlyUploadedResourceType = result.resource_type;
 
             if (type === "image") {
-                generatedThumbnail = result.secure_url;
+                generatedThumbnail = result.secure_url || result.url;
             }
         }
 

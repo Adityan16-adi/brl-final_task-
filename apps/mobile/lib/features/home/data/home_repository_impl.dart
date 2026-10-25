@@ -188,15 +188,21 @@ class InMemoryHomeRepository implements HomeRepository {
     String? link,
     String? thumbnailUrl,
     String? uploadedBy,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
   }) async {
+    onProgress?.call(50, 100);
     await Future<void>.delayed(const Duration(milliseconds: 100));
+    onProgress?.call(100, 100);
     final item = MaterialItem(
       id: 'mat-${DateTime.now().millisecondsSinceEpoch}',
       title: title.trim(),
       subject: subject.trim(),
       type: type,
       details: details.trim(),
-      link: link?.trim(),
+      link: link?.trim() ?? (fileName != null ? 'local://$fileName' : null),
       thumbnailUrl: thumbnailUrl?.trim(),
       createdAt: 'Today',
     );
@@ -368,17 +374,42 @@ class InMemoryHomeRepository implements HomeRepository {
     String assignmentId,
     String text, {
     String? studentId,
+    String? link,
     String? fileUrl,
     String? fileName,
+    String? filePath,
+    List<int>? fileBytes,
+    List<SelectedAttachmentItem>? localFiles,
+    void Function(int sent, int total)? onProgress,
   }) async {
+    onProgress?.call(50, 100);
     await Future<void>.delayed(const Duration(milliseconds: 250));
+    onProgress?.call(100, 100);
     final index = _assignments.indexWhere((a) => a.id == assignmentId);
     if (index == -1) return false;
+
+    final attachmentsList = <SubmissionAttachment>[];
+    if (fileUrl != null && fileUrl.isNotEmpty) {
+      attachmentsList.add(SubmissionAttachment(url: fileUrl, name: fileName ?? 'Attachment'));
+    }
+    if (localFiles != null) {
+      for (final f in localFiles) {
+        attachmentsList.add(
+          SubmissionAttachment(
+            url: f.path ?? 'local://${f.name}',
+            name: f.name,
+            size: f.size,
+          ),
+        );
+      }
+    }
 
     _assignments[index] = _assignments[index].copyWith(
       status: AssignmentStatus.submitted,
       submittedText: text,
-      submittedFileUrl: fileUrl,
+      submittedLink: link,
+      submittedFileUrl: fileUrl ?? (attachmentsList.isNotEmpty ? attachmentsList.first.url : null),
+      attachments: attachmentsList,
       submittedAt: DateTime.now(),
     );
     return true;

@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,7 +27,9 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
   final _thumbnailUrlCtrl = TextEditingController();
 
   CourseMaterialType _selectedType = CourseMaterialType.notes;
+  SelectedAttachmentItem? _pickedFile;
   bool _isUploading = false;
+  double? _uploadProgress;
   String? _errorMessage;
 
   @override
@@ -47,11 +50,91 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
     super.dispose();
   }
 
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final List<PlatformFile> files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'pdf',
+          'doc',
+          'docx',
+          'ppt',
+          'pptx',
+          'xls',
+          'xlsx',
+          'txt',
+          'csv',
+          'mp4',
+          'webm',
+          'mov',
+          'jpg',
+          'jpeg',
+          'png',
+          'webp',
+          'zip',
+        ],
+      );
+      if (files.isEmpty) return;
+
+      final file = files.first;
+      final size = file.lengthSync() ?? (await file.length()) ?? 0;
+      if (size > 25 * 1024 * 1024) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'File "${file.name}" exceeds the 25MB maximum limit. Please choose a smaller file.',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        return;
+      }
+
+      final bytes = await file.readAsBytes();
+      setState(() {
+        _pickedFile = SelectedAttachmentItem(
+          name: file.name,
+          path: file.path,
+          bytes: bytes,
+          size: size,
+        );
+        if (_titleCtrl.text.trim().isEmpty) {
+          // Pre-populate title with friendly filename
+          _titleCtrl.text = file.name.replaceAll(RegExp(r'\.[a-zA-Z0-9]+$'), '');
+        }
+        _errorMessage = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick file: $e')),
+      );
+    }
+  }
+
   Future<void> _handleUpload() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate() || _isUploading) return;
+
+    final link = _linkCtrl.text.trim();
+    if (_pickedFile == null && link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please attach a document/media file or provide a resource link.'),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isUploading = true;
+      _uploadProgress = 0.0;
       _errorMessage = null;
     });
 
@@ -67,11 +150,21 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
         details: _detailsCtrl.text.trim().isEmpty
             ? 'Course material resource.'
             : _detailsCtrl.text.trim(),
-        link: _linkCtrl.text.trim().isEmpty ? null : _linkCtrl.text.trim(),
+        link: link.isNotEmpty ? link : null,
         thumbnailUrl: _thumbnailUrlCtrl.text.trim().isEmpty
             ? null
             : _thumbnailUrlCtrl.text.trim(),
         uploadedBy: currentUser?.id,
+        filePath: _pickedFile?.path,
+        fileBytes: _pickedFile?.bytes,
+        fileName: _pickedFile?.name,
+        onProgress: (sent, total) {
+          if (total > 0 && mounted) {
+            setState(() {
+              _uploadProgress = sent / total;
+            });
+          }
+        },
       );
 
       if (mounted) {
@@ -118,57 +211,55 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
                         height: 36,
                         depth: 2,
                         borderRadius: BorderRadius.circular(10),
+                        color: ClayTokens.mint,
                         child: const Icon(
                           Icons.upload_file_rounded,
-                          color: ClayTokens.deepIndigo,
+                          color: ClayTokens.mintDark,
                           size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Upload Study Material',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: colors.onSurface,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Upload Study Material',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                            Text(
+                              widget.initialSubject ?? 'Pragti Course Resource',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: ClayTokens.secondaryText,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded, size: 20),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: _isUploading ? null : () => Navigator.of(context).pop(),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
 
                   // Title field
                   TextFormField(
                     controller: _titleCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Material Title *',
-                      hintText: 'e.g. Chapter 4 Lecture Slides',
+                      hintText: 'e.g. Lecture 4 Notes: Cell Transport',
                       prefixIcon: Icon(Icons.title_rounded),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter a title';
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Please provide a title';
                       }
                       return null;
                     },
@@ -180,23 +271,17 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
                     controller: _subjectCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Subject / Course *',
-                      hintText: 'e.g. Physics, Biology',
-                      prefixIcon: Icon(Icons.subject_rounded),
+                      hintText: 'e.g. Biology, Mathematics, Physics',
+                      prefixIcon: Icon(Icons.school_outlined),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter a subject';
-                      }
-                      return null;
-                    },
                   ),
                   const SizedBox(height: 14),
 
-                  // Material Category selector
+                  // Material Type Selector
                   Text(
-                    'Category / Format',
+                    'Material Category',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: colors.onSurface,
                     ),
@@ -229,6 +314,70 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+
+                  // Pick file section
+                  Text(
+                    'Attach File (Max 25MB: PDF, Docs, PPT, Excel, ZIP, Media)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (_pickedFile == null)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.file_upload_outlined, size: 18),
+                      label: const Text('Choose File from Device'),
+                      onPressed: _isUploading ? null : _pickFile,
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: colors.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.insert_drive_file_rounded, color: colors.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _pickedFile!.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  _formatBytes(_pickedFile!.size),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            tooltip: 'Remove file',
+                            onPressed: _isUploading
+                                ? null
+                                : () => setState(() => _pickedFile = null),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 14),
 
                   // Resource Link / URL field
@@ -236,7 +385,7 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
                     controller: _linkCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Resource / Document Link',
-                      hintText: 'https://drive.google.com/... or pdf url',
+                      hintText: 'https://drive.google.com/... or web URL',
                       prefixIcon: Icon(Icons.link_rounded),
                     ),
                   ),
@@ -263,6 +412,67 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
                       prefixIcon: Icon(Icons.notes_outlined),
                     ),
                   ),
+
+                  // Upload Progress
+                  if (_isUploading && _uploadProgress != null) ...[
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(
+                      value: _uploadProgress! > 0 ? _uploadProgress : null,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    const SizedBox(height: 6),
+                    Center(
+                      child: Text(
+                        _uploadProgress! > 0
+                            ? 'Uploading: ${(_uploadProgress! * 100).toInt()}%'
+                            : 'Publishing resource...',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Error banner with retry
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: colors.errorContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline_rounded,
+                              size: 18, color: colors.onErrorContainer),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.onErrorContainer,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _isUploading ? null : _handleUpload,
+                            child: Text(
+                              'Retry',
+                              style: TextStyle(
+                                color: colors.onErrorContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 20),
 
                   // Upload button

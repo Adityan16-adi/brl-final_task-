@@ -62,11 +62,15 @@ exports.createAssignment = async (req, res) => {
     if (req.file) {
       const result = await uploadToCloudinary(
         req.file.buffer,
-        "assignments"
+        "assignments",
+        {
+          mimetype: req.file.mimetype,
+          filename: req.file.originalname,
+        }
       );
 
       fileData = {
-        fileUrl: result.secure_url,
+        fileUrl: result.secure_url || result.url,
         filePublicId: result.public_id,
         fileResourceType: result.resource_type,
       };
@@ -188,10 +192,14 @@ exports.updateAssignment = async (req, res) => {
     if (req.file) {
       const result = await uploadToCloudinary(
         req.file.buffer,
-        "assignments"
+        "assignments",
+        {
+          mimetype: req.file.mimetype,
+          filename: req.file.originalname,
+        }
       );
 
-      updates.fileUrl = result.secure_url;
+      updates.fileUrl = result.secure_url || result.url;
       updates.filePublicId = result.public_id;
       updates.fileResourceType = result.resource_type;
       newlyUploadedPublicId = result.public_id;
