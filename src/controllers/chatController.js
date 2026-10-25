@@ -1,5 +1,4 @@
 const Message = require("../models/Message");
-const axios = require("axios");
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8001";
 
@@ -51,25 +50,29 @@ exports.sendMessage = async (req, res) => {
 
     // Optional call to ML service spam detection
     try {
-      const mlRes = await axios.post(
-        `${ML_SERVICE_URL}/spam/check`,
-        {
+      const mlRes = await fetch(`${ML_SERVICE_URL}/spam/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           meeting_id: classId,
           user_id: senderUid || "anonymous",
           message: text.trim(),
-        },
-        { timeout: 3000 }
-      );
-      if (mlRes.data && mlRes.data.is_spam) {
-        isSpam = true;
-        reasons = mlRes.data.reasons || ["Spam content detected by ML classifier"];
-        return res.status(422).json({
-          success: false,
-          isSpam: true,
-          action: mlRes.data.action || "warn",
-          reasons,
-          message: "Message rejected: " + reasons.join(", "),
-        });
+        }),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (mlRes.ok) {
+        const mlData = await mlRes.json();
+        if (mlData && mlData.is_spam) {
+          isSpam = true;
+          reasons = mlData.reasons || ["Spam content detected by ML classifier"];
+          return res.status(422).json({
+            success: false,
+            isSpam: true,
+            action: mlData.action || "warn",
+            reasons,
+            message: "Message rejected: " + reasons.join(", "),
+          });
+        }
       }
     } catch (mlErr) {
       // If ML service is unreachable, continue gracefully without blocking normal chat

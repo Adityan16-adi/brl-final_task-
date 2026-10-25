@@ -2,7 +2,7 @@ const http = require("http");
 const jwt = require("jsonwebtoken");
 const connectDB = require("./config/db");
 
-const API_BASE = "http://localhost:5000";
+let API_BASE = process.env.API_BASE || "http://localhost:5000";
 
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`;
@@ -30,6 +30,13 @@ async function request(path, options = {}) {
 async function runAuthSecurityTests() {
   console.log("=== STARTING AUTH & SECURITY TESTS ===");
   await connectDB();
+
+  const { app } = require("./server");
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  API_BASE = `http://127.0.0.1:${port}`;
+  console.log(`Test server running at ${API_BASE}`);
   let passed = 0;
   let total = 0;
 
