@@ -179,6 +179,32 @@ class InMemoryHomeRepository implements HomeRepository {
   }
 
   @override
+  Future<MaterialItem> uploadMaterial({
+    required String classId,
+    required String title,
+    required String subject,
+    required CourseMaterialType type,
+    required String details,
+    String? link,
+    String? thumbnailUrl,
+    String? uploadedBy,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    final item = MaterialItem(
+      id: 'mat-${DateTime.now().millisecondsSinceEpoch}',
+      title: title.trim(),
+      subject: subject.trim(),
+      type: type,
+      details: details.trim(),
+      link: link?.trim(),
+      thumbnailUrl: thumbnailUrl?.trim(),
+      createdAt: 'Today',
+    );
+    _materials.insert(0, item);
+    return item;
+  }
+
+  @override
   Future<List<ScheduleItem>> getSchedule() async {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     return List.unmodifiable(_schedules);

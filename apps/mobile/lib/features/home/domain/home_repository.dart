@@ -11,6 +11,16 @@ abstract interface class HomeRepository {
   Future<ClassroomDetails> getClassroomDetails(String id);
   Future<List<AssignmentItem>> getAssignments();
   Future<List<MaterialItem>> getMaterials();
+  Future<MaterialItem> uploadMaterial({
+    required String classId,
+    required String title,
+    required String subject,
+    required CourseMaterialType type,
+    required String details,
+    String? link,
+    String? thumbnailUrl,
+    String? uploadedBy,
+  });
   Future<List<ScheduleItem>> getSchedule();
   Future<bool> submitAssignment(
     String assignmentId,
@@ -287,6 +297,7 @@ class MaterialItem {
     required this.type,
     required this.details,
     this.link,
+    this.thumbnailUrl,
     this.createdAt,
   });
 
@@ -296,6 +307,7 @@ class MaterialItem {
   final CourseMaterialType type;
   final String details;
   final String? link;
+  final String? thumbnailUrl;
   final String? createdAt;
 }
 

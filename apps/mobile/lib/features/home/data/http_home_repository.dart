@@ -281,6 +281,8 @@ class HttpHomeRepository implements HomeRepository {
     }).toList();
   }
 
+  final List<MaterialItem> _uploadedMaterials = [];
+
   @override
   Future<List<MaterialItem>> getMaterials() async {
     try {
@@ -305,17 +307,21 @@ class HttpHomeRepository implements HomeRepository {
             type: type,
             details: m['description']?.toString() ?? '',
             link: m['fileUrl']?.toString() ?? m['link']?.toString() ?? '',
+            thumbnailUrl: m['thumbnailUrl']?.toString(),
             createdAt: m['createdAt'] != null
                 ? m['createdAt'].toString().split('T')[0]
                 : 'Recent',
           );
         }).toList();
-        if (list.isNotEmpty) return list;
+        if (list.isNotEmpty || _uploadedMaterials.isNotEmpty) {
+          return [..._uploadedMaterials, ...list];
+        }
       }
     } catch (_) {}
 
-    return const [
-      MaterialItem(
+    return [
+      ..._uploadedMaterials,
+      const MaterialItem(
         id: 'mat-cell-slides',
         title: 'Eukaryotic Cell Architecture Slide Deck',
         subject: 'Biology',
@@ -324,7 +330,7 @@ class HttpHomeRepository implements HomeRepository {
         link: 'https://unified-learn.preview/resources/cell-architecture.pdf',
         createdAt: 'Oct 20',
       ),
-      MaterialItem(
+      const MaterialItem(
         id: 'mat-calc-video',
         title: 'Chain Rule & Quotient Rule Walkthrough',
         subject: 'Mathematics',
@@ -333,7 +339,7 @@ class HttpHomeRepository implements HomeRepository {
         link: 'https://unified-learn.preview/resources/chain-rule-video',
         createdAt: 'Oct 18',
       ),
-      MaterialItem(
+      const MaterialItem(
         id: 'mat-hist-sources',
         title: 'Primary Diplomatic Documents 1919-1939',
         subject: 'History',
@@ -343,6 +349,69 @@ class HttpHomeRepository implements HomeRepository {
         createdAt: 'Oct 15',
       ),
     ];
+  }
+
+  @override
+  Future<MaterialItem> uploadMaterial({
+    required String classId,
+    required String title,
+    required String subject,
+    required CourseMaterialType type,
+    required String details,
+    String? link,
+    String? thumbnailUrl,
+    String? uploadedBy,
+  }) async {
+    final typeStr = switch (type) {
+      CourseMaterialType.video => 'video',
+      CourseMaterialType.document => 'note',
+      CourseMaterialType.notes => 'note',
+    };
+
+    try {
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/materials',
+        data: {
+          'classId': classId,
+          'title': title.trim(),
+          'subject': subject.trim(),
+          'type': typeStr,
+          'description': details.trim(),
+          'link': ?link?.trim(),
+          'thumbnailUrl': ?thumbnailUrl?.trim(),
+          'uploadedBy': ?uploadedBy,
+        },
+      );
+      final data = response.data;
+      if (data != null && data['success'] == true && data['data'] != null) {
+        final m = data['data'] as Map<String, dynamic>;
+        final item = MaterialItem(
+          id: m['_id']?.toString() ?? m['id']?.toString() ?? '',
+          title: m['title']?.toString() ?? title,
+          subject: subject,
+          type: type,
+          details: m['description']?.toString() ?? details,
+          link: m['fileUrl']?.toString() ?? m['link']?.toString() ?? link,
+          thumbnailUrl: m['thumbnailUrl']?.toString() ?? thumbnailUrl,
+          createdAt: DateTime.now().toIso8601String().split('T')[0],
+        );
+        _uploadedMaterials.insert(0, item);
+        return item;
+      }
+    } catch (_) {}
+
+    final item = MaterialItem(
+      id: 'mat-local-${DateTime.now().millisecondsSinceEpoch}',
+      title: title.trim(),
+      subject: subject.trim(),
+      type: type,
+      details: details.trim(),
+      link: link?.trim(),
+      thumbnailUrl: thumbnailUrl?.trim(),
+      createdAt: 'Today',
+    );
+    _uploadedMaterials.insert(0, item);
+    return item;
   }
 
   @override

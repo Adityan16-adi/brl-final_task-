@@ -7,6 +7,7 @@ import '../../../../core/widgets/demo_data_badge.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
+import 'upload_material_dialog.dart';
 
 class MaterialsView extends ConsumerStatefulWidget {
   const MaterialsView({super.key});
@@ -23,6 +24,7 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
   Widget build(BuildContext context) {
     final materialsAsync = ref.watch(materialsProvider);
     final currentUser = ref.watch(currentUserProvider);
+    final isTeacher = ref.watch(isTeacherProvider);
     final colors = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
@@ -30,6 +32,37 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
+          if (isTeacher) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ClayButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const UploadMaterialDialog(),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.upload_file_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Upload Study Material',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           // Search bar
           ClayContainer(
             depth: 3,
@@ -482,14 +515,37 @@ class _MaterialCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClayContainer(
-            width: 44,
-            height: 44,
-            depth: 3,
-            color: typeBg,
-            borderRadius: BorderRadius.circular(12),
-            child: Icon(_getTypeIcon(item.type), color: typeColor, size: 24),
-          ),
+          if (item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                item.thumbnailUrl!,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => ClayContainer(
+                  width: 44,
+                  height: 44,
+                  depth: 3,
+                  color: typeBg,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Icon(
+                    _getTypeIcon(item.type),
+                    color: typeColor,
+                    size: 24,
+                  ),
+                ),
+              ),
+            )
+          else
+            ClayContainer(
+              width: 44,
+              height: 44,
+              depth: 3,
+              color: typeBg,
+              borderRadius: BorderRadius.circular(12),
+              child: Icon(_getTypeIcon(item.type), color: typeColor, size: 24),
+            ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
