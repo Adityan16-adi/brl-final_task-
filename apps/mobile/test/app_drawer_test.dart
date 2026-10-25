@@ -70,36 +70,11 @@ void main() {
       expect(find.text('Student'), findsWidgets);
     });
 
-    testWidgets('AppDrawer renders rich navigation items and badges', (tester) async {
+    testWidgets('AppDrawer renders focused navigation items', (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 960));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(buildTestHome(
-        mockClasses: [
-          const ClassroomItem(
-            id: 'c1',
-            name: 'Advanced Physics',
-            subject: 'Physics',
-            teacher: 'Prof Newton',
-            schedule: 'Mon, Wed 10:00 AM',
-            room: 'Room 301',
-            studentCount: 18,
-            code: 'PHY401',
-          ),
-        ],
-        mockAssignments: [
-          const AssignmentItem(
-            id: 'a1',
-            title: 'Quantum Mechanics Problem Set',
-            subject: 'Physics',
-            description: 'Solve problems 1-5',
-            classId: 'c1',
-            dueDate: 'Tomorrow',
-            points: 100,
-            status: AssignmentStatus.pending,
-          ),
-        ],
-      ));
+      await tester.pumpWidget(buildTestHome());
       await tester.pumpAndSettle();
 
       // Open drawer
@@ -112,54 +87,10 @@ void main() {
             matching: find.text(text),
           );
 
-      expect(drawerText('Dashboard Overview'), findsOneWidget);
-      expect(drawerText('My Classes'), findsOneWidget);
-      expect(drawerText('Assignments'), findsOneWidget);
-      expect(drawerText('Study Planner & To-Do'), findsOneWidget);
-      expect(drawerText('Learning Materials'), findsOneWidget);
-      expect(drawerText('Weekly Schedule'), findsOneWidget);
-      expect(drawerText('Attendance Records'), findsOneWidget);
-      expect(drawerText('Live Video Meetings'), findsOneWidget);
-      expect(drawerText('AI Mentor Tutor'), findsOneWidget);
+      expect(drawerText('My Profile'), findsOneWidget);
       expect(drawerText('Settings & Preferences'), findsOneWidget);
       expect(drawerText('Help Desk & FAQ'), findsOneWidget);
       expect(drawerText('Sign Out'), findsOneWidget);
-
-      // Verify class count badge (1) and assignment badge count (1) are both present in drawer
-      expect(drawerText('1'), findsNWidgets(2));
-    });
-
-    testWidgets('AppDrawer My Classes expands and displays enrolled classes', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(360, 640));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(buildTestHome(
-        mockClasses: [
-          const ClassroomItem(
-            id: 'c10',
-            name: 'Cell Biology',
-            subject: 'Biology',
-            teacher: 'Dr. Darwin',
-            schedule: 'Tue, Thu 2:00 PM',
-            room: 'Lab 102',
-            studentCount: 24,
-            code: 'BIO101',
-          ),
-        ],
-      ));
-      await tester.pumpAndSettle();
-
-      // Open drawer
-      await tester.tap(find.byIcon(Icons.menu_rounded));
-      await tester.pumpAndSettle();
-
-      // Tap on My Classes ExpansionTile to expand
-      await tester.tap(find.text('My Classes'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('View All Classrooms'), findsOneWidget);
-      expect(find.text('Cell Biology'), findsOneWidget);
-      expect(find.text('Biology'), findsOneWidget);
     });
 
     testWidgets('AppDrawer Sign Out shows confirmation dialog', (tester) async {

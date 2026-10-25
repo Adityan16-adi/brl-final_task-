@@ -27,6 +27,8 @@ class ClayTokens {
   static const Color pragtiOrange = Color(0xFFFB9823);
   static const Color pragtiStar = Color(0xFFFBB746);
   static const Color pragtiSoftBlue = Color(0xFFEEF4FF);
+  static const Color brightBlue = Color(0xFF1680ED);
+  static const Color navy = Color(0xFF0B1E48);
 
   // Background and Surface Tones
   static const Color lightBg = Color(0xFFF3F2F9);

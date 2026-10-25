@@ -43,14 +43,13 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: LearningApp()));
     await tester.pumpAndSettle();
 
-    // Tap quick student login
+    // Tap quick student login on WelcomeScreen
     await tester.tap(find.text('Student Login'));
     await tester.pumpAndSettle();
 
     expect(find.text('Dashboard Overview'), findsOneWidget);
-    expect(find.text('Welcome back, Student'), findsOneWidget);
-    expect(find.text('Stuck on a problem?'), findsOneWidget);
-    expect(find.text('Active enrollments'), findsOneWidget);
+    expect(find.textContaining('Demo'), findsWidgets);
+    expect(find.text('Join Class'), findsWidgets);
   });
 
   testWidgets(
@@ -61,15 +60,13 @@ void main() {
       await tester.pumpWidget(const ProviderScope(child: LearningApp()));
       await tester.pumpAndSettle();
 
-      // Tap quick teacher login
+      // Tap quick teacher login on WelcomeScreen
       await tester.tap(find.text('Teacher Login'));
       await tester.pumpAndSettle();
 
       expect(find.text('Dashboard Overview'), findsOneWidget);
-      expect(find.text('Welcome back, Teacher'), findsOneWidget);
-      expect(find.text('TEACHER'), findsWidgets);
-      expect(find.text('Classes instructed'), findsOneWidget);
-      expect(find.text('Instructor Dashboard Active'), findsOneWidget);
+      expect(find.textContaining('Demo'), findsWidgets);
+      expect(find.text('Create Class'), findsWidgets);
     },
   );
 

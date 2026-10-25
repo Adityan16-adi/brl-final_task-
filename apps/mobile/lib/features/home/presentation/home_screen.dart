@@ -206,20 +206,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildBody() {
+    Widget child;
     switch (_currentIndex) {
       case 0:
-        return OverviewView(onNavigateToTab: _onTabSelect);
+        child = OverviewView(onNavigateToTab: _onTabSelect);
+        break;
       case 1:
-        return const ClassroomsView();
+        child = const ClassroomsView();
+        break;
       case 2:
-        return const AssignmentsView();
+        child = const AssignmentsView();
+        break;
       case 3:
-        return const MaterialsView();
+        child = const MaterialsView();
+        break;
       case 4:
-        return const ScheduleView();
+        child = const ScheduleView();
+        break;
       default:
-        return OverviewView(onNavigateToTab: _onTabSelect);
+        child = OverviewView(onNavigateToTab: _onTabSelect);
     }
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: child,
+      ),
+    );
   }
 
   @override
@@ -237,7 +249,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 720;
+          final isWide = constraints.maxWidth >= 840;
 
           if (isWide) {
             return Scaffold(

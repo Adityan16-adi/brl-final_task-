@@ -114,9 +114,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AppDrawer), findsOneWidget);
-      expect(find.text('Study Planner & To-Do'), findsOneWidget);
+      expect(find.text('My Profile'), findsOneWidget);
       expect(find.text('Settings & Preferences'), findsOneWidget);
-      expect(find.text('Manage Account'), findsOneWidget);
       expect(find.text('Help Desk & FAQ'), findsOneWidget);
       expect(find.text('Sign Out'), findsOneWidget);
     });

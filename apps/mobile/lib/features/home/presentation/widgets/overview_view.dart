@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/clay_theme.dart';
+import '../../../../core/widgets/demo_data_badge.dart';
 import '../../../auth/application/auth_providers.dart';
-import '../../../auth/domain/auth_repository.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
 import '../screens/classroom_detail_screen.dart';
-import 'create_assignment_dialog.dart';
 import 'create_class_dialog.dart';
 import 'join_class_dialog.dart';
 import 'submit_assignment_dialog.dart';
 
+/// Clean, uncluttered Dashboard Overview for Pragti students and teachers.
 class OverviewView extends ConsumerStatefulWidget {
   const OverviewView({required this.onNavigateToTab, super.key});
 
@@ -25,12 +24,26 @@ class OverviewView extends ConsumerStatefulWidget {
 
 class _OverviewViewState extends ConsumerState<OverviewView> {
   final TextEditingController _searchController = TextEditingController();
+  bool _isSearchOpen = false;
   String _searchQuery = '';
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  String _getGreeting(String? fullName) {
+    final hour = DateTime.now().hour;
+    final timeStr = hour < 12
+        ? 'Good morning'
+        : hour < 17
+            ? 'Good afternoon'
+            : 'Good evening';
+    final firstName = (fullName != null && fullName.trim().isNotEmpty)
+        ? fullName.trim().split(' ').first
+        : 'Student';
+    return '$timeStr, $firstName';
   }
 
   void _showTeacherGradingDialog(
@@ -66,230 +79,27 @@ class _OverviewViewState extends ConsumerState<OverviewView> {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  ClayContainer(
-                    width: 44,
-                    height: 44,
-                    depth: 3,
-                    color: const Color(0xFFF3E8FF),
-                    borderRadius: BorderRadius.circular(14),
-                    child: const Icon(
-                      Icons.rate_review_rounded,
-                      color: Color(0xFF8B5CF6),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          assignment.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          '${assignment.subject} · Max Points: ${assignment.points}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                assignment.title,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Submitted Work:',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              ),
-              const SizedBox(height: 6),
-              ClayContainer(
-                width: double.infinity,
-                depth: 3,
-                padding: const EdgeInsets.all(14),
-                child: Text(
-                  assignment.submittedText ??
-                      'No written solution submitted yet.',
-                  style: const TextStyle(fontSize: 13, height: 1.4),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (assignment.status == AssignmentStatus.graded) ...[
-                ClayContainer(
-                  depth: 2,
-                  color: ClayTokens.mint,
-                  padding: const EdgeInsets.all(12),
-                  borderRadius: BorderRadius.circular(ClayTokens.radiusSmall),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        color: ClayTokens.mintDark,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Graded: ${assignment.marks ?? 0}/${assignment.points} Points',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: ClayTokens.mintDark,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (assignment.feedback != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Instructor Feedback: "${assignment.feedback}"',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ] else ...[
-                const ClayBadge(
-                  label: 'Pending Instructor Review',
-                  icon: Icons.hourglass_top_rounded,
-                  backgroundColor: Color(0xFFFEF3C7),
-                  textColor: Color(0xFFB45309),
-                ),
-              ],
-              const SizedBox(height: 20),
-              ClayButton(
-                isFullWidth: true,
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Close Review'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showAttendanceModal(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final classrooms = ref.read(classroomsProvider).value ?? [];
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(ctx).colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Row(
-                children: [
-                  Icon(
-                    Icons.fact_check_rounded,
-                    color: ClayTokens.deepIndigo,
-                    size: 24,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Classroom Rosters & Attendance',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'View active classroom rosters and enrolled learners. Select a classroom to inspect learners or start a live session.',
+              Text(
+                '${assignment.subject} · Max Points: ${assignment.points}',
                 style: TextStyle(
-                  fontSize: 13,
-                  color: ClayTokens.secondaryText,
-                  height: 1.4,
+                  fontSize: 12,
+                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 14),
-              if (classrooms.isEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(child: Text('No classrooms created yet.')),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    widget.onNavigateToTab(2); // Go to Assignments tab
+                  },
+                  child: const Text('View All Submissions'),
                 ),
-              ] else ...[
-                ...classrooms.map((c) {
-                  return ClayCard(
-                    depth: 2,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ClassroomDetailScreen(classroom: c),
-                        ),
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.school_rounded,
-                          color: ClayTokens.deepIndigo,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                c.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                '${c.subject} · ${c.studentCount} enrolled',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: ClayTokens.secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 12),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-              const SizedBox(height: 10),
-              ClayButton(
-                isFullWidth: true,
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  widget.onNavigateToTab(1);
-                },
-                child: const Text('Manage All Classrooms'),
               ),
             ],
           ),
@@ -300,67 +110,161 @@ class _OverviewViewState extends ConsumerState<OverviewView> {
 
   @override
   Widget build(BuildContext context) {
-    final summaryAsync = ref.watch(homeSummaryProvider);
-    final assignmentsAsync = ref.watch(assignmentsProvider);
-    final scheduleAsync = ref.watch(scheduleProvider);
-    final classroomsAsync = ref.watch(classroomsProvider);
-    final materialsAsync = ref.watch(materialsProvider);
     final currentUser = ref.watch(currentUserProvider);
-
-    final colors = Theme.of(context).colorScheme;
     final isTeacher = currentUser?.isTeacher == true;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
+    final summaryAsync = ref.watch(homeSummaryProvider);
+    final classroomsAsync = ref.watch(classroomsProvider);
+    final assignmentsAsync = ref.watch(assignmentsProvider);
+    final materialsAsync = ref.watch(materialsProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(homeSummaryProvider);
-        ref.invalidate(assignmentsProvider);
-        ref.invalidate(scheduleProvider);
         ref.invalidate(classroomsProvider);
+        ref.invalidate(assignmentsProvider);
         ref.invalidate(materialsProvider);
+        ref.invalidate(scheduleProvider);
       },
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 60),
-        children: [
-          // Personalized Claymorphic Greeting Header
-          _buildPersonalizedHeader(context, currentUser, isTeacher),
-          const SizedBox(height: 8),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          // 1. Top Header: Small greeting, avatar on the right, search toggle. No badges.
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getGreeting(currentUser?.name),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isTeacher
+                          ? 'Instructor Dashboard Active'
+                          : 'Welcome back to your classes',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: _isSearchOpen ? 'Close search' : 'Search',
+                icon: Icon(_isSearchOpen ? Icons.close_rounded : Icons.search_rounded),
+                onPressed: () {
+                  setState(() {
+                    _isSearchOpen = !_isSearchOpen;
+                    if (!_isSearchOpen) {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }
+                  });
+                },
+              ),
+              const SizedBox(width: 4),
+              InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => context.push('/account'),
+                child: currentUser?.avatarUrl != null && currentUser!.avatarUrl!.isNotEmpty
+                    ? CircleAvatar(
+                        radius: 18,
+                        backgroundImage: NetworkImage(currentUser.avatarUrl!),
+                      )
+                    : Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isTeacher ? const Color(0xFF8B5CF6) : ClayTokens.brightBlue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            (currentUser?.name.isNotEmpty == true)
+                                ? currentUser!.name[0].toUpperCase()
+                                : 'P',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
 
-          // Cross-entity Universal Search Input
-          ClayCard(
-            depth: 3,
-            margin: EdgeInsets.zero,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            child: Row(
-              children: [
-                const Icon(Icons.search_rounded,
-                    color: ClayTokens.deepIndigo, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) =>
-                        setState(() => _searchQuery = val.trim()),
-                    decoration: const InputDecoration(
-                      hintText: 'Search classrooms, assignments, materials...',
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+          // Offline Demo Mode Notification (Quiet banner only when in demo mode)
+          if (currentUser?.isDemo == true) ...[
+            const SizedBox(height: 12),
+            const DemoDataBadge(
+              message: 'DEMO DATA',
+              compact: true,
+            ),
+          ],
+
+          // Expandable Search Input
+          if (_isSearchOpen) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? theme.colorScheme.outlineVariant
+                      : const Color(0xFFCBD5E1),
+                  width: 1,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, size: 20, color: ClayTokens.brightBlue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                      decoration: const InputDecoration(
+                        hintText: 'Search classes, assignments, materials...',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
                     ),
                   ),
-                ),
-                if (_searchQuery.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 18),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                    },
-                  ),
-              ],
+                  if (_searchQuery.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
+          ],
 
+          const SizedBox(height: 16),
+
+          // If searching, render search results
           if (_searchQuery.isNotEmpty) ...[
             _buildSearchResults(
               context,
@@ -369,441 +273,506 @@ class _OverviewViewState extends ConsumerState<OverviewView> {
               materialsAsync,
             ),
           ] else ...[
-            // Role-specific Metric Grid
-            summaryAsync.when(
-              data: (summary) => _buildMetricGrid(context, summary, isTeacher),
-              loading: () => _buildSkeletonMetricGrid(context),
-              error: (err, _) => ClayCard(
-                color: colors.errorContainer,
-                child: Text('Unable to load learning summary: $err'),
+            // 2. One Prominent "Next Class" Card (or empty state with "Join a class")
+            classroomsAsync.when(
+              data: (classrooms) => _buildNextClassCard(
+                context,
+                classrooms,
+                summaryAsync.value,
+                isTeacher,
+                isDark,
+              ),
+              loading: () => Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  color: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              error: (_, _) => _buildNextClassCard(
+                context,
+                [],
+                summaryAsync.value,
+                isTeacher,
+                isDark,
               ),
             ),
-            const SizedBox(height: 8),
 
-            // Role-specific Teacher Notice Card
-            if (isTeacher) ...[
-              _buildTeacherNoticeCard(context),
-              const SizedBox(height: 8),
-            ],
+            const SizedBox(height: 20),
 
-            // Role-Specific Quick Actions Bar
-            _buildQuickActionsBar(context, isTeacher, ref),
-            const SizedBox(height: 8),
+            // 3. "Due soon": Max 3 assignment rows with small status dot and "See all" link
+            _buildDueSoonSection(context, assignmentsAsync, isTeacher, isDark),
 
-            // Student: Attendance & Learning Streak Progress Card
-            if (!isTeacher) ...[
-              _buildStudentProgressCard(
-                context,
-                assignmentsAsync,
-                classroomsAsync,
-              ),
-              const SizedBox(height: 8),
-            ],
+            const SizedBox(height: 20),
 
-            // AI Mentor Quick-Launch Clay Banner
-            _buildAiMentorBanner(context),
-            const SizedBox(height: 14),
+            // 4. Row of 4 quick actions as simple icon buttons with labels
+            _buildQuickActions(context, isTeacher, isDark),
 
-          // Urgent Assignments / Grading Queue Section
-          _buildSectionHeader(
-            context,
-            title: isTeacher
-                ? 'Course Submissions & Grading'
-                : 'Assignments & Deadlines',
-            actionText: 'View All',
-            onAction: () => widget.onNavigateToTab(2), // Assignments Tab
-          ),
-          const SizedBox(height: 10),
-          assignmentsAsync.when(
-            data: (assignments) {
-              if (isTeacher) {
-                if (assignments.isEmpty) {
-                  return _buildEmptyState(
-                    context,
-                    icon: Icons.task_alt_rounded,
-                    title: 'No assignments created',
-                    subtitle: 'Create your first assignment for your students.',
-                  );
-                }
-                return Column(
-                  children: assignments
-                      .map((a) => _buildTeacherAssignmentCard(context, a))
-                      .toList(),
-                );
-              }
+            const SizedBox(height: 20),
 
-              // Student view: prioritize pending assignments
-              final pending = assignments
-                  .where((a) => a.status == AssignmentStatus.pending)
-                  .toList();
-              final displayList = pending.isNotEmpty
-                  ? pending
-                  : assignments.take(3).toList();
+            // 5. Small attendance / progress summary using one slim progress ring
+            _buildProgressSummary(
+              context,
+              assignmentsAsync,
+              classroomsAsync,
+              isTeacher,
+              isDark,
+            ),
 
-              if (displayList.isEmpty) {
-                return _buildEmptyState(
-                  context,
-                  icon: Icons.task_alt_rounded,
-                  title: 'All caught up!',
-                  subtitle:
-                      'You have no pending assignments waiting for submission.',
-                );
-              }
-              return Column(
-                children: displayList
-                    .map((a) => _buildAssignmentCard(context, a))
-                    .toList(),
-              );
-            },
-            loading: () => const ClaySkeletonList(itemCount: 2),
-            error: (err, _) => Text('Could not load assignments: $err'),
-          ),
-          const SizedBox(height: 24),
-
-          // Today's Next Class / Schedule
-          _buildSectionHeader(
-            context,
-            title: isTeacher ? 'Teaching Timetable' : 'Upcoming Schedule',
-            actionText: 'Full Schedule',
-            onAction: () => widget.onNavigateToTab(4), // Schedule Tab
-          ),
-          const SizedBox(height: 10),
-          scheduleAsync.when(
-            data: (schedules) {
-              if (schedules.isEmpty) {
-                return _buildEmptyState(
-                  context,
-                  icon: Icons.event_available_rounded,
-                  title: 'No classes scheduled today',
-                  subtitle: 'Enjoy your free time or prepare coursework.',
-                );
-              }
-              final todayClasses = schedules.where((s) => s.isToday).toList();
-              final displayList = todayClasses.isNotEmpty
-                  ? todayClasses
-                  : schedules.take(2).toList();
-
-              return Column(
-                children: displayList
-                    .map((item) => _buildScheduleCard(context, item))
-                    .toList(),
-              );
-            },
-            loading: () => const ClaySkeletonList(itemCount: 2),
-            error: (err, _) => Text('Could not load schedule: $err'),
-          ),
-          const SizedBox(height: 24),
-
-          // Classrooms Preview
-          _buildSectionHeader(
-            context,
-            title: isTeacher ? 'My Classrooms & Codes' : 'Enrolled Classrooms',
-            actionText: 'All Classes',
-            onAction: () => widget.onNavigateToTab(1), // Classrooms Tab
-          ),
-          const SizedBox(height: 10),
-          classroomsAsync.when(
-            data: (classes) {
-              if (classes.isEmpty) {
-                return _buildEmptyState(
-                  context,
-                  icon: Icons.school_outlined,
-                  title: 'No classrooms available',
-                  subtitle: isTeacher
-                      ? 'Tap "Create Class" to set up your first virtual classroom.'
-                      : 'Use the "Join Code" button to enroll in your first course.',
-                );
-              }
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 600;
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: isWide ? 3 : 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      mainAxisExtent: isTeacher ? 150 : 138,
-                    ),
-                    itemCount: classes.length.clamp(0, 4),
-                    itemBuilder: (context, index) {
-                      final c = classes[index];
-                      return _buildClassroomTile(context, c, isTeacher);
-                    },
-                  );
-                },
-              );
-            },
-            loading: () => const ClaySkeletonList(itemCount: 2),
-            error: (err, _) => Text('Could not load classrooms: $err'),
-          ),
-          const SizedBox(height: 24),
-
-          // Recent Learning Materials
-          _buildSectionHeader(
-            context,
-            title: isTeacher
-                ? 'Published Study Materials'
-                : 'Recent Learning Materials',
-            actionText: 'Library',
-            onAction: () => widget.onNavigateToTab(3), // Materials Tab
-          ),
-          const SizedBox(height: 10),
-          materialsAsync.when(
-            data: (materials) {
-              if (materials.isEmpty) {
-                return _buildEmptyState(
-                  context,
-                  icon: Icons.menu_book_outlined,
-                  title: 'No materials shared yet',
-                  subtitle:
-                      'Study notes and lesson recordings will appear here.',
-                );
-              }
-              return Column(
-                children: materials
-                    .take(3)
-                    .map((m) => _buildMaterialTile(context, m))
-                    .toList(),
-              );
-            },
-            loading: () => const ClaySkeletonList(itemCount: 2),
-            error: (err, _) => Text('Could not load materials: $err'),
-          ),
+            const SizedBox(height: 24),
+          ],
         ],
-      ],
+      ),
     ),
   );
 }
 
-Widget _buildSearchResults(
-  BuildContext context,
-  AsyncValue<List<ClassroomItem>> classroomsAsync,
-  AsyncValue<List<AssignmentItem>> assignmentsAsync,
-  AsyncValue<List<MaterialItem>> materialsAsync,
-) {
-  final q = _searchQuery.toLowerCase();
+  // 2. Next class card implementation
+  Widget _buildNextClassCard(
+    BuildContext context,
+    List<ClassroomItem> classrooms,
+    HomeSummary? summary,
+    bool isTeacher,
+    bool isDark,
+  ) {
+    final nextClass = classrooms.isNotEmpty ? classrooms.first : null;
+    final hasClass = nextClass != null;
 
-  final classes = classroomsAsync.asData?.value ?? [];
-  final matchingClasses = classes
-      .where((c) =>
-          c.name.toLowerCase().contains(q) ||
-          c.subject.toLowerCase().contains(q) ||
-          (c.code != null && c.code!.toLowerCase().contains(q)))
-      .toList();
-
-  final assignments = assignmentsAsync.asData?.value ?? [];
-  final matchingAssignments = assignments
-      .where((a) =>
-          a.title.toLowerCase().contains(q) ||
-          a.subject.toLowerCase().contains(q) ||
-          a.description.toLowerCase().contains(q))
-      .toList();
-
-  final materials = materialsAsync.asData?.value ?? [];
-  final matchingMaterials = materials
-      .where((m) =>
-          m.title.toLowerCase().contains(q) ||
-          m.subject.toLowerCase().contains(q) ||
-          m.details.toLowerCase().contains(q))
-      .toList();
-
-  final totalCount = matchingClasses.length +
-      matchingAssignments.length +
-      matchingMaterials.length;
-
-  if (totalCount == 0) {
-    return ClayCard(
-      depth: 3,
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: Column(
-          children: [
-            const Icon(Icons.search_off_rounded,
-                size: 44, color: ClayTokens.secondaryText),
-            const SizedBox(height: 12),
-            Text(
-              'No results for "$_searchQuery"',
-              style:
-                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? ClayTokens.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? Theme.of(context).colorScheme.outlineVariant
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: ClayTokens.brightBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isTeacher ? 'NEXT SESSION' : 'NEXT CLASS',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: ClayTokens.brightBlue,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (hasClass && nextClass.code?.isNotEmpty == true)
+                Text(
+                  'Code: ${nextClass.code}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            hasClass ? nextClass.name : (isTeacher ? 'No classes scheduled' : 'No upcoming classes today'),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
             ),
-            const SizedBox(height: 4),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            hasClass
+                ? '${nextClass.subject} · ${nextClass.schedule.isNotEmpty ? nextClass.schedule : (isTeacher ? "${nextClass.studentCount} students" : "Today, 10:00 AM")}'
+                : (isTeacher ? 'Create your first classroom to begin teaching.' : 'Join your enrolled courses to stay on track.'),
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ClayTokens.brightBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              onPressed: hasClass
+                  ? () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ClassroomDetailScreen(classroom: nextClass),
+                        ),
+                      );
+                    }
+                  : () {
+                      if (isTeacher) {
+                        showDialog<dynamic>(
+                          context: context,
+                          builder: (_) => const CreateClassDialog(),
+                        );
+                      } else {
+                        showDialog<dynamic>(
+                          context: context,
+                          builder: (_) => const JoinClassDialog(),
+                        );
+                      }
+                    },
+              child: Text(
+                hasClass
+                    ? (isTeacher ? 'Start Class' : 'Join Class')
+                    : (isTeacher ? 'Create Class' : 'Join a Class'),
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 3. "Due soon" section implementation (Max 3 assignment rows)
+  Widget _buildDueSoonSection(
+    BuildContext context,
+    AsyncValue<List<AssignmentItem>> assignmentsAsync,
+    bool isTeacher,
+    bool isDark,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
             const Text(
-              'Try searching with a different course title, subject or assignment name.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: ClayTokens.secondaryText),
+              'Due soon',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
+              ),
+            ),
+            TextButton(
+              onPressed: () => widget.onNavigateToTab(2),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: ClayTokens.brightBlue,
+              ),
+              child: const Text('See all', style: TextStyle(fontWeight: FontWeight.w700)),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 6),
+        assignmentsAsync.when(
+          data: (assignments) {
+            final pending = assignments
+                .where((a) => a.status == AssignmentStatus.pending)
+                .take(3)
+                .toList();
+            final displayList = pending.isNotEmpty
+                ? pending
+                : assignments.take(3).toList();
+
+            if (displayList.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark
+                        ? Theme.of(context).colorScheme.outlineVariant
+                        : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'No assignments due. Enjoy the break.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                  ),
+                ),
+              );
+            }
+
+            return Material(
+              color: isDark ? ClayTokens.darkCard : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: isDark
+                      ? Theme.of(context).colorScheme.outlineVariant
+                      : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: List.generate(displayList.length, (index) {
+                  final item = displayList[index];
+                  final isCompleted = item.status == AssignmentStatus.submitted ||
+                      item.status == AssignmentStatus.graded;
+                  final dotColor = isCompleted
+                      ? const Color(0xFF10B981)
+                      : ClayTokens.pragtiOrange;
+
+                  return Column(
+                    children: [
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        leading: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: dotColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        minLeadingWidth: 12,
+                        title: Text(
+                          item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          '${item.subject} · Due ${item.dueDate}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded, size: 18),
+                        onTap: () {
+                          if (isTeacher) {
+                            _showTeacherGradingDialog(context, item);
+                          } else {
+                            showDialog<bool>(
+                              context: context,
+                              builder: (_) => SubmitAssignmentDialog(assignment: item),
+                            );
+                          }
+                        },
+                      ),
+                      if (index < displayList.length - 1)
+                        Divider(
+                          height: 1,
+                          indent: 32,
+                          endIndent: 14,
+                          color: isDark
+                              ? Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)
+                              : const Color(0xFFF1F5F9),
+                        ),
+                    ],
+                  );
+                }),
+              ),
+            );
+          },
+          loading: () => Container(
+            height: 70,
+            decoration: BoxDecoration(
+              color: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, _) => Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Text('No assignments due. Enjoy the break.'),
+          ),
+        ),
+      ],
     );
   }
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Text(
-            'Search Results ($totalCount)',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
+  // 4. Quick actions row (4 simple icon buttons with labels)
+  Widget _buildQuickActions(BuildContext context, bool isTeacher, bool isDark) {
+    final actions = isTeacher
+        ? [
+            (
+              icon: Icons.add_circle_outline_rounded,
+              label: 'Create Class',
+              onTap: () => showDialog<dynamic>(
+                    context: context,
+                    builder: (_) => const CreateClassDialog(),
+                  ),
             ),
-          ),
-          const Spacer(),
-          const ClayBadge(
-            label: 'FILTERED',
-            backgroundColor: ClayTokens.softLavender,
-            textColor: ClayTokens.deepIndigo,
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      if (matchingClasses.isNotEmpty) ...[
-        _buildSectionHeader(
-          context,
-          title: 'Matching Classrooms (${matchingClasses.length})',
-          actionText: 'View All',
-          onAction: () => widget.onNavigateToTab(1),
-        ),
-        const SizedBox(height: 8),
-        ...matchingClasses.map((c) => _buildClassroomTile(context, c, false)),
-        const SizedBox(height: 16),
-      ],
-      if (matchingAssignments.isNotEmpty) ...[
-        _buildSectionHeader(
-          context,
-          title: 'Matching Assignments (${matchingAssignments.length})',
-          actionText: 'View All',
-          onAction: () => widget.onNavigateToTab(2),
-        ),
-        const SizedBox(height: 8),
-        ...matchingAssignments.map((a) => _buildAssignmentCard(context, a)),
-        const SizedBox(height: 16),
-      ],
-      if (matchingMaterials.isNotEmpty) ...[
-        _buildSectionHeader(
-          context,
-          title: 'Matching Materials (${matchingMaterials.length})',
-          actionText: 'View All',
-          onAction: () => widget.onNavigateToTab(3),
-        ),
-        const SizedBox(height: 8),
-        ...matchingMaterials.map((m) => _buildMaterialTile(context, m)),
-      ],
-    ],
-  );
-}
+            (
+              icon: Icons.videocam_outlined,
+              label: 'Start Live Class',
+              onTap: () => widget.onNavigateToTab(1),
+            ),
+            (
+              icon: Icons.assignment_outlined,
+              label: 'Assignments',
+              onTap: () => widget.onNavigateToTab(2),
+            ),
+            (
+              icon: Icons.fact_check_outlined,
+              label: 'Attendance',
+              onTap: () => widget.onNavigateToTab(1),
+            ),
+          ]
+        : [
+            (
+              icon: Icons.add_box_outlined,
+              label: 'Join Class',
+              onTap: () => showDialog<dynamic>(
+                    context: context,
+                    builder: (_) => const JoinClassDialog(),
+                  ),
+            ),
+            (
+              icon: Icons.auto_awesome_outlined,
+              label: 'Ask Mentor',
+              onTap: () => context.push('/mentor'),
+            ),
+            (
+              icon: Icons.menu_book_outlined,
+              label: 'Materials',
+              onTap: () => widget.onNavigateToTab(3),
+            ),
+            (
+              icon: Icons.calendar_month_outlined,
+              label: 'Schedule',
+              onTap: () => widget.onNavigateToTab(4),
+            ),
+          ];
 
-  Widget _buildTeacherNoticeCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return ClayCard(
-      depth: 4,
-      color: isDark ? ClayTokens.darkCard : const Color(0xFFFBF8FF),
-      padding: const EdgeInsets.all(14),
-      child: const Row(
-        children: [
-          Icon(Icons.school_rounded, color: Color(0xFF8B5CF6), size: 22),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Instructor Dashboard Active',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    color: Color(0xFF8B5CF6),
+    return Row(
+      children: actions.map((item) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: item.onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark
+                        ? Theme.of(context).colorScheme.outlineVariant
+                        : const Color(0xFFE2E8F0),
+                    width: 1,
                   ),
                 ),
-                SizedBox(height: 2),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      item.icon,
+                      size: 22,
+                      color: isDark ? Colors.white : ClayTokens.navy,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : ClayTokens.darkInk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // 5. Small attendance / progress summary using one slim progress ring
+  Widget _buildProgressSummary(
+    BuildContext context,
+    AsyncValue<List<AssignmentItem>> assignmentsAsync,
+    AsyncValue<List<ClassroomItem>> classroomsAsync,
+    bool isTeacher,
+    bool isDark,
+  ) {
+    final assignments = assignmentsAsync.value ?? [];
+    final classrooms = classroomsAsync.value ?? [];
+
+    final completed = assignments.where((a) => a.status != AssignmentStatus.pending).length;
+    final total = assignments.length;
+    final progress = total > 0 ? (completed / total) : 0.0;
+    final pct = (progress * 100).toInt();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isDark ? ClayTokens.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? Theme.of(context).colorScheme.outlineVariant
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: isTeacher ? (classrooms.isNotEmpty ? 1.0 : 0.0) : (total > 0 ? progress : 0.85),
+                  strokeWidth: 4,
+                  backgroundColor: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  color: isTeacher ? const Color(0xFF8B5CF6) : ClayTokens.brightBlue,
+                ),
                 Text(
-                  'Live grading API endpoints verified. Local state manages rapid classroom reviews.',
-                  style: TextStyle(
+                  isTeacher ? '${classrooms.length}' : (total > 0 ? '$pct%' : '85%'),
+                  style: const TextStyle(
                     fontSize: 11,
-                    color: ClayTokens.secondaryText,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPersonalizedHeader(
-    BuildContext context,
-    AppUser? user,
-    bool isTeacher,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final name = user?.name.isNotEmpty == true
-        ? user!.name
-        : (isTeacher ? 'Teacher' : 'Student');
-
-    return ClayCard(
-      depth: 6,
-      gradient: isDark
-          ? const LinearGradient(
-              colors: [Color(0xFF26233E), Color(0xFF1E1B32)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            )
-          : const LinearGradient(
-              colors: [Color(0xFFFFFFFF), Color(0xFFF9F8FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          ClayContainer(
-            width: 46,
-            height: 46,
-            depth: 4,
-            padding: EdgeInsets.zero,
-            gradient: LinearGradient(
-              colors: isTeacher
-                  ? [const Color(0xFF9333EA), const Color(0xFF6B21A8)]
-                  : [const Color(0xFF6356F5), const Color(0xFF473BB8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
-                  ? Image.network(
-                      user.avatarUrl!,
-                      width: 52,
-                      height: 52,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Center(
-                        child: Text(
-                          name[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 22,
-                          ),
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        name[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
             ),
           ),
           const SizedBox(width: 14),
@@ -811,47 +780,17 @@ Widget _buildSearchResults(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      isTeacher
-                          ? 'Welcome back, Teacher'
-                          : 'Welcome back, Student',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 17,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    if (user?.isDemo == true)
-                      const ClayBadge(
-                        label: 'DEMO DATA',
-                        backgroundColor: Color(0xFFFEF3C7),
-                        textColor: Color(0xFF92400E),
-                      ),
-                    ClayBadge(
-                      label: isTeacher ? 'TEACHER' : 'STUDENT',
-                      backgroundColor: isTeacher
-                          ? (isDark
-                                ? const Color(0xFF382650)
-                                : const Color(0xFFF3E8FF))
-                          : (isDark
-                                ? const Color(0xFF2E2B54)
-                                : ClayTokens.softLavender),
-                      textColor: isTeacher
-                          ? const Color(0xFF8B5CF6)
-                          : ClayTokens.deepIndigo,
-                    ),
-                  ],
+                const Text(
+                  'Academic Progress & Attendance',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   isTeacher
-                      ? 'Course roster and submissions ready'
-                      : 'No assignments due. Enjoy the break.',
+                      ? '${classrooms.length} active classes · ${assignments.length} assignments managed'
+                      : (total > 0
+                          ? '$completed of $total coursework completed · ${classrooms.length} enrolled'
+                          : 'Attendance rate on track · ${classrooms.length} classes enrolled'),
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white60 : ClayTokens.secondaryText,
@@ -865,1031 +804,107 @@ Widget _buildSearchResults(
     );
   }
 
-  Widget _buildQuickActionsBar(
+  // Cross-entity search results renderer
+  Widget _buildSearchResults(
     BuildContext context,
-    bool isTeacher,
-    WidgetRef ref,
+    AsyncValue<List<ClassroomItem>> classroomsAsync,
+    AsyncValue<List<AssignmentItem>> assignmentsAsync,
+    AsyncValue<List<MaterialItem>> materialsAsync,
   ) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (isTeacher) {
-          return Row(
-            children: [
-              Expanded(
-                child: ClayButton(
-                  icon: Icons.add_circle_outline_rounded,
-                  onPressed: () async {
-                    final res = await showDialog<dynamic>(
-                      context: context,
-                      builder: (_) => const CreateClassDialog(),
-                    );
-                    if (res is ClassroomItem && context.mounted) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ClassroomDetailScreen(classroom: res),
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Create Class'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ClayButton(
-                  icon: Icons.post_add_rounded,
-                  color: const Color(0xFF0D9488),
-                  onPressed: () => showDialog<bool>(
-                    context: context,
-                    builder: (_) => const CreateAssignmentDialog(),
-                  ),
-                  child: const Text('Add Assignment'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ClayButton(
-                  icon: Icons.fact_check_outlined,
-                  color: const Color(0xFF7C3AED),
-                  onPressed: () => _showAttendanceModal(context, ref),
-                  child: const Text('Attendance'),
-                ),
-              ),
-            ],
-          );
-        }
+    final q = _searchQuery.toLowerCase();
+    final matchingClasses = (classroomsAsync.value ?? [])
+        .where((c) =>
+            c.name.toLowerCase().contains(q) ||
+            c.subject.toLowerCase().contains(q) ||
+            (c.code ?? '').toLowerCase().contains(q))
+        .toList();
 
-        // Student quick actions
-        return Row(
+    final matchingAssignments = (assignmentsAsync.value ?? [])
+        .where((a) =>
+            a.title.toLowerCase().contains(q) ||
+            a.subject.toLowerCase().contains(q))
+        .toList();
+
+    final matchingMaterials = (materialsAsync.value ?? [])
+        .where((m) =>
+            m.title.toLowerCase().contains(q) ||
+            m.subject.toLowerCase().contains(q))
+        .toList();
+
+    final total = matchingClasses.length + matchingAssignments.length + matchingMaterials.length;
+
+    if (total == 0) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        alignment: Alignment.center,
+        child: Column(
           children: [
-            Expanded(
-              child: ClayButton(
-                icon: Icons.vpn_key_rounded,
-                onPressed: () async {
-                  final res = await showDialog<dynamic>(
-                    context: context,
-                    builder: (_) => const JoinClassDialog(),
-                  );
-                  if (res is ClassroomItem && context.mounted) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ClassroomDetailScreen(classroom: res),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('Join Class'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ClayButton(
-                icon: Icons.auto_awesome_rounded,
-                color: const Color(0xFF6356F5),
-                onPressed: () => context.push('/mentor'),
-                child: const Text('Ask Mentor'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ClayButton(
-                icon: Icons.calendar_month_rounded,
-                color: const Color(0xFF0D9488),
-                onPressed: () => widget.onNavigateToTab(4),
-                child: const Text('Schedule'),
-              ),
+            const Icon(Icons.search_off_rounded, size: 36, color: Colors.grey),
+            const SizedBox(height: 8),
+            Text(
+              'No results found for "$_searchQuery"',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    }
 
-  Widget _buildStudentProgressCard(
-    BuildContext context,
-    AsyncValue<List<AssignmentItem>> assignmentsAsync,
-    AsyncValue<List<ClassroomItem>> classroomsAsync,
-  ) {
-    final assignments = assignmentsAsync.value ?? [];
-    final classrooms = classroomsAsync.value ?? [];
-    final total = assignments.length;
-    final completed = assignments
-        .where((a) => a.status != AssignmentStatus.pending)
-        .length;
-    final progress = total > 0 ? (completed / total) : 0.0;
-    final progressPct = (progress * 100).toInt();
-
-    return ClayCard(
-      depth: 5,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ClayContainer(
-                width: 36,
-                height: 36,
-                depth: 3,
-                color: ClayTokens.softLavender,
-                borderRadius: BorderRadius.circular(12),
-                child: const Icon(
-                  Icons.insights_rounded,
-                  size: 20,
-                  color: ClayTokens.deepIndigo,
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Academic Progress & Attendance',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              ClayBadge(
-                label: total > 0 ? '$progressPct% Completed' : 'Enrolled',
-                backgroundColor: ClayTokens.mint,
-                textColor: ClayTokens.mintDark,
-                icon: Icons.check_circle_rounded,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _buildProgressItem(
-                  context,
-                  'Coursework Completion',
-                  '$progressPct%',
-                  progress,
-                  ClayTokens.deepIndigo,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildProgressItem(
-                  context,
-                  'Class Enrollment',
-                  '${classrooms.length} Enrolled',
-                  classrooms.isNotEmpty ? 1.0 : 0.0,
-                  const Color(0xFF10B981),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressItem(
-    BuildContext context,
-    String label,
-    String value,
-    double progress,
-    Color color,
-  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-                color: color,
-              ),
-            ),
-          ],
+        Text(
+          'Search Results ($total found)',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
         ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(ClayTokens.radiusPill),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 7,
-            backgroundColor: Theme.of(context)
-                .colorScheme
-                .surfaceContainerHighest,
-            color: color,
-          ),
-        ),
+        const SizedBox(height: 10),
+        if (matchingClasses.isNotEmpty) ...[
+          const Text('Classrooms', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: ClayTokens.brightBlue)),
+          const SizedBox(height: 4),
+          ...matchingClasses.map((c) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.school_rounded, size: 20),
+                title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text('${c.subject} · Code: ${c.code}'),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ClassroomDetailScreen(classroom: c),
+                    ),
+                  );
+                },
+              )),
+          const SizedBox(height: 8),
+        ],
+        if (matchingAssignments.isNotEmpty) ...[
+          const Text('Assignments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: ClayTokens.brightBlue)),
+          const SizedBox(height: 4),
+          ...matchingAssignments.map((a) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.assignment_rounded, size: 20),
+                title: Text(a.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text('${a.subject} · Due ${a.dueDate}'),
+                onTap: () {
+                  showDialog<bool>(
+                    context: context,
+                    builder: (_) => SubmitAssignmentDialog(assignment: a),
+                  );
+                },
+              )),
+          const SizedBox(height: 8),
+        ],
+        if (matchingMaterials.isNotEmpty) ...[
+          const Text('Materials', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: ClayTokens.brightBlue)),
+          const SizedBox(height: 4),
+          ...matchingMaterials.map((m) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.menu_book_rounded, size: 20),
+                title: Text(m.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text('${m.subject} · ${m.type.name}'),
+                onTap: () => widget.onNavigateToTab(3),
+              )),
+        ],
       ],
-    );
-  }
-
-  Widget _buildSkeletonMetricGrid(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 600;
-        final count = isWide ? 4 : 2;
-
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: count,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: isWide ? 1.4 : 1.25,
-          children: List.generate(
-            4,
-            (index) => const ClaySkeletonCard(
-              hasLeading: false,
-              lines: 2,
-              margin: EdgeInsets.zero,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMetricGrid(
-    BuildContext context,
-    HomeSummary summary,
-    bool isTeacher,
-  ) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 600;
-        final count = isWide ? 4 : 2;
-
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: count,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: isWide ? 1.4 : 1.25,
-          children: [
-            _metricCard(
-              context,
-              title: isTeacher ? 'Active Courses' : 'Classrooms',
-              value: '${summary.enrolledClassesCount}',
-              subtitle: isTeacher ? 'Classes instructed' : 'Active enrollments',
-              icon: Icons.groups_rounded,
-              color: isTeacher
-                  ? const Color(0xFF8B5CF6)
-                  : ClayTokens.deepIndigo,
-              onTap: () => widget.onNavigateToTab(1),
-            ),
-            _metricCard(
-              context,
-              title: isTeacher ? 'To Review' : 'Assignments',
-              value: '${summary.pendingAssignmentsCount}',
-              subtitle: isTeacher
-                  ? 'Submissions pending'
-                  : (summary.pendingAssignmentsCount > 0
-                        ? 'Due this week'
-                        : 'All submitted'),
-              icon: Icons.assignment_rounded,
-              color: summary.pendingAssignmentsCount > 0
-                  ? ClayTokens.peachDark
-                  : const Color(0xFF10B981),
-              onTap: () => widget.onNavigateToTab(2),
-            ),
-            _metricCard(
-              context,
-              title: 'Study Materials',
-              value: '${summary.materialsCount}',
-              subtitle: isTeacher ? 'Resources shared' : 'Notes & recordings',
-              icon: Icons.menu_book_rounded,
-              color: const Color(0xFF0EA5E9),
-              onTap: () => widget.onNavigateToTab(3),
-            ),
-            _metricCard(
-              context,
-              title: 'AI Mentor',
-              value: 'Active',
-              subtitle: '24/7 Smart Doubts',
-              icon: Icons.auto_awesome_rounded,
-              color: const Color(0xFF6356F5),
-              onTap: () => context.push('/mentor'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _metricCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-
-    return ClayCard(
-      depth: 5,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              ClayContainer(
-                width: 24,
-                height: 24,
-                depth: 2,
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
-                padding: EdgeInsets.zero,
-                child: Center(child: Icon(icon, size: 14, color: color)),
-              ),
-            ],
-          ),
-          const Spacer(),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: color,
-                height: 1.1,
-              ),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAiMentorBanner(BuildContext context) {
-    return ClayContainer(
-      depth: 6,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF5B4DF0), Color(0xFF4334C4)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(20),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          ClayContainer(
-            width: 46,
-            height: 46,
-            depth: 4,
-            color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            child: const Center(
-              child: Icon(
-                Icons.auto_awesome_rounded,
-                color: Colors.white,
-                size: 26,
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Stuck on a problem?',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Ask the AI Mentor for step-by-step guidance, math derivations, and instant study notes.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: ClayTokens.deepIndigo,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(ClayTokens.radiusSmall),
-              ),
-            ),
-            onPressed: () => context.push('/mentor'),
-            child: const Text(
-              'Ask Now',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(
-    BuildContext context, {
-    required String title,
-    required String actionText,
-    required VoidCallback onAction,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        TextButton(
-          onPressed: onAction,
-          style: TextButton.styleFrom(
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                actionText,
-                style: TextStyle(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: colors.primary,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScheduleCard(BuildContext context, ScheduleItem item) {
-    final colors = Theme.of(context).colorScheme;
-
-    return ClayCard(
-      depth: 5,
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          ClayContainer(
-            width: 44,
-            height: 44,
-            depth: 3,
-            color: item.isToday
-                ? ClayTokens.softLavender
-                : colors.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(14),
-            child: Icon(
-              Icons.videocam_rounded,
-              color: item.isToday
-                  ? ClayTokens.deepIndigo
-                  : colors.onSurfaceVariant,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    ClayBadge(
-                      label: item.type,
-                      fontSize: 10,
-                      backgroundColor: ClayTokens.mint,
-                      textColor: ClayTokens.mintDark,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      item.subject,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.time,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Copy Session Preview Link',
-            icon: const Icon(Icons.link_rounded, size: 20),
-            onPressed: () {
-              Clipboard.setData(
-                ClipboardData(
-                  text: 'https://pragti.app/live/${item.title}',
-                ),
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Session link copied for "${item.title}"!'),
-                  backgroundColor: ClayTokens.deepIndigo,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAssignmentCard(BuildContext context, AssignmentItem assignment) {
-    final colors = Theme.of(context).colorScheme;
-
-    return ClayCard(
-      depth: 5,
-      onTap: () => showDialog<bool>(
-        context: context,
-        builder: (_) => SubmitAssignmentDialog(assignment: assignment),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          ClayContainer(
-            width: 44,
-            height: 44,
-            depth: 3,
-            color: ClayTokens.softPeach,
-            borderRadius: BorderRadius.circular(14),
-            child: const Icon(
-              Icons.assignment_late_rounded,
-              color: ClayTokens.peachDark,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        assignment.subject,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: colors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '·  ${assignment.points} Points',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  assignment.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Due: ${assignment.dueDate}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: ClayTokens.peachDark,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (assignment.isDueIn24h)
-                      const ClayBadge(
-                        label: 'DUE IN 24H',
-                        fontSize: 9.0,
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        backgroundColor: Color(0xFFFEE2E2),
-                        textColor: Color(0xFFDC2626),
-                      )
-                    else if (assignment.isDueSoon)
-                      const ClayBadge(
-                        label: 'DUE SOON',
-                        fontSize: 9.0,
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        backgroundColor: Color(0xFFFEF3C7),
-                        textColor: Color(0xFFD97706),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          FilledButton.tonal(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              textStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            onPressed: () => showDialog<bool>(
-              context: context,
-              builder: (_) => SubmitAssignmentDialog(assignment: assignment),
-            ),
-            child: const Text('Turn In'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTeacherAssignmentCard(
-    BuildContext context,
-    AssignmentItem assignment,
-  ) {
-    final colors = Theme.of(context).colorScheme;
-    final isGraded = assignment.status == AssignmentStatus.graded;
-
-    return ClayCard(
-      depth: 5,
-      onTap: () => _showTeacherGradingDialog(context, assignment),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          ClayContainer(
-            width: 44,
-            height: 44,
-            depth: 3,
-            color: isGraded ? ClayTokens.mint : ClayTokens.softLavender,
-            borderRadius: BorderRadius.circular(14),
-            child: Icon(
-              isGraded
-                  ? Icons.check_circle_rounded
-                  : Icons.pending_actions_rounded,
-              color: isGraded ? ClayTokens.mintDark : ClayTokens.deepIndigo,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        assignment.subject,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: colors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '·  Max: ${assignment.points} Pts',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  assignment.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isGraded
-                      ? 'Graded (${assignment.marks}/${assignment.points} marks)'
-                      : 'Pending Student Review / Grading',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isGraded
-                        ? ClayTokens.mintDark
-                        : colors.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              visualDensity: VisualDensity.compact,
-            ),
-            onPressed: () => _showTeacherGradingDialog(context, assignment),
-            child: Text(isGraded ? 'Review' : 'Grade'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildClassroomTile(
-    BuildContext context,
-    ClassroomItem c,
-    bool isTeacher,
-  ) {
-    final colors = Theme.of(context).colorScheme;
-
-    return ClayCard(
-      depth: 4,
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ClassroomDetailScreen(classroom: c),
-          ),
-        );
-      },
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ClayBadge(
-                label: c.subject,
-                fontSize: 9,
-                backgroundColor: isTeacher
-                    ? const Color(0xFFF3E8FF)
-                    : ClayTokens.softLavender,
-                textColor: isTeacher
-                    ? const Color(0xFF8B5CF6)
-                    : ClayTokens.deepIndigo,
-              ),
-              if (c.code != null) ...[
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: c.code!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Class code ${c.code} copied to clipboard!',
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          c.code!,
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        const Icon(Icons.copy_rounded, size: 10),
-                      ],
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 11,
-                  color: colors.onSurfaceVariant,
-                ),
-              ],
-            ],
-          ),
-          Text(
-            c.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-          ),
-          Row(
-            children: [
-              Icon(
-                Icons.people_alt_outlined,
-                size: 13,
-                color: colors.onSurfaceVariant,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${c.studentCount} students',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colors.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMaterialTile(BuildContext context, MaterialItem m) {
-    IconData icon = Icons.article_rounded;
-    Color iconColor = ClayTokens.deepIndigo;
-
-    if (m.type == CourseMaterialType.video) {
-      icon = Icons.play_circle_fill_rounded;
-      iconColor = Colors.redAccent;
-    } else if (m.type == CourseMaterialType.notes) {
-      icon = Icons.edit_note_rounded;
-      iconColor = const Color(0xFF0D9488);
-    }
-
-    return ClayCard(
-      depth: 4,
-      onTap: () => widget.onNavigateToTab(3),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          ClayContainer(
-            width: 38,
-            height: 38,
-            depth: 2,
-            color: iconColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-            padding: EdgeInsets.zero,
-            child: Center(child: Icon(icon, color: iconColor, size: 20)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  m.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  '${m.subject} · ${m.details}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.arrow_forward_rounded, size: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-
-    return ClayCard(
-      depth: 3,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 36,
-            color: colors.onSurfaceVariant.withValues(alpha: 0.5),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

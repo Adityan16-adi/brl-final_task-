@@ -33,8 +33,8 @@ void main() {
 
       // Tab 0: Overview
       expect(find.text('Dashboard Overview'), findsOneWidget);
-      expect(find.text('Welcome back, Teacher'), findsOneWidget);
-      expect(find.text('Classes instructed'), findsOneWidget);
+      expect(find.textContaining('Demo'), findsWidgets);
+      expect(find.text('Create Class'), findsWidgets);
 
       final navBar = find.byType(NavigationBar);
 
@@ -94,7 +94,7 @@ void main() {
 
       // Verify overview renders properly under dark theme
       expect(find.text('Dashboard Overview'), findsOneWidget);
-      expect(find.text('Active enrollments'), findsOneWidget);
+      expect(find.textContaining('Demo'), findsWidgets);
 
       // Switch back to light mode
       container.read(themeModeProvider.notifier).state = ThemeMode.light;

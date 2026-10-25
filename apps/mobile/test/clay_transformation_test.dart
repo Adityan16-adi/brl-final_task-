@@ -183,10 +183,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome back, Student'), findsOneWidget);
-      expect(find.text('STUDENT'), findsOneWidget);
       expect(find.text('Academic Progress & Attendance'), findsOneWidget);
-      expect(find.text('Join Class'), findsOneWidget);
+      expect(find.text('Join Class'), findsWidgets);
       expect(find.text('Ask Mentor'), findsOneWidget);
     });
 
@@ -209,12 +207,10 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Welcome back, Teacher'), findsOneWidget);
-        expect(find.text('TEACHER'), findsOneWidget);
         expect(find.text('Instructor Dashboard Active'), findsOneWidget);
-        expect(find.text('Create Class'), findsOneWidget);
-        expect(find.text('Add Assignment'), findsOneWidget);
-        expect(find.text('Attendance'), findsOneWidget);
+        expect(find.text('Create Class'), findsWidgets);
+        expect(find.text('Assignments'), findsWidgets);
+        expect(find.text('Attendance'), findsWidgets);
       },
     );
   });
