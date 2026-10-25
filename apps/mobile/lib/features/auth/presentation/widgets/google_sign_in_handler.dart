@@ -6,7 +6,105 @@ import 'package:mobile/core/theme/clay_theme.dart';
 import '../../application/auth_providers.dart';
 import '../../domain/auth_repository.dart';
 
-/// Reusable Claymorphic "Continue with Google" button and first-time role selection modal.
+class GoogleLogoPainter extends CustomPainter {
+  const GoogleLogoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width / 24.0;
+
+    // Blue #4285F4
+    final bluePath = Path()
+      ..moveTo(23.49 * s, 12.28 * s)
+      ..cubicTo(23.49 * s, 11.43 * s, 23.42 * s, 10.61 * s, 23.28 * s, 9.82 * s)
+      ..lineTo(12.0 * s, 9.82 * s)
+      ..lineTo(12.0 * s, 14.47 * s)
+      ..lineTo(18.44 * s, 14.47 * s)
+      ..cubicTo(18.16 * s, 15.96 * s, 17.32 * s, 17.23 * s, 16.05 * s, 18.08 * s)
+      ..lineTo(16.05 * s, 21.08 * s)
+      ..lineTo(19.92 * s, 21.08 * s)
+      ..cubicTo(22.18 * s, 19.0 * s, 23.49 * s, 15.93 * s, 23.49 * s, 12.28 * s)
+      ..close();
+    canvas.drawPath(
+      bluePath,
+      Paint()
+        ..color = const Color(0xFF4285F4)
+        ..isAntiAlias = true,
+    );
+
+    // Green #34A853
+    final greenPath = Path()
+      ..moveTo(12.0 * s, 24.0 * s)
+      ..cubicTo(15.24 * s, 24.0 * s, 17.95 * s, 22.92 * s, 19.93 * s, 21.09 * s)
+      ..lineTo(16.06 * s, 18.09 * s)
+      ..cubicTo(14.98 * s, 18.81 * s, 13.61 * s, 19.25 * s, 12.0 * s, 19.25 * s)
+      ..cubicTo(8.87 * s, 19.25 * s, 6.22 * s, 17.14 * s, 5.27 * s, 14.29 * s)
+      ..lineTo(1.25 * s, 14.29 * s)
+      ..lineTo(1.25 * s, 17.38 * s)
+      ..cubicTo(3.28 * s, 21.43 * s, 7.34 * s, 24.0 * s, 12.0 * s, 24.0 * s)
+      ..close();
+    canvas.drawPath(
+      greenPath,
+      Paint()
+        ..color = const Color(0xFF34A853)
+        ..isAntiAlias = true,
+    );
+
+    // Yellow #FBBC05
+    final yellowPath = Path()
+      ..moveTo(5.27 * s, 14.29 * s)
+      ..cubicTo(5.02 * s, 13.57 * s, 4.89 * s, 12.8 * s, 4.89 * s, 12.0 * s)
+      ..cubicTo(4.89 * s, 11.2 * s, 5.03 * s, 10.43 * s, 5.27 * s, 9.71 * s)
+      ..lineTo(5.27 * s, 6.6 * s)
+      ..lineTo(1.25 * s, 6.6 * s)
+      ..cubicTo(0.45 * s, 8.19 * s, 0.0, 9.99 * s, 0.0, 12.0 * s)
+      ..cubicTo(0.0, 14.01 * s, 0.45 * s, 15.81 * s, 1.25 * s, 17.4 * s)
+      ..lineTo(5.27 * s, 14.29 * s)
+      ..close();
+    canvas.drawPath(
+      yellowPath,
+      Paint()
+        ..color = const Color(0xFFFBBC05)
+        ..isAntiAlias = true,
+    );
+
+    // Red #EA4335
+    final redPath = Path()
+      ..moveTo(12.0 * s, 4.75 * s)
+      ..cubicTo(13.77 * s, 4.75 * s, 15.35 * s, 5.36 * s, 16.6 * s, 6.55 * s)
+      ..lineTo(20.02 * s, 3.13 * s)
+      ..cubicTo(17.95 * s, 1.19 * s, 15.24 * s, 0.0, 12.0 * s, 0.0)
+      ..cubicTo(7.34 * s, 0.0, 3.28 * s, 2.57 * s, 1.25 * s, 6.6 * s)
+      ..lineTo(5.27 * s, 9.71 * s)
+      ..cubicTo(6.22 * s, 6.86 * s, 8.87 * s, 4.75 * s, 12.0 * s, 4.75 * s)
+      ..close();
+    canvas.drawPath(
+      redPath,
+      Paint()
+        ..color = const Color(0xFFEA4335)
+        ..isAntiAlias = true,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Official multi-coloured "G" vector logo
+class GoogleLogo extends StatelessWidget {
+  const GoogleLogo({super.key, this.size = 20});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: const GoogleLogoPainter(),
+    );
+  }
+}
+
+/// Reusable Google Sign-In button following official brand guidelines
 class GoogleSignInButton extends ConsumerStatefulWidget {
   const GoogleSignInButton({
     super.key,
@@ -46,12 +144,15 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
           context.go('/overview');
         }
       }
-    } on AuthFailure catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      showGoogleUnavailableDialog(context, e.message);
-    } catch (e) {
-      if (!mounted) return;
-      showGoogleUnavailableDialog(context, 'Google Sign-In error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Google sign-in isn't set up on this build. Use email instead."),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 4),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -61,21 +162,50 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ClayButton(
-      isFullWidth: true,
-      isLoading: _busy,
-      onPressed: _busy ? null : _handleGoogleSignIn,
-      icon: Icons.g_mobiledata_rounded,
-      color: isDark ? ClayTokens.darkSurface : Colors.white,
-      textColor: isDark ? Colors.white : ClayTokens.darkInk,
-      gradient: LinearGradient(
-        colors: isDark
-            ? [const Color(0xFF26243A), const Color(0xFF1E1C2E)]
-            : [Colors.white, const Color(0xFFF7F7FA)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+    return Material(
+      color: isDark ? ClayTokens.darkCard : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isDark ? Colors.white24 : const Color(0xFFDADCE0),
+          width: 1,
+        ),
       ),
-      child: Text(widget.text),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _busy ? null : _handleGoogleSignIn,
+        child: Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const GoogleLogo(size: 20),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        widget.text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : const Color(0xFF3C4043),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 }

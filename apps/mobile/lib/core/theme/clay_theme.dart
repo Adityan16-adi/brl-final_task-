@@ -470,8 +470,11 @@ class ClayTextField extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
-            boxShadow: ClayTokens.insetShadows(isDark: isDark),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+              width: 1,
+            ),
           ),
           child: TextFormField(
             controller: controller,

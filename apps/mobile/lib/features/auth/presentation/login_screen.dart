@@ -236,73 +236,182 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           onCard: true,
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      Text(
+                      const SizedBox(height: 12),
+                      const Text(
                         AppBranding.appName,
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineSmall?.copyWith(
+                        style: TextStyle(
+                          fontSize: 22,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Sign in to access your virtual classrooms and assignments.',
+                      const SizedBox(height: 2),
+                      const Text(
+                        AppBranding.tagline,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 13,
-                          color: isDark
-                              ? Colors.white60
-                              : ClayTokens.secondaryText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: ClayTokens.pragtiOrange,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+
+                      // Single, clean heading
+                      Text(
+                        'Sign in to your account',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : ClayTokens.navy,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
 
                       // Email Field
-                      ClayTextField(
-                        controller: _emailController,
-                        labelText: 'Email Address',
-                        hintText: 'e.g. student@demo.com',
-                        prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'Please enter an email';
-                          }
-                          if (!val.contains('@') || !val.contains('.')) {
-                            return 'Please enter a valid email address';
-                          }
-                          return null;
-                        },
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 6),
+                            child: Text(
+                              'Email Address',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white70 : ClayTokens.darkInk,
+                              ),
+                            ),
+                          ),
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white : ClayTokens.darkInk,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'e.g. student@demo.com',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white38 : ClayTokens.secondaryText,
+                              ),
+                              prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              filled: true,
+                              fillColor: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(
+                                  color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(
+                                  color: ClayTokens.brightBlue,
+                                  width: 1.5,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                              ),
+                            ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'Please enter an email';
+                              }
+                              if (!val.contains('@') || !val.contains('.')) {
+                                return 'Please enter a valid email address';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
 
                       // Password Field
-                      ClayTextField(
-                        controller: _passwordController,
-                        labelText: 'Password',
-                        hintText: 'e.g. demo1234',
-                        obscureText: _obscure,
-                        prefixIcon: const Icon(
-                          Icons.lock_outline_rounded,
-                          size: 20,
-                        ),
-                        suffixIcon: IconButton(
-                          tooltip: _obscure ? 'Show password' : 'Hide password',
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            size: 18,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 6),
+                            child: Text(
+                              'Password',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white70 : ClayTokens.darkInk,
+                              ),
+                            ),
                           ),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                        textInputAction: TextInputAction.done,
-                        validator: (val) => (val == null || val.length < 6)
-                            ? 'Password must be at least 6 characters'
-                            : null,
-                        onFieldSubmitted: (_) => _submit(),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscure,
+                            textInputAction: TextInputAction.done,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white : ClayTokens.darkInk,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'e.g. demo1234',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white38 : ClayTokens.secondaryText,
+                              ),
+                              prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                              suffixIcon: IconButton(
+                                tooltip: _obscure ? 'Show password' : 'Hide password',
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  size: 18,
+                                ),
+                                onPressed: () => setState(() => _obscure = !_obscure),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              filled: true,
+                              fillColor: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(
+                                  color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(
+                                  color: ClayTokens.brightBlue,
+                                  width: 1.5,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                              ),
+                            ),
+                            validator: (val) => (val == null || val.length < 6)
+                                ? 'Password must be at least 6 characters'
+                                : null,
+                            onFieldSubmitted: (_) => _submit(),
+                          ),
+                        ],
                       ),
 
                       // Forgot Password Link
@@ -319,13 +428,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 6),
-                        ClayContainer(
+                        Container(
                           padding: const EdgeInsets.all(12),
-                          color: isDark
-                              ? const Color(0xFF421D24)
-                              : const Color(0xFFFFECEE),
-                          borderRadius: BorderRadius.circular(
-                            ClayTokens.radiusSmall,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF421D24)
+                                : const Color(0xFFFFECEE),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.redAccent.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,44 +483,102 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 12),
                       ],
 
-                      const SizedBox(height: 10),
-
-                      // Submit Clay Button
-                      ClayButton(
-                        isFullWidth: true,
-                        isLoading: _busy,
-                        onPressed: _busy ? null : _submit,
-                        icon: Icons.login_rounded,
-                        child: const Text('Sign In'),
-                      ),
-
                       const SizedBox(height: 12),
 
-                      // Sign in with Google
+                      // Primary Button: Solid blue fill, white text, 50px high, full width, "Sign In"
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _busy ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ClayTokens.brightBlue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: _busy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Sign In',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Subtle "or" divider
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                              height: 1,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Text(
+                              'or',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white54 : ClayTokens.secondaryText,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                              height: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Google Sign-In button
                       const GoogleSignInButton(),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
 
-                      // Create Account Button
-                      ClayButton(
-                        isFullWidth: true,
-                        color: isDark ? ClayTokens.darkSurface : Colors.white,
-                        textColor: isDark ? Colors.white : ClayTokens.darkInk,
-                        gradient: LinearGradient(
-                          colors: isDark
-                              ? [
-                                  const Color(0xFF292742),
-                                  const Color(0xFF1E1C30),
-                                ]
-                              : [Colors.white, const Color(0xFFF7F6FC)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                      // New to Pragti? Register
+                      Center(
+                        child: TextButton(
+                          onPressed: _busy ? null : () => context.push('/register'),
+                          child: Text.rich(
+                            TextSpan(
+                              text: 'New to Pragti? ',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : ClayTokens.secondaryText,
+                                fontSize: 13,
+                              ),
+                              children: const [
+                                TextSpan(
+                                  text: 'Register',
+                                  style: TextStyle(
+                                    color: ClayTokens.brightBlue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        onPressed: _busy
-                            ? null
-                            : () => context.push('/register'),
-                        icon: Icons.person_add_outlined,
-                        child: const Text('New to Pragti? Register'),
                       ),
 
                       const SizedBox(height: 14),
