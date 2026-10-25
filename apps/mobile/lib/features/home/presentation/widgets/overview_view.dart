@@ -314,12 +314,7 @@ class OverviewView extends ConsumerWidget {
           // Role-specific Metric Grid
           summaryAsync.when(
             data: (summary) => _buildMetricGrid(context, summary, isTeacher),
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(),
-              ),
-            ),
+            loading: () => _buildSkeletonMetricGrid(context),
             error: (err, _) => ClayCard(
               color: colors.errorContainer,
               child: Text('Unable to load learning summary: $err'),
@@ -402,7 +397,7 @@ class OverviewView extends ConsumerWidget {
                     .toList(),
               );
             },
-            loading: () => const LinearProgressIndicator(),
+            loading: () => const ClaySkeletonList(itemCount: 2),
             error: (err, _) => Text('Could not load assignments: $err'),
           ),
           const SizedBox(height: 24),
@@ -436,7 +431,7 @@ class OverviewView extends ConsumerWidget {
                     .toList(),
               );
             },
-            loading: () => const LinearProgressIndicator(),
+            loading: () => const ClaySkeletonList(itemCount: 2),
             error: (err, _) => Text('Could not load schedule: $err'),
           ),
           const SizedBox(height: 24),
@@ -482,7 +477,7 @@ class OverviewView extends ConsumerWidget {
                 },
               );
             },
-            loading: () => const LinearProgressIndicator(),
+            loading: () => const ClaySkeletonList(itemCount: 2),
             error: (err, _) => Text('Could not load classrooms: $err'),
           ),
           const SizedBox(height: 24),
@@ -515,7 +510,7 @@ class OverviewView extends ConsumerWidget {
                     .toList(),
               );
             },
-            loading: () => const LinearProgressIndicator(),
+            loading: () => const ClaySkeletonList(itemCount: 2),
             error: (err, _) => Text('Could not load materials: $err'),
           ),
         ],
@@ -574,6 +569,17 @@ class OverviewView extends ConsumerWidget {
 
     return ClayCard(
       depth: 6,
+      gradient: isDark
+          ? const LinearGradient(
+              colors: [Color(0xFF26233E), Color(0xFF1E1B32)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            )
+          : const LinearGradient(
+              colors: [Color(0xFFFFFFFF), Color(0xFFF9F8FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
       padding: const EdgeInsets.all(18),
       child: Row(
         children: [
@@ -581,6 +587,7 @@ class OverviewView extends ConsumerWidget {
             width: 52,
             height: 52,
             depth: 4,
+            padding: EdgeInsets.zero,
             gradient: LinearGradient(
               colors: isTeacher
                   ? [const Color(0xFF9333EA), const Color(0xFF6B21A8)]
@@ -589,15 +596,35 @@ class OverviewView extends ConsumerWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(18),
-            child: Center(
-              child: Text(
-                name[0].toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 22,
-                ),
-              ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
+                  ? Image.network(
+                      user.avatarUrl!,
+                      width: 52,
+                      height: 52,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Text(
+                          name[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 22,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        name[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 22,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 14),
@@ -889,6 +916,32 @@ class OverviewView extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSkeletonMetricGrid(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 600;
+        final count = isWide ? 4 : 2;
+
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: count,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: isWide ? 1.4 : 1.25,
+          children: List.generate(
+            4,
+            (index) => const ClaySkeletonCard(
+              hasLeading: false,
+              lines: 2,
+              margin: EdgeInsets.zero,
+            ),
+          ),
+        );
+      },
     );
   }
 

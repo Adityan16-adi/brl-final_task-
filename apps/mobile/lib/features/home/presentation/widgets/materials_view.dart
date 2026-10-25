@@ -241,11 +241,9 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
                 ],
               );
             },
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: CircularProgressIndicator(),
-              ),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: ClaySkeletonList(itemCount: 3),
             ),
             error: (err, _) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 40),

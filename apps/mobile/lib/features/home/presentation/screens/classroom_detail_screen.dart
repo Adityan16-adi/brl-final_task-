@@ -1075,11 +1075,9 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
               }).toList(),
             );
           },
-          loading: () => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
-            ),
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: ClaySkeletonList(itemCount: 2),
           ),
           error: (err, _) => Text('Error loading assignments: $err'),
         ),
@@ -1096,11 +1094,9 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
           .getClassroomDetails(widget.classroom.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: CircularProgressIndicator(),
-            ),
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: ClaySkeletonList(itemCount: 3),
           );
         }
 

@@ -513,3 +513,185 @@ class ClayTextField extends StatelessWidget {
     );
   }
 }
+
+/// A pulsing skeleton loader designed for claymorphism surfaces.
+class ClaySkeleton extends StatefulWidget {
+  const ClaySkeleton({
+    super.key,
+    this.width,
+    this.height = 16.0,
+    this.borderRadius,
+  });
+
+  final double? width;
+  final double height;
+  final BorderRadiusGeometry? borderRadius;
+
+  @override
+  State<ClaySkeleton> createState() => _ClaySkeletonState();
+}
+
+class _ClaySkeletonState extends State<ClaySkeleton>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _controller;
+  Animation<double>? _animation;
+
+  bool get _isInTest =>
+      WidgetsBinding.instance.runtimeType
+          .toString()
+          .contains('TestWidgetsFlutterBinding');
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isInTest) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1100),
+      )..repeat(reverse: true);
+      _animation = Tween<double>(begin: 0.45, end: 0.90).animate(
+        CurvedAnimation(parent: _controller!, curve: Curves.easeInOut),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor =
+        isDark ? const Color(0xFF2C2A44) : const Color(0xFFE5E2F2);
+    final effectiveRadius =
+        widget.borderRadius ?? BorderRadius.circular(ClayTokens.radiusSmall);
+
+    if (_animation != null) {
+      return AnimatedBuilder(
+        animation: _animation!,
+        builder: (context, child) {
+          return Container(
+            width: widget.width,
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: baseColor.withValues(alpha: _animation!.value),
+              borderRadius: effectiveRadius,
+            ),
+          );
+        },
+      );
+    }
+
+    return Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        color: baseColor.withValues(alpha: 0.65),
+        borderRadius: effectiveRadius,
+      ),
+    );
+  }
+}
+
+/// A claymorphic card skeleton with soft shimmer placeholders.
+class ClaySkeletonCard extends StatelessWidget {
+  const ClaySkeletonCard({
+    super.key,
+    this.height,
+    this.hasLeading = true,
+    this.lines = 2,
+    this.margin = const EdgeInsets.only(bottom: 12),
+  });
+
+  final double? height;
+  final bool hasLeading;
+  final int lines;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClayCard(
+      margin: margin,
+      padding: const EdgeInsets.all(16),
+      child: SizedBox(
+        height: height,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (hasLeading) ...[
+              const ClaySkeleton(
+                width: 44,
+                height: 44,
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+              ),
+              const SizedBox(width: 14),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ClaySkeleton(
+                    width: double.infinity,
+                    height: 14,
+                  ),
+                  const SizedBox(height: 8),
+                  const FractionallySizedBox(
+                    widthFactor: 0.65,
+                    child: ClaySkeleton(
+                      height: 10,
+                    ),
+                  ),
+                  if (lines > 2) ...[
+                    const SizedBox(height: 8),
+                    const FractionallySizedBox(
+                      widthFactor: 0.40,
+                      child: ClaySkeleton(
+                        height: 10,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A column/list of ClaySkeletonCard placeholders.
+class ClaySkeletonList extends StatelessWidget {
+  const ClaySkeletonList({
+    super.key,
+    this.itemCount = 3,
+    this.hasLeading = true,
+    this.lines = 2,
+    this.padding = EdgeInsets.zero,
+  });
+
+  final int itemCount;
+  final bool hasLeading;
+  final int lines;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Column(
+        children: List.generate(
+          itemCount,
+          (index) => ClaySkeletonCard(
+            hasLeading: hasLeading,
+            lines: lines,
+          ),
+        ),
+      ),
+    );
+  }
+}

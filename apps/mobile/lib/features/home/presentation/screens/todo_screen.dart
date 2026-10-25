@@ -100,7 +100,10 @@ class _TodoScreenState extends ConsumerState<TodoScreen>
         ),
       ),
       body: assignmentsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Padding(
+          padding: EdgeInsets.all(16),
+          child: ClaySkeletonList(itemCount: 4),
+        ),
         error: (err, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
