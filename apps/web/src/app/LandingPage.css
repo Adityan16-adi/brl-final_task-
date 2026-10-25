@@ -92,9 +92,57 @@
   background: rgb(9 12 24 / 92%);
   box-shadow: 0 15px 50px rgb(0 0 0 / 36%);
 }
-.landing-brand { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; letter-spacing: 0; white-space: nowrap; }
-.landing-brand strong { font-weight: 800; }
-.landing-brand-mark { display: grid; width: 37px; height: 37px; place-items: center; border: 1px solid rgb(255 255 255 / 16%); border-radius: 12px; color: #fff; background: linear-gradient(145deg, #8b5cf6, #4e74e9 65%, #32b7d4); box-shadow: 0 4px 20px rgb(117 80 250 / 29%); }
+.landing-brand { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 11px; font-size: 15px; font-weight: 500; letter-spacing: 0; white-space: nowrap; transition: opacity 160ms ease; }
+.landing-brand strong { font-weight: 800; letter-spacing: -0.02em; }
+.landing-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 180ms ease;
+}
+.landing-brand:hover .landing-brand-mark { transform: scale(1.06); }
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 0;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.4)) drop-shadow(0 2px 10px rgba(0, 194, 255, 0.2));
+  transition: filter 180ms ease;
+}
+.landing-brand:hover .brand-logo-img {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.6)) drop-shadow(0 4px 16px rgba(0, 194, 255, 0.35));
+}
+.about-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+  padding: 0;
+  flex-shrink: 0;
+}
+.cta-brand-mark {
+  width: 42px !important;
+  height: 42px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
 .landing-nav { display: flex; align-items: center; gap: clamp(13px, 1.8vw, 26px); }
 .landing-nav-link { position: relative; padding: 10px 0; color: var(--text-secondary); font-size: 11px; font-weight: 500; transition: color 180ms ease; white-space: nowrap; }
 .landing-nav-link::after { position: absolute; right: 0; bottom: 3px; left: 0; height: 1px; border-radius: 2px; content: ""; background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan)); opacity: .9; transform: scaleX(0); transform-origin: left; transition: transform 180ms ease; }
@@ -428,6 +476,19 @@
 :root[data-theme="light"] .landing-brand,
 :root[data-theme="light"] .landing-nav-link,
 :root[data-theme="light"] .landing-login { color: #263653; }
+:root[data-theme="light"] .landing-brand-mark,
+:root[data-theme="light"] .about-mark,
+:root[data-theme="light"] .cta-brand-mark {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+:root[data-theme="light"] .brand-logo-img {
+  filter: none;
+}
+:root[data-theme="light"] .landing-brand:hover .brand-logo-img {
+  filter: drop-shadow(0 2px 6px rgba(38, 54, 83, 0.15));
+}
 :root[data-theme="light"] .landing-nav-link:hover,
 :root[data-theme="light"] .landing-login:hover { color: #5746d4; }
 :root[data-theme="light"] .landing-button-secondary { border-color: rgb(37 51 82 / 14%); color: #263653; background: rgb(255 255 255 / 85%); }
@@ -471,7 +532,6 @@
 :root[data-theme="light"] .teacher-block { background: radial-gradient(ellipse at 92% 50%, rgb(25 162 183 / 8%), transparent 48%), linear-gradient(110deg, #f2f7fa, #fff 80%); }
 :root[data-theme="light"] .audience-dashboard { border-color: rgb(168 180 255 / 18%); }
 :root[data-theme="light"] .audience-text-link { color: #5f6f8e; }
-:root[data-theme="light"] .about-mark { border-color: rgb(98 85 245 / 20%); color: #6953dc; background: rgb(98 85 245 / 8%); }
 :root[data-theme="light"] .newsletter-section { border-color: rgb(37 51 82 / 11%); }
 :root[data-theme="light"] .newsletter-field { border-color: rgb(37 51 82 / 14%); background: #fff; }
 :root[data-theme="light"] .newsletter-field input { color: #17233f; }
