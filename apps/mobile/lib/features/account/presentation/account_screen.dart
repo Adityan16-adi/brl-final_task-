@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/errors/error_message_helper.dart';
 import '../../../../core/theme/clay_theme.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/domain/auth_repository.dart';
@@ -167,7 +168,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                                       if (mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: Text('Failed to update profile: $e'),
+                                            content: Text(ErrorMessageHelper.format(e, fallback: 'Failed to update profile. Please try again.')),
                                             backgroundColor: _coral,
                                           ),
                                         );

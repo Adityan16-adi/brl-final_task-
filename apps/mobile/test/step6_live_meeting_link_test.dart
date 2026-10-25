@@ -59,7 +59,7 @@ void main() {
       expect(find.text('Web Meeting Link'), findsOneWidget);
       expect(find.text('Jitsi / Google Meet Fallback'), findsOneWidget);
       expect(find.text('ZERO-CONFIG'), findsOneWidget);
-      expect(find.text('https://meet.jit.si/UnifiedLearn-QM401'), findsOneWidget);
+      expect(find.text('https://meet.jit.si/Pragti-QM401'), findsOneWidget);
 
       // Verify Teacher controls
       expect(find.text('Launch Zero-Config Meeting'), findsOneWidget);
@@ -133,7 +133,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Web Meeting Link'), findsOneWidget);
-      expect(find.text('https://meet.jit.si/UnifiedLearn-QM401'), findsOneWidget);
+      expect(find.text('https://meet.jit.si/Pragti-QM401'), findsOneWidget);
 
       // Student controls
       expect(find.text('Join via Web / Meet Link'), findsOneWidget);

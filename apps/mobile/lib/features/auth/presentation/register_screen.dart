@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/branding/app_branding.dart';
 import '../../../core/branding/brand_widgets.dart';
+import '../../../core/errors/error_message_helper.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
@@ -62,10 +63,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         context.go('/');
       }
-    } on AuthFailure catch (e) {
-      if (mounted) setState(() => _errorMessage = e.message);
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = 'Registration failed: $e');
+      if (mounted) setState(() => _errorMessage = ErrorMessageHelper.format(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

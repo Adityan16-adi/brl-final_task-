@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/branding/brand_widgets.dart';
+import '../../../core/errors/error_message_helper.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
@@ -31,8 +32,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Demo session failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ErrorMessageHelper.format(e))),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

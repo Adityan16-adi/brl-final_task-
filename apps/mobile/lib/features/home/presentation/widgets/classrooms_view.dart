@@ -599,7 +599,7 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                         Clipboard.setData(
                           ClipboardData(
                             text:
-                                'https://unified-learn.preview/class/${item.id}',
+                                'https://pragti.app/class/${item.id}',
                           ),
                         );
                         Navigator.of(ctx).pop();

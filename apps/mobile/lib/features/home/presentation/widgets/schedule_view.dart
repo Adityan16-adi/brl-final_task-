@@ -215,10 +215,7 @@ class _ScheduleViewState extends ConsumerState<ScheduleView> {
 
           scheduleAsync.when(
             data: (schedule) {
-              final isDemoOrFallback = (currentUser?.isDemo == true) ||
-                  schedule.any((s) =>
-                      s.id.startsWith('sched-today-') ||
-                      s.id.startsWith('sched-fri-'));
+              final isDemoMode = currentUser?.isDemo == true;
 
               final items = schedule.where((s) {
                 if (_filterIndex == 1) {
@@ -237,9 +234,9 @@ class _ScheduleViewState extends ConsumerState<ScheduleView> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (isDemoOrFallback)
+                    if (isDemoMode)
                       const DemoDataBadge(
-                        message: 'Demo Data — Showing demonstration timetable and deadlines',
+                        message: 'Demo Data — Offline demonstration mode active',
                       ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 48),
@@ -289,9 +286,9 @@ class _ScheduleViewState extends ConsumerState<ScheduleView> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (isDemoOrFallback)
+                  if (isDemoMode)
                     const DemoDataBadge(
-                      message: 'Demo Data — Showing demonstration timetable and deadlines',
+                      message: 'Demo Data — Offline demonstration mode active',
                     ),
                   LayoutBuilder(
                     builder: (context, constraints) {

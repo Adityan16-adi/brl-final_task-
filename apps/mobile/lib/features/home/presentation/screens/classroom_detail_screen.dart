@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/api_config.dart';
+import '../../../../core/errors/error_message_helper.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/theme/clay_theme.dart';
 import '../../../auth/application/auth_providers.dart';
@@ -131,7 +132,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
         ? widget.classroom.code!.trim()
         : widget.classroom.id.trim();
     final sanitized = rawCode.replaceAll(RegExp(r'[^a-zA-Z0-9-]'), '');
-    return 'https://meet.jit.si/UnifiedLearn-${sanitized.isNotEmpty ? sanitized : "Class"}';
+    return 'https://meet.jit.si/Pragti-${sanitized.isNotEmpty ? sanitized : "Class"}';
   }
 
   void _copyMeetingLink(BuildContext context, {bool launch = false}) {
@@ -2041,7 +2042,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Error saving attendance: $e'),
+                                    content: Text(ErrorMessageHelper.format(e, fallback: 'Error saving attendance. Please try again.')),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -2700,7 +2701,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send message: $e'),
+            content: Text(ErrorMessageHelper.format(e, fallback: 'Failed to send message. Please try again.')),
             backgroundColor: Colors.red,
           ),
         );
@@ -2784,7 +2785,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
       if (context.mounted) {
         Navigator.of(context).pop(); // dismiss loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error connecting to meeting: $e')),
+          SnackBar(content: Text(ErrorMessageHelper.format(e, fallback: 'Error connecting to meeting. Please try again.'))),
         );
       }
     }

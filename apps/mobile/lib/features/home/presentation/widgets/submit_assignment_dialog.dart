@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../auth/application/auth_providers.dart';
+import '../../../../core/errors/error_message_helper.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
 
@@ -288,7 +289,7 @@ class _SubmitAssignmentDialogState
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = err.toString();
+        _errorMessage = ErrorMessageHelper.format(err, fallback: 'Failed to submit assignment. Please try again.');
       });
     }
   }

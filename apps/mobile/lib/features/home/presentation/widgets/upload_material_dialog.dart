@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/error_message_helper.dart';
 import '../../../../core/theme/clay_theme.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
@@ -181,7 +182,7 @@ class _UploadMaterialDialogState extends ConsumerState<UploadMaterialDialog> {
       if (mounted) {
         setState(() {
           _isUploading = false;
-          _errorMessage = e.toString();
+          _errorMessage = ErrorMessageHelper.format(e, fallback: 'Failed to upload material. Please try again.');
         });
       }
     }

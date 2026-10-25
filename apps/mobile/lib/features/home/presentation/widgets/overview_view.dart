@@ -826,8 +826,7 @@ Widget _buildSearchResults(
                         letterSpacing: -0.3,
                       ),
                     ),
-                    if (user?.isDemo == true ||
-                        user?.email.contains('@demo.com') == true)
+                    if (user?.isDemo == true)
                       const ClayBadge(
                         label: 'DEMO DATA',
                         backgroundColor: Color(0xFFFEF3C7),
@@ -851,8 +850,8 @@ Widget _buildSearchResults(
                 const SizedBox(height: 4),
                 Text(
                   isTeacher
-                      ? 'Rosters updated · Course submissions ready for grading'
-                      : '🔥 5-Day Study Streak · 2 assignments due this week',
+                      ? 'Course roster and submissions ready'
+                      : 'No assignments due. Enjoy the break.',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white60 : ClayTokens.secondaryText,
@@ -1458,7 +1457,7 @@ Widget _buildSearchResults(
             onPressed: () {
               Clipboard.setData(
                 ClipboardData(
-                  text: 'https://unified-learn.preview/live/${item.title}',
+                  text: 'https://pragti.app/live/${item.title}',
                 ),
               );
               ScaffoldMessenger.of(context).showSnackBar(

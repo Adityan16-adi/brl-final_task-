@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/branding/app_branding.dart';
 import '../../../../core/branding/brand_widgets.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../core/errors/error_message_helper.dart';
 import '../../../../core/theme/clay_theme.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../home/presentation/home_providers.dart';
@@ -68,7 +69,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } catch (e) {
       setState(() {
-        _pingStatus = 'Connection error: ${e.toString().split('\n').first}';
+        _pingStatus = ErrorMessageHelper.format(e, fallback: 'Could not reach server. Please check connection.');
       });
     } finally {
       if (mounted) setState(() => _isPinging = false);

@@ -120,11 +120,7 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
 
           materialsAsync.when(
             data: (materials) {
-              final isDemoOrFallback = (currentUser?.isDemo == true) ||
-                  materials.any((m) =>
-                      m.id.startsWith('mat-cell') ||
-                      m.id.startsWith('mat-calc') ||
-                      m.id.startsWith('mat-hist'));
+              final isDemoMode = currentUser?.isDemo == true;
 
               final filtered = materials.where((m) {
                 if (_filterType != null && m.type != _filterType) {
@@ -149,9 +145,9 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (isDemoOrFallback)
+                    if (isDemoMode)
                       const DemoDataBadge(
-                        message: 'Demo Data — Showing curated demonstration study materials',
+                        message: 'Demo Data — Offline demonstration mode active',
                       ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 48),
@@ -205,9 +201,9 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (isDemoOrFallback)
+                  if (isDemoMode)
                     const DemoDataBadge(
-                      message: 'Demo Data — Showing curated demonstration study materials',
+                      message: 'Demo Data — Offline demonstration mode active',
                     ),
                   LayoutBuilder(
                     builder: (context, constraints) {

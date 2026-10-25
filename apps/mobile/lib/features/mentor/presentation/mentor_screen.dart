@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/core/errors/error_message_helper.dart';
 import 'package:mobile/core/providers/network_providers.dart';
 import 'package:mobile/core/theme/clay_theme.dart';
 
@@ -84,25 +85,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      String errMsg;
-      if (e is DioException) {
-        final serverMsg = e.response?.data is Map ? e.response?.data['message']?.toString() : null;
-        if (serverMsg != null && serverMsg.isNotEmpty) {
-          errMsg = serverMsg;
-        } else if (e.type == DioExceptionType.connectionTimeout ||
-            e.type == DioExceptionType.receiveTimeout) {
-          errMsg = 'AI Mentor request timed out. Please try again.';
-        } else if (e.type == DioExceptionType.connectionError ||
-            e.response == null) {
-          errMsg = 'Cannot reach backend server. Please verify network connectivity.';
-        } else {
-          errMsg = 'AI Mentor service returned error ${e.response?.statusCode}: ${e.message}';
-        }
-      } else {
-        errMsg = 'AI Mentor error: $e';
-      }
       setState(() {
-        _error = errMsg;
+        _error = ErrorMessageHelper.format(e, fallback: 'The AI Mentor is currently unavailable. Please try again.');
       });
     } finally {
       if (mounted) setState(() => _sending = false);

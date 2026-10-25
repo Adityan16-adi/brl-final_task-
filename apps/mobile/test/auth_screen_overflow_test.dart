@@ -39,8 +39,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.text('Student Login'), findsOneWidget);
-      expect(find.text('Teacher Login'), findsOneWidget);
+      expect(find.text('Try demo'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

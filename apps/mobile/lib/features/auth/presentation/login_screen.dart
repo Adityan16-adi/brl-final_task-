@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/branding/app_branding.dart';
 import '../../../core/branding/brand_widgets.dart';
+import '../../../core/errors/error_message_helper.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
@@ -45,10 +46,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         context.go('/');
       }
-    } on AuthFailure catch (e) {
-      if (mounted) setState(() => _errorMessage = e.message);
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = 'Login failed: $e');
+      if (mounted) setState(() => _errorMessage = ErrorMessageHelper.format(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -71,10 +70,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         context.go('/');
       }
-    } on AuthFailure catch (e) {
-      if (mounted) setState(() => _errorMessage = e.message);
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = 'An error occurred: $e');
+      if (mounted) setState(() => _errorMessage = ErrorMessageHelper.format(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -139,47 +136,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  void _showDemoInfoDialog() {
-    showDialog<void>(
+  void _showTryDemoSheet() {
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(
-              Icons.info_outline_rounded,
-              size: 20,
-              color: ClayTokens.deepIndigo,
-            ),
-            SizedBox(width: 8),
-            Text('Authentication & Demo Info', style: TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Current Architecture Status:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            SizedBox(height: 6),
-            Text(
-              '• The mobile app connects to the Auth Repository with offline mock fallback and live session management.\n'
-              '• Rapid demonstration accounts:\n'
-              '  - Student: student@demo.com (demo1234)\n'
-              '  - Teacher: teacher@demo.com (demo1234)\n'
-              '• New accounts created via Register are stored locally in the session registry.',
-              style: TextStyle(fontSize: 12, height: 1.4),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? ClayTokens.darkSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-        ],
-      ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Try Pragti Demo',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Select a role to explore features with offline demonstration data:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.school_rounded, color: ClayTokens.deepIndigo),
+                  title: const Text('Continue as Student'),
+                  subtitle: const Text('student@demo.com'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  tileColor: isDark ? ClayTokens.darkCard : const Color(0xFFF1F0FB),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _quickLogin('student@demo.com');
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.co_present_rounded, color: ClayTokens.deepIndigo),
+                  title: const Text('Continue as Teacher'),
+                  subtitle: const Text('teacher@demo.com'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  tileColor: isDark ? ClayTokens.darkCard : const Color(0xFFF1F0FB),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _quickLogin('teacher@demo.com');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -241,92 +257,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // Demo Mode Quick Login Card
-                      ClayCard(
-                        padding: const EdgeInsets.all(14),
-                        depth: 4,
-                        color: isDark
-                            ? ClayTokens.darkCard
-                            : const Color(0xFFEFEFF9),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.bolt_rounded,
-                                  size: 18,
-                                  color: ClayTokens.deepIndigo,
-                                ),
-                                SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'Development Demo Mode',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 13,
-                                      color: ClayTokens.deepIndigo,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Instant credentials for quick feature review:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark
-                                    ? Colors.white60
-                                    : ClayTokens.secondaryText,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: _busy
-                                      ? null
-                                      : () => _quickLogin('student@demo.com'),
-                                  icon: const Icon(
-                                    Icons.person_rounded,
-                                    size: 16,
-                                  ),
-                                  label: const Text('Student Login'),
-                                  style: OutlinedButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 12,
-                                    ),
-                                  ),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: _busy
-                                      ? null
-                                      : () => _quickLogin('teacher@demo.com'),
-                                  icon: const Icon(
-                                    Icons.co_present_rounded,
-                                    size: 16,
-                                  ),
-                                  label: const Text('Teacher Login'),
-                                  style: OutlinedButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
 
                       // Email Field
                       ClayTextField(
@@ -477,17 +407,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ? null
                             : () => context.push('/register'),
                         icon: Icons.person_add_outlined,
-                        child: const Text('New to Unified Learn? Register'),
+                        child: const Text('New to Pragti? Register'),
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
-                      TextButton.icon(
-                        onPressed: _showDemoInfoDialog,
-                        icon: const Icon(Icons.help_outline_rounded, size: 15),
-                        label: const Text(
-                          'Auth Architecture & Demo Info',
-                          style: TextStyle(fontSize: 12),
+                      // Small, quiet "Try demo" text link
+                      Center(
+                        child: TextButton(
+                          onPressed: _busy ? null : _showTryDemoSheet,
+                          child: Text(
+                            'Try demo',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
                       ),
                     ],

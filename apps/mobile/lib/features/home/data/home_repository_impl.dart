@@ -88,7 +88,7 @@ class InMemoryHomeRepository implements HomeRepository {
         subject: 'Biology',
         type: CourseMaterialType.notes,
         details: 'Lecture 4 summary slides covering membrane transport and organelles.',
-        link: 'https://unified-learn.preview/resources/cell-architecture.pdf',
+        link: 'https://pragti.app/resources/cell-architecture.pdf',
         createdAt: 'Oct 20',
       ),
       const MaterialItem(
@@ -97,7 +97,7 @@ class InMemoryHomeRepository implements HomeRepository {
         subject: 'Mathematics',
         type: CourseMaterialType.video,
         details: 'Recorded problem solving session with step-by-step calculus proofs.',
-        link: 'https://unified-learn.preview/resources/chain-rule-video',
+        link: 'https://pragti.app/resources/chain-rule-video',
         createdAt: 'Oct 18',
       ),
       const MaterialItem(
@@ -107,7 +107,7 @@ class InMemoryHomeRepository implements HomeRepository {
         type: CourseMaterialType.document,
         details:
             'Annotated diplomatic correspondence and primary document scans.',
-        link: 'https://unified-learn.preview/resources/treaty-excerpts.pdf',
+        link: 'https://pragti.app/resources/treaty-excerpts.pdf',
         createdAt: 'Oct 15',
       ),
     ]);
