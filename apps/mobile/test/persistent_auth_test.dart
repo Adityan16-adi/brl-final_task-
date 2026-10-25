@@ -21,40 +21,52 @@ void main() {
       expect(repo.hasCompletedOnboarding(), isFalse);
     });
 
-    test('Offline fallback sign in with demo credentials succeeds', () async {
-      final repo = PersistentAuthRepository(prefs);
-
-      final user = await repo.signIn(
-        email: 'teacher@demo.com',
-        password: PersistentAuthRepository.demoPassword,
-      );
-
-      expect(user.role, UserRole.teacher);
-      expect(user.email, 'teacher@demo.com');
-      expect(repo.hasCompletedOnboarding(), isTrue);
-
-      final token = await repo.getIdToken();
-      expect(token, startsWith('mock-jwt-token-'));
-    });
-
-    test('Offline fallback sign in with wrong password throws AuthFailure', () async {
+    test('signIn when backend is unreachable throws AuthFailure and never silent fake session', () async {
       final repo = PersistentAuthRepository(prefs);
 
       expect(
         () => repo.signIn(
           email: 'teacher@demo.com',
-          password: 'wrong_password_123',
+          password: 'any_password',
         ),
         throwsA(isA<AuthFailure>()),
       );
     });
 
+    test('register when backend is unreachable throws AuthFailure and never silent fake session', () async {
+      final repo = PersistentAuthRepository(prefs);
+
+      expect(
+        () => repo.register(
+          name: 'New Student',
+          email: 'newstudent@example.com',
+          password: 'password123',
+        ),
+        throwsA(isA<AuthFailure>()),
+      );
+    });
+
+    test('Explicit signInDemo succeeds with isDemo true for teacher and student', () async {
+      final repo = PersistentAuthRepository(prefs);
+
+      final teacher = await repo.signInDemo(role: UserRole.teacher);
+      expect(teacher.role, UserRole.teacher);
+      expect(teacher.email, 'teacher@demo.com');
+      expect(teacher.isDemo, isTrue);
+      expect(repo.hasCompletedOnboarding(), isTrue);
+
+      final token = await repo.getIdToken();
+      expect(token, startsWith('mock-jwt-token-demo-'));
+
+      final student = await repo.signInDemo(role: UserRole.student);
+      expect(student.role, UserRole.student);
+      expect(student.email, 'student@demo.com');
+      expect(student.isDemo, isTrue);
+    });
+
     test('Sign out clears session and token while preserving onboarding', () async {
       final repo = PersistentAuthRepository(prefs);
-      await repo.signIn(
-        email: 'student@demo.com',
-        password: PersistentAuthRepository.demoPassword,
-      );
+      await repo.signInDemo(role: UserRole.student);
 
       expect(await repo.getIdToken(), isNotNull);
       expect(repo.hasCompletedOnboarding(), isTrue);

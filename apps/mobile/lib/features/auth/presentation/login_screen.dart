@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/branding/app_branding.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
-import '../data/mock_auth_repository.dart';
 import '../domain/auth_repository.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -39,10 +38,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final repo = ref.read(authRepositoryProvider);
-      await repo.signIn(
-        email: email,
-        password: MockAuthRepository.demoPassword,
-      );
+      final role = email.contains('teacher') ? UserRole.teacher : UserRole.student;
+      await repo.signInDemo(role: role);
       if (mounted) {
         context.go('/');
       }
@@ -411,20 +408,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           borderRadius: BorderRadius.circular(
                             ClayTokens.radiusSmall,
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.error_outline_rounded,
-                                size: 18,
-                                color: Colors.redAccent,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    size: 18,
                                     color: Colors.redAccent,
-                                    fontSize: 12,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!,
+                                      style: const TextStyle(
+                                        color: Colors.redAccent,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: _busy ? null : _submit,
+                                  icon: const Icon(Icons.refresh_rounded, size: 14),
+                                  label: const Text('Retry Connection'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.redAccent,
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
                                   ),
                                 ),
                               ),

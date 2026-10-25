@@ -12,12 +12,14 @@ class AppUser {
     required this.email,
     required this.name,
     required this.role,
+    this.isDemo = false,
   });
 
   final String uid;
   final String email;
   final String name;
   final UserRole role;
+  final bool isDemo;
 
   bool get isTeacher => role == UserRole.teacher;
   bool get isStudent => role == UserRole.student;
@@ -27,6 +29,7 @@ class AppUser {
         'email': email,
         'name': name,
         'role': role.name,
+        'isDemo': isDemo,
       };
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -34,6 +37,7 @@ class AppUser {
         email: json['email']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
         role: UserRole.fromString(json['role']?.toString()),
+        isDemo: json['isDemo'] == true,
       );
 }
 
@@ -51,6 +55,9 @@ abstract interface class AuthRepository {
   Stream<AppUser?> authStateChanges();
 
   Future<AppUser> signIn({required String email, required String password});
+
+  /// Explicitly starts an offline demonstration session with demo credentials.
+  Future<AppUser> signInDemo({UserRole role = UserRole.student});
 
   Future<AppUser> register({
     required String name,

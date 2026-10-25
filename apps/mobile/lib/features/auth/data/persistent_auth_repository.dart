@@ -107,8 +107,8 @@ class PersistentAuthRepository implements AuthRepository {
         '/api/auth/login',
         data: {'email': cleanEmail, 'password': password},
         options: Options(
-          sendTimeout: const Duration(seconds: 3),
-          receiveTimeout: const Duration(seconds: 3),
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
         ),
       );
 
@@ -122,6 +122,7 @@ class PersistentAuthRepository implements AuthRepository {
             email: userRaw['email'] as String? ?? cleanEmail,
             name: userRaw['name'] as String? ?? cleanEmail.split('@')[0],
             role: userRaw['role'] == 'teacher' ? UserRole.teacher : UserRole.student,
+            isDemo: false,
           );
 
           _set(user);
@@ -137,37 +138,50 @@ class PersistentAuthRepository implements AuthRepository {
           return user;
         }
       }
+      throw const AuthFailure('Server returned an unexpected authentication format.');
     } on DioException catch (dioErr) {
       if (dioErr.response != null) {
         final resData = dioErr.response?.data;
         if (resData is Map && resData['message'] != null) {
           throw AuthFailure(resData['message'] as String);
         }
-        if (dioErr.response?.statusCode == 401) {
+        if (dioErr.response?.statusCode == 401 || dioErr.response?.statusCode == 403) {
           throw const AuthFailure('Invalid email or password.');
         }
+        throw AuthFailure(
+          'Authentication server error (${dioErr.response?.statusCode}). Please verify backend is running and retry.',
+        );
       }
+      throw AuthFailure(
+        'Cannot connect to authentication server at ${ApiConfig.coreBaseUrl}. Please ensure the backend is running, check your network, or launch Demo Mode.',
+      );
     } catch (e) {
       if (e is AuthFailure) rethrow;
+      throw AuthFailure('Sign in failed: $e');
     }
+  }
 
-    // 2. Offline fallback to local cached/demo accounts
-    final account = _accounts[cleanEmail];
-    if (account == null || account.password != password) {
-      throw const AuthFailure(
-        'Invalid credentials. Use student@demo.com or teacher@demo.com with password demo1234, or register a new account.',
-      );
-    }
+  @override
+  Future<AppUser> signInDemo({UserRole role = UserRole.student}) async {
+    final cleanEmail =
+        role == UserRole.teacher ? 'teacher@demo.com' : 'student@demo.com';
+    final user = AppUser(
+      uid: 'demo-${role.name}',
+      email: cleanEmail,
+      name: role == UserRole.teacher ? 'Teacher' : 'Student',
+      role: role,
+      isDemo: true,
+    );
 
-    _set(account.user);
+    _set(user);
     _onboardingCompleted = true;
     final prefs = _prefs;
     if (prefs != null) {
       await prefs.setBool(keyOnboarding, true);
-      await prefs.setString(keyUser, jsonEncode(account.user.toJson()));
-      await prefs.setString(keyToken, 'mock-jwt-token-${account.user.uid}');
+      await prefs.setString(keyUser, jsonEncode(user.toJson()));
+      await prefs.setString(keyToken, 'mock-jwt-token-demo-${role.name}');
     }
-    return account.user;
+    return user;
   }
 
   @override
@@ -192,8 +206,8 @@ class PersistentAuthRepository implements AuthRepository {
           'role': role.name,
         },
         options: Options(
-          sendTimeout: const Duration(seconds: 3),
-          receiveTimeout: const Duration(seconds: 3),
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
         ),
       );
 
@@ -207,6 +221,7 @@ class PersistentAuthRepository implements AuthRepository {
             email: userRaw['email'] as String? ?? cleanEmail,
             name: userRaw['name'] as String? ?? cleanName,
             role: userRaw['role'] == 'teacher' ? UserRole.teacher : UserRole.student,
+            isDemo: false,
           );
 
           _set(user);
@@ -222,6 +237,7 @@ class PersistentAuthRepository implements AuthRepository {
           return user;
         }
       }
+      throw const AuthFailure('Unexpected response from registration service.');
     } on DioException catch (dioErr) {
       if (dioErr.response != null) {
         final resData = dioErr.response?.data;
@@ -231,43 +247,15 @@ class PersistentAuthRepository implements AuthRepository {
         if (dioErr.response?.statusCode == 409) {
           throw const AuthFailure('An account with this email already exists.');
         }
+        throw AuthFailure('Server returned registration error (${dioErr.response?.statusCode}). Please retry.');
       }
+      throw AuthFailure(
+        'Cannot connect to registration server at ${ApiConfig.coreBaseUrl}. Please verify the backend is running and retry.',
+      );
     } catch (e) {
       if (e is AuthFailure) rethrow;
+      throw AuthFailure('Registration failed: $e');
     }
-
-    // 2. Offline fallback
-    if (_accounts.containsKey(cleanEmail)) {
-      throw const AuthFailure('An account with this email already exists.');
-    }
-
-    final user = AppUser(
-      uid: 'user-${DateTime.now().millisecondsSinceEpoch}',
-      email: cleanEmail,
-      name: cleanName,
-      role: role,
-    );
-
-    _accounts[cleanEmail] = (user: user, password: password);
-    _set(user);
-    _onboardingCompleted = true;
-
-    final prefs = _prefs;
-    if (prefs != null) {
-      final serializedAccounts = <String, dynamic>{};
-      for (final e in _accounts.entries) {
-        serializedAccounts[e.key] = {
-          ...e.value.user.toJson(),
-          'password': e.value.password,
-        };
-      }
-      await prefs.setString(keyAccounts, jsonEncode(serializedAccounts));
-      await prefs.setBool(keyOnboarding, true);
-      await prefs.setString(keyUser, jsonEncode(user.toJson()));
-      await prefs.setString(keyToken, 'mock-jwt-token-${user.uid}');
-    }
-
-    return user;
   }
 
   @override

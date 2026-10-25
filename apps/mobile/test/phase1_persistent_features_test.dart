@@ -41,10 +41,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final repo = PersistentAuthRepository(prefs);
 
-      final user = await repo.signIn(
-        email: 'student@demo.com',
-        password: PersistentAuthRepository.demoPassword,
-      );
+      final user = await repo.signInDemo(role: UserRole.student);
 
       expect(user.email, 'student@demo.com');
       expect(user.role, UserRole.student);
@@ -57,10 +54,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final repo1 = PersistentAuthRepository(prefs);
 
-      await repo1.signIn(
-        email: 'teacher@demo.com',
-        password: PersistentAuthRepository.demoPassword,
-      );
+      await repo1.signInDemo(role: UserRole.teacher);
 
       // Simulate app kill and relaunch with same prefs
       final repo2 = PersistentAuthRepository(prefs);
@@ -78,10 +72,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final repo = PersistentAuthRepository(prefs);
 
-      await repo.signIn(
-        email: 'student@demo.com',
-        password: PersistentAuthRepository.demoPassword,
-      );
+      await repo.signInDemo(role: UserRole.student);
       await repo.signOut();
 
       expect(await repo.authStateChanges().first, isNull);

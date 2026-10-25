@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/branding/app_branding.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
-import '../data/mock_auth_repository.dart';
+import '../domain/auth_repository.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -22,17 +22,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     try {
       final repo = ref.read(authRepositoryProvider);
       await repo.setOnboardingCompleted(true);
-      await repo.signIn(
-        email: email,
-        password: MockAuthRepository.demoPassword,
-      );
+      final role =
+          email.contains('teacher') ? UserRole.teacher : UserRole.student;
+      await repo.signInDemo(role: role);
       if (mounted) {
         context.go('/');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Login failed: $e')));
+            .showSnackBar(SnackBar(content: Text('Demo session failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -220,6 +219,26 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           },
                     icon: Icons.login_rounded,
                     child: const Text('Sign In'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Explicit Clearly Labelled Demo Mode Button
+                  ClayButton(
+                    isFullWidth: true,
+                    color: isDark ? const Color(0xFF382F18) : const Color(0xFFFEF3C7),
+                    textColor: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                    gradient: LinearGradient(
+                      colors: isDark
+                          ? [const Color(0xFF3D3216), const Color(0xFF29210B)]
+                          : [const Color(0xFFFEF9C3), const Color(0xFFFDE68A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    onPressed: _busy
+                        ? null
+                        : () => _quickLogin('student@demo.com'),
+                    icon: Icons.science_outlined,
+                    child: const Text('Explore in Demo Mode (Offline)'),
                   ),
                   const SizedBox(height: 24),
 

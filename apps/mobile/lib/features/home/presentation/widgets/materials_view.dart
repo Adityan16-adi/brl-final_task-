@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/clay_theme.dart';
+import '../../../../core/widgets/demo_data_badge.dart';
+import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
 
@@ -20,6 +22,7 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
   @override
   Widget build(BuildContext context) {
     final materialsAsync = ref.watch(materialsProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final colors = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
@@ -95,6 +98,12 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
 
           materialsAsync.when(
             data: (materials) {
+              final isDemoOrFallback = (currentUser?.isDemo == true) ||
+                  materials.any((m) =>
+                      m.id.startsWith('mat-cell') ||
+                      m.id.startsWith('mat-calc') ||
+                      m.id.startsWith('mat-hist'));
+
               final filtered = materials.where((m) {
                 if (_filterType != null && m.type != _filterType) {
                   return false;
@@ -115,82 +124,100 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
               }).toList();
 
               if (filtered.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ClayContainer(
-                          width: 64,
-                          height: 64,
-                          depth: 4,
-                          borderRadius: BorderRadius.circular(20),
-                          child: const Center(
-                            child: Icon(
-                              Icons.folder_open_rounded,
-                              size: 32,
-                              color: ClayTokens.deepIndigo,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isDemoOrFallback)
+                      const DemoDataBadge(
+                        message: 'Demo Data — Showing curated demonstration study materials',
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ClayContainer(
+                              width: 64,
+                              height: 64,
+                              depth: 4,
+                              borderRadius: BorderRadius.circular(20),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.folder_open_rounded,
+                                  size: 32,
+                                  color: ClayTokens.deepIndigo,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 14),
+                            Text(
+                              _filterType != null || _searchQuery.isNotEmpty
+                                  ? 'No matching materials found'
+                                  : 'No materials available yet.',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (_filterType != null || _searchQuery.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              TextButton.icon(
+                                onPressed: () => setState(() {
+                                  _filterType = null;
+                                  _searchQuery = '';
+                                }),
+                                icon: const Icon(Icons.refresh_rounded, size: 16),
+                                label: const Text('Reset filters'),
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: 14),
-                        Text(
-                          _filterType != null || _searchQuery.isNotEmpty
-                              ? 'No matching materials found'
-                              : 'No materials available yet.',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (_filterType != null || _searchQuery.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          TextButton.icon(
-                            onPressed: () => setState(() {
-                              _filterType = null;
-                              _searchQuery = '';
-                            }),
-                            icon: const Icon(Icons.refresh_rounded, size: 16),
-                            label: const Text('Reset filters'),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 );
               }
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 600;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isDemoOrFallback)
+                    const DemoDataBadge(
+                      message: 'Demo Data — Showing curated demonstration study materials',
+                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth >= 600;
 
-                  if (isWide) {
-                    return Wrap(
-                      spacing: 14,
-                      runSpacing: 14,
-                      children: filtered.map((item) {
-                        final cardWidth = (constraints.maxWidth - 14) / 2;
-                        return SizedBox(
-                          width: cardWidth,
-                          child: _MaterialCard(item: item),
+                      if (isWide) {
+                        return Wrap(
+                          spacing: 14,
+                          runSpacing: 14,
+                          children: filtered.map((item) {
+                            final cardWidth = (constraints.maxWidth - 14) / 2;
+                            return SizedBox(
+                              width: cardWidth,
+                              child: _MaterialCard(item: item),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
-                    );
-                  }
+                      }
 
-                  return Column(
-                    children: filtered
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _MaterialCard(item: item),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
+                      return Column(
+                        children: filtered
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _MaterialCard(item: item),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    },
+                  ),
+                ],
               );
             },
             loading: () => const Center(

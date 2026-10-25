@@ -21,6 +21,7 @@ class MockAuthRepository implements AuthRepository {
     email: 'student@demo.com',
     name: 'Demo Student',
     role: UserRole.student,
+    isDemo: true,
   );
 
   static const teacherUser = AppUser(
@@ -28,6 +29,7 @@ class MockAuthRepository implements AuthRepository {
     email: 'teacher@demo.com',
     name: 'Demo Teacher',
     role: UserRole.teacher,
+    isDemo: true,
   );
 
   static final Map<String, AppUser> _accounts = {
@@ -64,6 +66,15 @@ class MockAuthRepository implements AuthRepository {
       );
     }
 
+    _onboardingCompleted = true;
+    _set(user);
+    return user;
+  }
+
+  @override
+  Future<AppUser> signInDemo({UserRole role = UserRole.student}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final user = role == UserRole.teacher ? teacherUser : studentUser;
     _onboardingCompleted = true;
     _set(user);
     return user;

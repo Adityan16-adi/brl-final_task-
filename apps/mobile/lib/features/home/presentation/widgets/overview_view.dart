@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/clay_theme.dart';
+import '../../../../core/widgets/demo_data_badge.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../../auth/domain/auth_repository.dart';
 import '../../domain/home_repository.dart';
@@ -621,6 +622,15 @@ class OverviewView extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (user?.isDemo == true ||
+                        user?.email.contains('@demo.com') == true) ...[
+                      const ClayBadge(
+                        label: 'DEMO DATA',
+                        backgroundColor: Color(0xFFFEF3C7),
+                        textColor: Color(0xFF92400E),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     ClayBadge(
                       label: isTeacher ? 'TEACHER' : 'STUDENT',
                       backgroundColor: isTeacher

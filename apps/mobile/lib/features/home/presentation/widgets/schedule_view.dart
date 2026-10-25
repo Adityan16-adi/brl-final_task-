@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/clay_theme.dart';
+import '../../../../core/widgets/demo_data_badge.dart';
+import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
 
@@ -158,6 +160,7 @@ class _ScheduleViewState extends ConsumerState<ScheduleView> {
   @override
   Widget build(BuildContext context) {
     final scheduleAsync = ref.watch(scheduleProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final colors = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
@@ -212,6 +215,11 @@ class _ScheduleViewState extends ConsumerState<ScheduleView> {
 
           scheduleAsync.when(
             data: (schedule) {
+              final isDemoOrFallback = (currentUser?.isDemo == true) ||
+                  schedule.any((s) =>
+                      s.id.startsWith('sched-today-') ||
+                      s.id.startsWith('sched-fri-'));
+
               final items = schedule.where((s) {
                 if (_filterIndex == 1) {
                   return s.isToday;
@@ -226,78 +234,96 @@ class _ScheduleViewState extends ConsumerState<ScheduleView> {
               }).toList();
 
               if (items.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ClayContainer(
-                          width: 64,
-                          height: 64,
-                          depth: 4,
-                          borderRadius: BorderRadius.circular(20),
-                          child: const Center(
-                            child: Icon(
-                              Icons.event_available_rounded,
-                              size: 32,
-                              color: ClayTokens.deepIndigo,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isDemoOrFallback)
+                      const DemoDataBadge(
+                        message: 'Demo Data — Showing demonstration timetable and deadlines',
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ClayContainer(
+                              width: 64,
+                              height: 64,
+                              depth: 4,
+                              borderRadius: BorderRadius.circular(20),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.event_available_rounded,
+                                  size: 32,
+                                  color: ClayTokens.deepIndigo,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 14),
+                            Text(
+                              _filterIndex == 1
+                                  ? 'No sessions scheduled for today!'
+                                  : 'No schedule items found.',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (_filterIndex != 0) ...[
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: () => setState(() => _filterIndex = 0),
+                                child: const Text('View entire schedule'),
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: 14),
-                        Text(
-                          _filterIndex == 1
-                              ? 'No sessions scheduled for today!'
-                              : 'No schedule items found.',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (_filterIndex != 0) ...[
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () => setState(() => _filterIndex = 0),
-                            child: const Text('View entire schedule'),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 );
               }
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 600;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isDemoOrFallback)
+                    const DemoDataBadge(
+                      message: 'Demo Data — Showing demonstration timetable and deadlines',
+                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth >= 600;
 
-                  if (isWide) {
-                    return Wrap(
-                      spacing: 14,
-                      runSpacing: 14,
-                      children: items.map((item) {
-                        final cardWidth = (constraints.maxWidth - 14) / 2;
-                        return SizedBox(
-                          width: cardWidth,
-                          child: _ScheduleCard(item: item),
+                      if (isWide) {
+                        return Wrap(
+                          spacing: 14,
+                          runSpacing: 14,
+                          children: items.map((item) {
+                            final cardWidth = (constraints.maxWidth - 14) / 2;
+                            return SizedBox(
+                              width: cardWidth,
+                              child: _ScheduleCard(item: item),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
-                    );
-                  }
+                      }
 
-                  return Column(
-                    children: items
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _ScheduleCard(item: item),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
+                      return Column(
+                        children: items
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _ScheduleCard(item: item),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    },
+                  ),
+                ],
               );
             },
             loading: () => const Center(
