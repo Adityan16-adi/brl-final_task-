@@ -68,6 +68,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
+        path: '/overview',
+        redirect: (context, state) => '/',
+      ),
+      GoRoute(
         path: '/todo',
         builder: (context, state) => const TodoScreen(),
       ),

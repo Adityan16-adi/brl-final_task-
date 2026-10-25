@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/clay_theme.dart';
 import '../../../auth/application/auth_providers.dart';
+import '../home_providers.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({
@@ -22,90 +23,113 @@ class AppDrawer extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final isTeacher = user?.isTeacher == true;
 
+    final classroomsAsync = ref.watch(classroomsProvider);
+    final assignmentsAsync = ref.watch(assignmentsProvider);
+
+    final classrooms = classroomsAsync.value ?? [];
+    final assignments = assignmentsAsync.value ?? [];
+    final pendingAssignmentsCount = assignments.length;
+
     return Drawer(
       child: SafeArea(
         child: Column(
           children: [
             // Header Profile Card
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: ClayCard(
-                depth: 3,
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    ClayContainer(
-                      width: 50,
-                      height: 50,
-                      depth: 4,
-                      gradient: LinearGradient(
-                        colors: isTeacher
-                            ? [const Color(0xFF9333EA), const Color(0xFF6B21A8)]
-                            : [const Color(0xFF6356F5), const Color(0xFF473BB8)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Center(
-                        child: Text(
-                          user?.name.isNotEmpty == true
-                              ? user!.name[0].toUpperCase()
-                              : 'U',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/account');
+                },
+                child: ClayCard(
+                  depth: 3,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      if (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                        CircleAvatar(
+                          radius: 25,
+                          backgroundImage: NetworkImage(user.avatarUrl!),
+                          backgroundColor: Colors.transparent,
+                        )
+                      else
+                        ClayContainer(
+                          width: 50,
+                          height: 50,
+                          depth: 4,
+                          gradient: LinearGradient(
+                            colors: isTeacher
+                                ? [const Color(0xFF9333EA), const Color(0xFF6B21A8)]
+                                : [const Color(0xFF6356F5), const Color(0xFF473BB8)],
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.name ?? 'User',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            user?.email ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: ClayTokens.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isTeacher
-                                  ? const Color(0xFFF3E8FF)
-                                  : const Color(0xFFEDEAF8),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Center(
                             child: Text(
-                              isTeacher ? 'Instructor' : 'Student',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: isTeacher
-                                    ? const Color(0xFF7E22CE)
-                                    : ClayTokens.deepIndigo,
+                              user?.name.isNotEmpty == true
+                                  ? user!.name[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
                               ),
                             ),
                           ),
-                        ],
+                        ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.name ?? 'User',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              user?.email ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: ClayTokens.secondaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isTeacher
+                                    ? const Color(0xFFF3E8FF)
+                                    : const Color(0xFFEDEAF8),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isTeacher ? 'Instructor' : 'Student',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: isTeacher
+                                      ? const Color(0xFF7E22CE)
+                                      : ClayTokens.deepIndigo,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -115,7 +139,7 @@ class AppDrawer extends ConsumerWidget {
             // Navigation Items
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 children: [
                   _DrawerItem(
                     icon: Icons.dashboard_rounded,
@@ -126,18 +150,93 @@ class AppDrawer extends ConsumerWidget {
                       onSelectTab?.call(0);
                     },
                   ),
-                  _DrawerItem(
-                    icon: Icons.school_rounded,
-                    title: 'Classrooms',
-                    selected: currentTabIndex == 1,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onSelectTab?.call(1);
-                    },
+
+                  // My Classes Expandable Section
+                  Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                      leading: Icon(
+                        Icons.school_rounded,
+                        size: 20,
+                        color: currentTabIndex == 1 ? ClayTokens.deepIndigo : null,
+                      ),
+                      title: const Text(
+                        'My Classes',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: ClayTokens.deepIndigo.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${classrooms.length}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: ClayTokens.deepIndigo,
+                          ),
+                        ),
+                      ),
+                      children: [
+                        ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.only(left: 36, right: 16),
+                          leading: const Icon(Icons.grid_view_rounded, size: 16),
+                          title: const Text('View All Classrooms', style: TextStyle(fontSize: 13)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            onSelectTab?.call(1);
+                          },
+                        ),
+                        if (classrooms.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 36),
+                            child: Text(
+                              'No enrolled classes',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          )
+                        else
+                          ...classrooms.map(
+                            (c) => ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.only(left: 36, right: 16),
+                              leading: const Icon(Icons.bookmark_border_rounded, size: 16),
+                              title: Text(
+                                c.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                              subtitle: Text(
+                                c.subject,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                              ),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                context.push('/classroom/${c.id}', extra: c);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
+
                   _DrawerItem(
                     icon: Icons.assignment_rounded,
                     title: 'Assignments',
+                    badge: pendingAssignmentsCount > 0 ? '$pendingAssignmentsCount' : null,
+                    badgeColor: isTeacher ? ClayTokens.deepIndigo : const Color(0xFFEAB308),
                     selected: currentTabIndex == 2,
                     onTap: () {
                       Navigator.of(context).pop();
@@ -173,6 +272,24 @@ class AppDrawer extends ConsumerWidget {
                     },
                   ),
                   _DrawerItem(
+                    icon: Icons.fact_check_rounded,
+                    title: 'Attendance Records',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(1); // Navigates to classrooms for attendance
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.video_camera_front_rounded,
+                    title: 'Live Video Meetings',
+                    badge: 'LiveKit',
+                    badgeColor: const Color(0xFF10B981),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(1); // Navigates to classrooms to join meeting
+                    },
+                  ),
+                  _DrawerItem(
                     icon: Icons.auto_awesome_rounded,
                     title: 'AI Mentor Tutor',
                     badge: 'AI 24/7',
@@ -182,21 +299,21 @@ class AppDrawer extends ConsumerWidget {
                       context.push('/mentor');
                     },
                   ),
-                  const Divider(height: 16),
-                  _DrawerItem(
-                    icon: Icons.settings_rounded,
-                    title: 'Settings & Preferences',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      context.push('/settings');
-                    },
-                  ),
+                  const Divider(height: 6),
                   _DrawerItem(
                     icon: Icons.account_circle_rounded,
                     title: 'Manage Account',
                     onTap: () {
                       Navigator.of(context).pop();
                       context.push('/account');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.settings_rounded,
+                    title: 'Settings & Preferences',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push('/settings');
                     },
                   ),
                   _DrawerItem(
@@ -215,6 +332,9 @@ class AppDrawer extends ConsumerWidget {
 
             // Logout Footer
             ListTile(
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               leading: const Icon(Icons.logout_rounded, color: _coral),
               title: const Text(
                 'Sign Out',
@@ -284,6 +404,8 @@ class _DrawerItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       dense: true,
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       selected: selected,
       selectedTileColor: ClayTokens.deepIndigo.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

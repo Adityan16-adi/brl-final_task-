@@ -973,7 +973,7 @@ class OverviewView extends ConsumerWidget {
 
     return ClayCard(
       depth: 5,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -987,7 +987,7 @@ class OverviewView extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: colors.onSurfaceVariant,
                   ),
@@ -995,24 +995,28 @@ class OverviewView extends ConsumerWidget {
               ),
               const SizedBox(width: 4),
               ClayContainer(
-                width: 28,
-                height: 28,
+                width: 24,
+                height: 24,
                 depth: 2,
                 color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
                 padding: EdgeInsets.zero,
-                child: Center(child: Icon(icon, size: 16, color: color)),
+                child: Center(child: Icon(icon, size: 14, color: color)),
               ),
             ],
           ),
           const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: color,
-              height: 1.1,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: color,
+                height: 1.1,
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -1020,7 +1024,7 @@ class OverviewView extends ConsumerWidget {
             subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
+            style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant),
           ),
         ],
       ),

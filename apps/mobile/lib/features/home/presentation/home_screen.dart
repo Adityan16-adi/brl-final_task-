@@ -25,6 +25,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
+  final GlobalKey<ScaffoldState> _wideScaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> _mobileScaffoldKey = GlobalKey<ScaffoldState>();
 
   static const _titles = [
     'Dashboard Overview',
@@ -238,6 +240,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           if (isWide) {
             return Scaffold(
+              key: _wideScaffoldKey,
               drawer: AppDrawer(
                 currentTabIndex: _currentIndex,
                 onSelectTab: _onTabSelect,
@@ -365,6 +368,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Expanded(
                     child: Scaffold(
                       appBar: AppBar(
+                        leading: IconButton(
+                          tooltip: 'Open navigation drawer',
+                          icon: const Icon(Icons.menu_rounded),
+                          onPressed: () => _wideScaffoldKey.currentState?.openDrawer(),
+                        ),
                         title: Text(_titles[_currentIndex]),
                         actions: [
                           if (currentUser?.isTeacher == true)
@@ -414,11 +422,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           // Mobile layout: Bottom NavigationBar + AppDrawer
           return Scaffold(
+            key: _mobileScaffoldKey,
             drawer: AppDrawer(
               currentTabIndex: _currentIndex,
               onSelectTab: _onTabSelect,
             ),
             appBar: AppBar(
+              leading: Builder(
+                builder: (ctx) => IconButton(
+                  tooltip: 'Open navigation drawer',
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => _mobileScaffoldKey.currentState?.openDrawer(),
+                ),
+              ),
               title: Text(_titles[_currentIndex]),
               actions: [
                 if (currentUser?.isTeacher == true)
