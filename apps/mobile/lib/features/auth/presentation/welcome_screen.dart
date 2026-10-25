@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/branding/app_branding.dart';
+import '../../../core/branding/brand_widgets.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
@@ -55,40 +55,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Hero Claymorphic Badge
-                  Center(
-                    child: ClayContainer(
-                      width: 76,
-                      height: 76,
-                      depth: 7,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6B5EFF), Color(0xFF4335C9)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      child: const Center(
-                        child: Icon(
-                          Icons.school_rounded,
-                          size: 40,
-                          color: Colors.white,
-                        ),
-                      ),
+                  // Hero Brand Header with Logo & Tagline
+                  const Center(
+                    child: BrandHeader(
+                      markSize: 72,
+                      showTagline: true,
                     ),
                   ),
-                  const SizedBox(height: 18),
-
-                  // Brand Title & Tagline
-                  Text(
-                    AppBranding.appName,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.6,
-                      color: isDark ? Colors.white : ClayTokens.darkInk,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 10),
                   Text(
                     'Empowering students & educators with collaborative virtual classrooms, automated grading, and an intelligent AI mentor.',
                     textAlign: TextAlign.center,

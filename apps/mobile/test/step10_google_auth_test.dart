@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/branding/app_branding.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/application/auth_providers.dart';
 import 'package:mobile/features/auth/data/mock_auth_repository.dart';
@@ -122,7 +123,7 @@ void main() {
       await tester.tap(find.text('Trigger Role Sheet'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome to Smart Classroom!'), findsOneWidget);
+      expect(find.text('Welcome to ${AppBranding.appName}!'), findsOneWidget);
       expect(find.text('Student'), findsOneWidget);
       expect(find.text('Teacher'), findsOneWidget);
       expect(find.text('Complete Sign In'), findsOneWidget);

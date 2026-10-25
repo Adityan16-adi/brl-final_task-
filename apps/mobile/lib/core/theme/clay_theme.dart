@@ -8,8 +8,8 @@ class ClayTokens {
   ClayTokens._();
 
   // Core Claymorphism Color Palette
-  static const Color deepIndigo = Color(0xFF5146D8);
-  static const Color softLavender = Color(0xFFE9E5FF);
+  static const Color deepIndigo = Color(0xFF1680ED);
+  static const Color softLavender = Color(0xFFEEF4FF);
   static const Color warmCream = Color(0xFFFAF7F0);
   static const Color mint = Color(0xFFD8F4E7);
   static const Color mintDark = Color(0xFF0F766E);
@@ -17,8 +17,16 @@ class ClayTokens {
   static const Color peachDark = Color(0xFFC2410C);
   static const Color skyBlue = Color(0xFFDCEEFF);
   static const Color skyDark = Color(0xFF0369A1);
-  static const Color darkInk = Color(0xFF25243A);
-  static const Color secondaryText = Color(0xFF77758B);
+  static const Color darkInk = Color(0xFF0B1E48);
+  static const Color secondaryText = Color(0xFF6B7280);
+
+  // Official Pragti Brand Palette (Sampled from pragti_logo_original.jpeg)
+  static const Color pragtiNavy = Color(0xFF0B1E48);
+  static const Color pragtiDeepNavy = Color(0xFF021742);
+  static const Color pragtiBlue = Color(0xFF1680ED);
+  static const Color pragtiOrange = Color(0xFFFB9823);
+  static const Color pragtiStar = Color(0xFFFBB746);
+  static const Color pragtiSoftBlue = Color(0xFFEEF4FF);
 
   // Background and Surface Tones
   static const Color lightBg = Color(0xFFF3F2F9);

@@ -5,20 +5,24 @@ import 'clay_theme.dart';
 class AppTheme {
   AppTheme._();
 
-  // Primary & Accent Brand Palette (Deep Indigo & Soft Lavender)
-  static const Color primaryIndigo = ClayTokens.deepIndigo;
-  static const Color accentBlue = Color(0xFF3B82F6);
+  // Primary & Accent Brand Palette (Pragti Navy & Blue as primary, Orange as highlight)
+  static const Color primaryNavy = ClayTokens.pragtiNavy;
+  static const Color primaryBlue = ClayTokens.pragtiBlue;
+  static const Color accentOrange = ClayTokens.pragtiOrange;
+  static const Color starGold = ClayTokens.pragtiStar;
+  static const Color primaryIndigo = ClayTokens.pragtiBlue;
+  static const Color accentBlue = ClayTokens.pragtiBlue;
   static const Color secondarySky = Color(0xFF0EA5E9);
 
   // Semantic Status Tokens
-  static const Color statusPending = Color(0xFFF59E0B);
-  static const Color statusSubmitted = Color(0xFF3B82F6);
+  static const Color statusPending = ClayTokens.pragtiOrange;
+  static const Color statusSubmitted = ClayTokens.pragtiBlue;
   static const Color statusGraded = Color(0xFF10B981);
   static const Color statusOverdue = Color(0xFFEF4444);
 
   // Role Badges
-  static const Color roleStudent = ClayTokens.deepIndigo;
-  static const Color roleTeacher = Color(0xFF8B5CF6);
+  static const Color roleStudent = ClayTokens.pragtiNavy;
+  static const Color roleTeacher = ClayTokens.pragtiBlue;
 
   // Corner Radii Tokens
   static const double radiusSmall = ClayTokens.radiusSmall;
@@ -29,20 +33,23 @@ class AppTheme {
   static ThemeData get light {
     final colorScheme =
         ColorScheme.fromSeed(
-          seedColor: primaryIndigo,
+          seedColor: primaryBlue,
           brightness: Brightness.light,
           surface: ClayTokens.lightBg,
         ).copyWith(
-          primary: primaryIndigo,
+          primary: primaryBlue,
           onPrimary: Colors.white,
-          primaryContainer: ClayTokens.softLavender,
-          onPrimaryContainer: ClayTokens.darkInk,
-          secondary: const Color(0xFF6356F5),
+          primaryContainer: ClayTokens.pragtiSoftBlue,
+          onPrimaryContainer: ClayTokens.pragtiDeepNavy,
+          secondary: primaryNavy,
+          onSecondary: Colors.white,
+          tertiary: accentOrange,
+          onTertiary: Colors.white,
           surface: ClayTokens.lightBg,
-          surfaceContainerHighest: const Color(0xFFE8E6F3),
-          onSurface: ClayTokens.darkInk,
+          surfaceContainerHighest: const Color(0xFFE8EEF8),
+          onSurface: ClayTokens.pragtiDeepNavy,
           onSurfaceVariant: ClayTokens.secondaryText,
-          outlineVariant: const Color(0xFFE1DFED),
+          outlineVariant: const Color(0xFFDCE6F5),
         );
 
     return _buildTheme(colorScheme);
@@ -51,20 +58,22 @@ class AppTheme {
   static ThemeData get dark {
     final colorScheme =
         ColorScheme.fromSeed(
-          seedColor: primaryIndigo,
+          seedColor: primaryBlue,
           brightness: Brightness.dark,
           surface: ClayTokens.darkBg,
         ).copyWith(
-          primary: const Color(0xFF8F85FF),
-          onPrimary: const Color(0xFF1F1D33),
-          primaryContainer: const Color(0xFF2E2B4D),
-          onPrimaryContainer: ClayTokens.softLavender,
-          secondary: const Color(0xFFA5B4FC),
+          primary: const Color(0xFF5CA4FF),
+          onPrimary: const Color(0xFF021742),
+          primaryContainer: const Color(0xFF0E234A),
+          onPrimaryContainer: Colors.white,
+          secondary: const Color(0xFF90C2FF),
+          tertiary: accentOrange,
+          onTertiary: Colors.white,
           surface: ClayTokens.darkBg,
           surfaceContainerHighest: ClayTokens.darkCard,
           onSurface: const Color(0xFFF8F7FC),
           onSurfaceVariant: const Color(0xFFA3A1BD),
-          outlineVariant: const Color(0xFF35334D),
+          outlineVariant: const Color(0xFF26334D),
         );
 
     return _buildTheme(colorScheme);

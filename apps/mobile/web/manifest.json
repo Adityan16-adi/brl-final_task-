@@ -1,11 +1,11 @@
 {
-    "name": "mobile",
-    "short_name": "mobile",
+    "name": "Pragti",
+    "short_name": "Pragti",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0B1E48",
+    "theme_color": "#0B1E48",
+    "description": "Pragti — Learn · Connect · Grow",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

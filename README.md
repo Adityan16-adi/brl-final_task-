@@ -1,6 +1,6 @@
-# Unified Learning & Virtual Classroom
+# Pragti — Learn · Connect · Grow
 
-A unified education platform merging Google Classroom (coursework, assignments with grading, attendance, announcements, study materials, chat with ML spam filtering) and Google Meet (live interactive video classrooms, lobby readiness checks, WebRTC streaming, and zero-config Jitsi Meet / Google Meet fallback).
+Pragti is a unified education platform merging Google Classroom (coursework, assignments with grading, attendance, announcements, study materials, chat with ML spam filtering) and Google Meet (live interactive video classrooms, lobby readiness checks, WebRTC streaming, and zero-config Jitsi Meet / Google Meet fallback).
 
 Built with a tactile **Claymorphism** design system on Flutter, backed by a robust Node.js/Express API, and powered by a Python FastAPI machine learning microservice.
 

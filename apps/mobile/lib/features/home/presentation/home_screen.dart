@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/branding/app_branding.dart';
+import 'package:mobile/core/branding/brand_widgets.dart';
 import 'package:mobile/core/theme/clay_theme.dart';
 
 import '../../auth/application/auth_providers.dart';
@@ -257,20 +258,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ClayContainer(
-                            width: 40,
-                            height: 40,
-                            depth: 3,
-                            color: ClayTokens.deepIndigo,
-                            borderRadius: BorderRadius.circular(12),
-                            padding: EdgeInsets.zero,
-                            child: const Center(
-                              child: Icon(
-                                Icons.school_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            ),
+                          const BrandLogo(
+                            size: 30,
+                            useMarkOnly: true,
+                            onCard: true,
                           ),
                           if (constraints.maxWidth >= 900) ...[
                             const SizedBox(width: 10),

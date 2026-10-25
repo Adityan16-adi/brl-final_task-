@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/branding/app_branding.dart';
+import '../../../../core/branding/brand_widgets.dart';
 import '../../../../core/theme/clay_theme.dart';
 
 class HelpDeskScreen extends StatefulWidget {
@@ -230,6 +232,53 @@ class _HelpDeskScreenState extends State<HelpDeskScreen> {
                   icon: Icons.confirmation_number_outlined,
                   onPressed: _showTicketDialog,
                   child: const Text('Open Support Ticket'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // About Pragti Card
+          ClayCard(
+            depth: 2,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const BrandLogo(
+                  size: 36,
+                  useMarkOnly: true,
+                  onCard: true,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        AppBranding.appName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        AppBranding.tagline,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: ClayTokens.pragtiOrange,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Virtual Classroom & Learning Platform • v2.0.0',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: ClayTokens.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

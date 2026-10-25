@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/branding/app_branding.dart';
 import 'package:mobile/features/auth/application/auth_providers.dart';
 import 'package:mobile/features/auth/data/mock_auth_repository.dart';
 import 'package:mobile/features/home/presentation/home_providers.dart';
@@ -128,7 +129,7 @@ void main() {
       // On wide screens, NavigationRail is rendered
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
-      expect(find.text('Unified Learn'), findsOneWidget);
+      expect(find.text(AppBranding.appName), findsOneWidget);
     });
   });
 }

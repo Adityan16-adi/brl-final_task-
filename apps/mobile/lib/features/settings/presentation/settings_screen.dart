@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/branding/app_branding.dart';
+import '../../../../core/branding/brand_widgets.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/theme/clay_theme.dart';
 import '../../auth/application/auth_providers.dart';
@@ -346,32 +347,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 Row(
                   children: [
-                    ClayContainer(
-                      width: 42,
-                      height: 42,
-                      depth: 3,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6B5EFF), Color(0xFF4335C9)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      child: const Center(
-                        child: Icon(Icons.school_rounded,
-                            color: Colors.white, size: 22),
-                      ),
+                    const BrandLogo(
+                      size: 38,
+                      useMarkOnly: true,
+                      onCard: true,
                     ),
                     const SizedBox(width: 12),
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           AppBranding.appName,
                           style: TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w800),
+                              fontSize: 16, fontWeight: FontWeight.w800),
                         ),
                         Text(
+                          AppBranding.tagline,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: ClayTokens.pragtiOrange,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
                           'Version 2.0.0 (Production Build)',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: ClayTokens.secondaryText,
                           ),
                         ),
@@ -380,9 +382,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Unified Learning & Virtual Classroom delivers claymorphic modern UI, role-secured classroom management, automated grading, and an integrated AI Mentor.',
-                  style: TextStyle(fontSize: 12, height: 1.4),
+                Text(
+                  '${AppBranding.appName} delivers modern claymorphic virtual classrooms, role-secured coursework management, automated grading, live video sessions, and an intelligent AI Mentor.',
+                  style: const TextStyle(fontSize: 12, height: 1.4),
                 ),
               ],
             ),

@@ -266,7 +266,7 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
 
     // App title is visible in NavigationRail header
-    expect(find.text('Unified Learn'), findsOneWidget);
+    expect(find.text('Pragti'), findsOneWidget);
 
     // Tap Classrooms icon in NavigationRail
     await tester.tap(find.byIcon(Icons.school_outlined));

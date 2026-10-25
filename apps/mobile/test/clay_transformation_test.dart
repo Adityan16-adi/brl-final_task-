@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/branding/app_branding.dart';
+import 'package:mobile/core/branding/brand_widgets.dart';
 import 'package:mobile/core/theme/clay_theme.dart';
 import 'package:mobile/features/auth/application/auth_providers.dart';
 import 'package:mobile/features/auth/data/mock_auth_repository.dart';
@@ -91,7 +93,9 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Unified Learn'), findsOneWidget);
+        expect(find.text(AppBranding.appName), findsOneWidget);
+        expect(find.text(AppBranding.tagline), findsOneWidget);
+        expect(find.byType(BrandHeader), findsOneWidget);
         expect(find.text('Role-Secured Classrooms'), findsOneWidget);
         expect(find.text('Assignments & Direct Feedback'), findsOneWidget);
         expect(find.text('24/7 AI Mentor Assistant'), findsOneWidget);

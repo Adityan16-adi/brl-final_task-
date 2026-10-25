@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/branding/app_branding.dart';
+import '../../../core/branding/brand_widgets.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
@@ -103,17 +104,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         depth: 6,
                         child: Column(
                           children: [
-                            ClayContainer(
-                              width: 52,
-                              height: 52,
-                              depth: 4,
-                              color: ClayTokens.softLavender,
-                              borderRadius: BorderRadius.circular(16),
-                              child: const Icon(
-                                Icons.person_add_rounded,
-                                color: ClayTokens.deepIndigo,
-                                size: 28,
-                              ),
+                            const BrandLogo(
+                              size: 44,
+                              useMarkOnly: true,
+                              onCard: true,
                             ),
                             const SizedBox(height: 12),
                             Text(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/branding/app_branding.dart';
+import '../../../../core/branding/brand_widgets.dart';
 import '../../../../core/theme/clay_theme.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../home_providers.dart';
@@ -46,8 +48,43 @@ class AppDrawer extends ConsumerWidget {
                 child: ClayCard(
                   depth: 3,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      Row(
+                        children: [
+                          const BrandLogo(
+                            size: 20,
+                            useMarkOnly: true,
+                            onCard: false,
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            AppBranding.appName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Expanded(
+                            child: Text(
+                              '• ${AppBranding.tagline}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: ClayTokens.pragtiOrange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
                       if (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
                         CircleAvatar(
                           radius: 25,
@@ -130,9 +167,11 @@ class AppDrawer extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
+          ),
+        ),
 
             const Divider(height: 1),
 

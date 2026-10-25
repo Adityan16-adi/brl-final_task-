@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile/core/branding/app_branding.dart';
 import 'package:mobile/core/theme/clay_theme.dart';
 import '../../application/auth_providers.dart';
 import '../../domain/auth_repository.dart';
@@ -233,7 +234,7 @@ Future<void> showRoleSelectionSheet(
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Welcome to Smart Classroom!',
+                    'Welcome to ${AppBranding.appName}!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,

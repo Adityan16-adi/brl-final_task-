@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/branding/app_branding.dart';
+import '../../../core/branding/brand_widgets.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
@@ -212,27 +213,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Header Logo & Branding
-                      Center(
-                        child: ClayContainer(
-                          width: 68,
-                          height: 68,
-                          depth: 7,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6B5EFF), Color(0xFF4335C9)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(22),
-                          child: const Center(
-                            child: Icon(
-                              Icons.school_rounded,
-                              color: Colors.white,
-                              size: 36,
-                            ),
-                          ),
+                      const Center(
+                        child: BrandLogo(
+                          size: 54,
+                          useMarkOnly: true,
+                          onCard: true,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       Text(
                         AppBranding.appName,
                         textAlign: TextAlign.center,
