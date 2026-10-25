@@ -182,6 +182,7 @@ const startServer = async () => {
     }
 
     await connectDB();
+    await require("./src/utils/seedDemoData")();
 
     server.listen(PORT, "0.0.0.0", () => {
         console.log(`Server running on 0.0.0.0:${PORT}`);
