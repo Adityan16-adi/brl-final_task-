@@ -6,6 +6,7 @@ import '../../../core/branding/app_branding.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
+import 'widgets/google_sign_in_handler.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -419,6 +420,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               : 'Register as Student',
                         ),
                       ),
+                      const SizedBox(height: 12),
+
+                      // Sign up with Google
+                      const GoogleSignInButton(text: 'Sign up with Google'),
                       const SizedBox(height: 16),
 
                       // Switch to Login

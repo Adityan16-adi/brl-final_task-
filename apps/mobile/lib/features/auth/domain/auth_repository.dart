@@ -13,6 +13,7 @@ class AppUser {
     required this.name,
     required this.role,
     this.isDemo = false,
+    this.avatarUrl,
   });
 
   final String uid;
@@ -20,6 +21,7 @@ class AppUser {
   final String name;
   final UserRole role;
   final bool isDemo;
+  final String? avatarUrl;
 
   String get id => uid;
 
@@ -32,6 +34,7 @@ class AppUser {
         'name': name,
         'role': role.name,
         'isDemo': isDemo,
+        if (avatarUrl != null) 'avatarUrl': avatarUrl,
       };
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -40,7 +43,29 @@ class AppUser {
         name: json['name']?.toString() ?? '',
         role: UserRole.fromString(json['role']?.toString()),
         isDemo: json['isDemo'] == true,
+        avatarUrl: json['avatarUrl']?.toString(),
       );
+}
+
+/// Result returned from a Google Sign-In attempt
+class GoogleAuthResult {
+  const GoogleAuthResult({
+    this.user,
+    this.needsRoleSelection = false,
+    this.idToken,
+    this.email,
+    this.displayName,
+    this.photoUrl,
+    this.message,
+  });
+
+  final AppUser? user;
+  final bool needsRoleSelection;
+  final String? idToken;
+  final String? email;
+  final String? displayName;
+  final String? photoUrl;
+  final String? message;
 }
 
 /// A user-facing authentication failure.
@@ -66,6 +91,13 @@ abstract interface class AuthRepository {
     required String email,
     required String password,
     UserRole role = UserRole.student,
+  });
+
+  /// Signs in using Google via Firebase authentication.
+  Future<GoogleAuthResult> signInWithGoogle({
+    UserRole? role,
+    String? teacherCode,
+    String? idTokenOverride,
   });
 
   Future<void> signOut();

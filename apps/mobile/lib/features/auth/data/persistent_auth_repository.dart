@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/config/api_config.dart';
@@ -259,8 +262,136 @@ class PersistentAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<GoogleAuthResult> signInWithGoogle({
+    UserRole? role,
+    String? teacherCode,
+    String? idTokenOverride,
+  }) async {
+    String? tokenToUse = idTokenOverride;
+
+    if (tokenToUse == null || tokenToUse.isEmpty) {
+      try {
+        if (Firebase.apps.isEmpty) {
+          if (ApiConfig.hasFirebaseConfig) {
+            await Firebase.initializeApp(
+              options: const FirebaseOptions(
+                apiKey: ApiConfig.firebaseApiKey,
+                appId: ApiConfig.firebaseAppId,
+                messagingSenderId: ApiConfig.firebaseMessagingSenderId,
+                projectId: ApiConfig.firebaseProjectId,
+              ),
+            );
+          } else {
+            await Firebase.initializeApp();
+          }
+        }
+
+        final googleSignIn = GoogleSignIn();
+        final googleAccount = await googleSignIn.signIn();
+        if (googleAccount == null) {
+          throw const AuthFailure('Google sign-in was cancelled.');
+        }
+
+        final googleAuth = await googleAccount.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
+        tokenToUse = await userCred.user?.getIdToken();
+
+        if (tokenToUse == null || tokenToUse.isEmpty) {
+          throw const AuthFailure('Failed to obtain Firebase ID token from Google account.');
+        }
+      } on AuthFailure {
+        rethrow;
+      } catch (err) {
+        throw const AuthFailure(
+          'Google Sign-In is unavailable on this device (google-services.json is missing or not configured). Please sign in using Email & Password or use Demo Mode.',
+        );
+      }
+    }
+
+    // Call backend /api/auth/google
+    try {
+      final dio = _dio ?? DioClient.createFor(ApiConfig.coreBaseUrl);
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/auth/google',
+        data: {
+          'idToken': tokenToUse,
+          if (role != null) 'role': role.name,
+          if (teacherCode != null && teacherCode.isNotEmpty) 'teacherCode': teacherCode.trim(),
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(seconds: 8),
+        ),
+      );
+
+      final data = response.data;
+      if (data != null) {
+        if (data['needsRoleSelection'] == true) {
+          return GoogleAuthResult(
+            needsRoleSelection: true,
+            idToken: tokenToUse,
+            email: data['email'] as String?,
+            displayName: data['name'] as String?,
+            photoUrl: data['picture'] as String?,
+            message: data['message'] as String?,
+          );
+        }
+
+        if (data['success'] == true && data['user'] is Map) {
+          final userRaw = data['user'] as Map<String, dynamic>;
+          final token = data['token'] as String?;
+          final user = AppUser(
+            uid: userRaw['uid'] as String? ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
+            email: userRaw['email'] as String? ?? '',
+            name: userRaw['name'] as String? ?? 'User',
+            role: userRaw['role'] == 'teacher' ? UserRole.teacher : UserRole.student,
+            avatarUrl: userRaw['avatarUrl'] as String?,
+            isDemo: false,
+          );
+
+          _set(user);
+          _onboardingCompleted = true;
+          final prefs = _prefs;
+          if (prefs != null) {
+            await prefs.setBool(keyOnboarding, true);
+            await prefs.setString(keyUser, jsonEncode(user.toJson()));
+            if (token != null) {
+              await prefs.setString(keyToken, token);
+            }
+          }
+          return GoogleAuthResult(user: user);
+        }
+      }
+      throw const AuthFailure('Unexpected response from Google authentication service.');
+    } on DioException catch (dioErr) {
+      if (dioErr.response != null) {
+        final resData = dioErr.response?.data;
+        if (resData is Map && resData['message'] != null) {
+          throw AuthFailure(resData['message'] as String);
+        }
+        throw AuthFailure('Server returned Google auth error (${dioErr.response?.statusCode}). Please retry.');
+      }
+      throw AuthFailure(
+        'Cannot connect to authentication server at ${ApiConfig.coreBaseUrl}. Please verify the backend is running and retry.',
+      );
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure('Google sign in failed: $e');
+    }
+  }
+
+  @override
   Future<void> signOut() async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
+    try {
+      await GoogleSignIn().signOut().catchError((_) => null);
+      await FirebaseAuth.instance.signOut().catchError((_) => null);
+    } catch (_) {}
     _set(null);
     await _prefs?.remove(keyUser);
     await _prefs?.remove(keyToken);

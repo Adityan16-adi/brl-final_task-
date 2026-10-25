@@ -819,22 +819,41 @@ class HttpHomeRepository implements HomeRepository {
     required String message,
   }) async {
     try {
-      final response = await _mlDio.post<Map<String, dynamic>>(
-        '/spam/check',
+      // First try via Node backend proxy
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/chat/spam-check',
         data: {
           'meeting_id': meetingId,
           'user_id': userId,
           'message': message.trim(),
         },
         options: Options(
-          sendTimeout: const Duration(seconds: 3),
-          receiveTimeout: const Duration(seconds: 3),
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
         ),
       );
       if (response.statusCode == 200 && response.data != null) {
         return SpamCheckResult.fromJson(response.data!);
       }
-    } catch (_) {}
+    } catch (_) {
+      try {
+        final response = await _mlDio.post<Map<String, dynamic>>(
+          '/spam/check',
+          data: {
+            'meeting_id': meetingId,
+            'user_id': userId,
+            'message': message.trim(),
+          },
+          options: Options(
+            sendTimeout: const Duration(seconds: 3),
+            receiveTimeout: const Duration(seconds: 3),
+          ),
+        );
+        if (response.statusCode == 200 && response.data != null) {
+          return SpamCheckResult.fromJson(response.data!);
+        }
+      } catch (_) {}
+    }
 
     final trimmed = message.trim();
     final isRepeatedChar = RegExp(r'(.)\1{7,}').hasMatch(trimmed);

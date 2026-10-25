@@ -50,15 +50,23 @@ exports.sendMessage = async (req, res) => {
 
     // Optional call to ML service spam detection
     try {
+      const mlHeaders = {
+        "Content-Type": "application/json",
+        "X-User-Id": senderUid || req.user?.uid || "anonymous",
+      };
+      if (process.env.ML_API_TOKEN) {
+        mlHeaders["X-API-Key"] = process.env.ML_API_TOKEN;
+      }
+
       const mlRes = await fetch(`${ML_SERVICE_URL}/spam/check`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: mlHeaders,
         body: JSON.stringify({
           meeting_id: classId,
           user_id: senderUid || "anonymous",
           message: text.trim(),
         }),
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
       if (mlRes.ok) {
         const mlData = await mlRes.json();
@@ -97,4 +105,75 @@ exports.sendMessage = async (req, res) => {
       message: "Failed to send message: " + error.message,
     });
   }
+};
+
+/**
+ * POST /api/chat/spam-check
+ * Backend proxy endpoint for pre-validating message text against ML spam classifier
+ */
+exports.checkSpam = async (req, res) => {
+  try {
+    const { meeting_id, user_id, message } = req.body || {};
+    if (!message || !message.trim()) {
+      return res.status(200).json({ is_spam: false, score: 0, action: "allow", strikes: 0, reasons: [] });
+    }
+
+    const mlHeaders = {
+      "Content-Type": "application/json",
+      "X-User-Id": user_id || req.user?.uid || "anonymous",
+    };
+    if (process.env.ML_API_TOKEN) {
+      mlHeaders["X-API-Key"] = process.env.ML_API_TOKEN;
+    }
+
+    let mlUrl = ML_SERVICE_URL;
+    if (!/^https?:\/\//i.test(mlUrl)) {
+      mlUrl = `https://${mlUrl}`;
+    }
+
+    const mlRes = await fetch(`${mlUrl}/spam/check`, {
+      method: "POST",
+      headers: mlHeaders,
+      body: JSON.stringify({
+        meeting_id: meeting_id || "general",
+        user_id: user_id || "anonymous",
+        message: message.trim(),
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+
+    if (mlRes.ok) {
+      const mlData = await mlRes.json();
+      return res.status(200).json(mlData);
+    }
+  } catch (err) {
+    // Fail open
+  }
+
+  // Fallback heuristic
+  const trimmed = (req.body?.message || "").trim();
+  const isRepeatedChar = /(.)\1{7,}/.test(trimmed);
+  const urlMatches = (trimmed.match(/(https?:\/\/|www\.)\S+/gi) || []).length;
+  const isTooLong = trimmed.length > 500;
+  if (isRepeatedChar || urlMatches > 2 || isTooLong) {
+    const reasons = [];
+    if (isRepeatedChar) reasons.push("Repeated characters");
+    if (urlMatches > 2) reasons.push("Excessive external links");
+    if (isTooLong) reasons.push("Message too long");
+    return res.status(200).json({
+      is_spam: true,
+      score: 3,
+      action: "block",
+      strikes: 1,
+      reasons,
+    });
+  }
+
+  return res.status(200).json({
+    is_spam: false,
+    score: 0,
+    action: "allow",
+    strikes: 0,
+    reasons: [],
+  });
 };

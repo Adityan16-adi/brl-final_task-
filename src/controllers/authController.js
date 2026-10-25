@@ -296,4 +296,151 @@ const syncUser = async (req, res) => {
     }
 };
 
-module.exports = { register, login, getMe, syncUser, generateToken, getJwtSecret };
+const googleLogin = async (req, res) => {
+    try {
+        const { idToken, role, teacherCode } = req.body || {};
+
+        if (!idToken || typeof idToken !== "string" || !idToken.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Firebase ID token is required."
+            });
+        }
+
+        const { auth } = require("../../config/firebase");
+        if (!auth) {
+            return res.status(503).json({
+                success: false,
+                message: "Firebase authentication service is not configured on this server."
+            });
+        }
+
+        let decoded;
+        try {
+            decoded = await auth.verifyIdToken(idToken.trim());
+        } catch (verifyErr) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid or expired Firebase ID token: " + verifyErr.message
+            });
+        }
+
+        const uid = decoded.uid;
+        const email = decoded.email ? decoded.email.trim().toLowerCase() : null;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Google account must have an associated email address."
+            });
+        }
+
+        const name = decoded.name || decoded.displayName || email.split("@")[0];
+        const picture = decoded.picture || undefined;
+
+        let user = await User.findOne({ $or: [{ uid }, { email }] });
+        if (user) {
+            // Existing user
+            let changed = false;
+            if (user.uid !== uid) {
+                user.uid = uid;
+                changed = true;
+            }
+            if (picture && !user.avatarUrl) {
+                user.avatarUrl = picture;
+                changed = true;
+            }
+            if (changed) {
+                await user.save();
+            }
+
+            const token = generateToken(user);
+            return res.status(200).json({
+                success: true,
+                message: "Login successful.",
+                token,
+                user: {
+                    _id: user._id,
+                    uid: user.uid,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    avatarUrl: user.avatarUrl
+                }
+            });
+        }
+
+        // New user: requires role selection
+        if (!role || (role !== "student" && role !== "teacher")) {
+            return res.status(200).json({
+                success: false,
+                needsRoleSelection: true,
+                uid,
+                email,
+                name,
+                picture,
+                message: "Account not found. Please select your role to complete registration."
+            });
+        }
+
+        let userRole = "student";
+        if (role === "teacher") {
+            const isProduction = process.env.NODE_ENV === "production";
+            const configuredKey = process.env.TEACHER_SIGNUP_KEY?.trim();
+
+            if (isProduction) {
+                if (!configuredKey || configuredKey === "TEACHER_INVITE_2026" || configuredKey.length < 16) {
+                    return res.status(403).json({
+                        success: false,
+                        message: "Teacher self-registration is disabled in production: TEACHER_SIGNUP_KEY must be configured with a secure key (minimum 16 characters) by the administrator."
+                    });
+                }
+                if (!teacherCode || teacherCode.trim() !== configuredKey) {
+                    return res.status(403).json({
+                        success: false,
+                        message: "Invalid teacher provisioning code."
+                    });
+                }
+            } else {
+                const devKey = configuredKey || "TEACHER_INVITE_2026";
+                if (!teacherCode || teacherCode.trim() !== devKey) {
+                    return res.status(403).json({
+                        success: false,
+                        message: "A valid teacher provisioning code is required to register a teacher account."
+                    });
+                }
+            }
+            userRole = "teacher";
+        }
+
+        const newUser = await User.create({
+            uid,
+            name: name || email.split("@")[0],
+            email,
+            role: userRole,
+            avatarUrl: picture
+        });
+
+        const token = generateToken(newUser);
+        return res.status(201).json({
+            success: true,
+            message: "Registration successful.",
+            token,
+            user: {
+                _id: newUser._id,
+                uid: newUser.uid,
+                name: newUser.name,
+                email: newUser.email,
+                role: newUser.role,
+                avatarUrl: newUser.avatarUrl
+            }
+        });
+    } catch (error) {
+        console.error("Google Auth Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to authenticate with Google."
+        });
+    }
+};
+
+module.exports = { register, login, getMe, syncUser, googleLogin, generateToken, getJwtSecret };

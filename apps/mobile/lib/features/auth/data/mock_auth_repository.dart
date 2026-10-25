@@ -108,6 +108,20 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<GoogleAuthResult> signInWithGoogle({
+    UserRole? role,
+    String? teacherCode,
+    String? idTokenOverride,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    final effectiveRole = role ?? UserRole.student;
+    final user = effectiveRole == UserRole.teacher ? teacherUser : studentUser;
+    _onboardingCompleted = true;
+    _set(user);
+    return GoogleAuthResult(user: user);
+  }
+
+  @override
   Future<void> signOut() async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     _set(null);

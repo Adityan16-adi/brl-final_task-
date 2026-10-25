@@ -198,14 +198,15 @@ async function runAuthSecurityTests() {
   assert(studentClassroom.status === 403, "Student is blocked from creating classroom with 403 Forbidden");
 
   // 15. LiveKit Room Token: Teacher requests token for their classroom
-  // When LiveKit credentials are not in environment, safely returns 503 awaiting_credentials
+  // When LiveKit credentials are configured, returns 200 with token; otherwise safely returns 503 awaiting_credentials
   const liveKitRes = await request(`/api/classrooms/${classroomId}/meeting/token`, {
     method: "POST",
     headers: { Authorization: `Bearer ${teacherToken}` },
   });
   assert(
-    liveKitRes.status === 503 && liveKitRes.data?.status === "awaiting_credentials",
-    "LiveKit token generation returns 503 awaiting_credentials when provider keys are not yet configured"
+    (liveKitRes.status === 200 && !!liveKitRes.data?.token) ||
+    (liveKitRes.status === 503 && liveKitRes.data?.status === "awaiting_credentials"),
+    "LiveKit token generation returns 200 with token when configured, or 503 awaiting_credentials when not configured"
   );
 
   // 16. LiveKit Room Token: Unauthenticated request rejected
@@ -232,7 +233,28 @@ async function runAuthSecurityTests() {
   });
   assert(unenrolledLiveKit.status === 403, "Unenrolled student requesting meeting token is rejected with 403 Forbidden");
 
-  // 18. Production mode strictly rejects mock tokens
+  // 18. Google Auth: Missing token rejected with 400
+  const googleMissing = await request("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  assert(googleMissing.status === 400, "Google auth rejects missing token with 400");
+
+  // 19. Google Auth: Invalid token rejected with 401
+  const googleInvalid = await request("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ idToken: "invalid-mock-firebase-token" }),
+  });
+  assert(googleInvalid.status === 401, "Google auth rejects invalid token with 401");
+
+  // 20. Mentor Proxy: Missing message rejected with 400
+  const mentorMissing = await request("/api/mentor/chat", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  assert(mentorMissing.status === 400, "Mentor chat proxy rejects missing message with 400");
+
+  // 21. Production mode strictly rejects mock tokens
   const prevEnv = process.env.NODE_ENV;
   try {
     process.env.NODE_ENV = "production";

@@ -6,6 +6,7 @@ import '../../../core/branding/app_branding.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
+import 'widgets/google_sign_in_handler.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -220,6 +221,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     icon: Icons.login_rounded,
                     child: const Text('Sign In'),
                   ),
+                  const SizedBox(height: 12),
+
+                  // Sign in with Google
+                  const GoogleSignInButton(),
                   const SizedBox(height: 12),
 
                   // Explicit Clearly Labelled Demo Mode Button

@@ -37,3 +37,7 @@ Thumbs.db
 apps/backend/uploads/
 ml_service/.venv/
 uploads/
+
+# Firebase private credentials
+/config/serviceAccountKey.json
+/config/*serviceAccount*.json

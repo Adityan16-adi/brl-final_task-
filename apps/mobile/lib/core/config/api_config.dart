@@ -17,16 +17,25 @@ class ApiConfig {
     'LEARNING_API_BASE_URL',
   );
 
-  // Firebase client parameters (supplied via --dart-define)
+  // Firebase client parameters (Web/Dart client config)
   static const String firebaseApiKey = String.fromEnvironment(
     'FIREBASE_API_KEY',
+    defaultValue: 'AIzaSyDnYNTndRhW4z8Vokhqy8zkZSl7ho7j8Ls',
   );
-  static const String firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
+
+  static const String firebaseAppId = String.fromEnvironment(
+    'FIREBASE_APP_ID',
+    defaultValue: '1:444025703404:web:dcea1bdb1ddf2204130ec9',
+  );
+
   static const String firebaseMessagingSenderId = String.fromEnvironment(
     'FIREBASE_MESSAGING_SENDER_ID',
+    defaultValue: '444025703404',
   );
+
   static const String firebaseProjectId = String.fromEnvironment(
     'FIREBASE_PROJECT_ID',
+    defaultValue: 'smart-classroom-cc0bc',
   );
 
   /// True only when required Firebase client values are provided.

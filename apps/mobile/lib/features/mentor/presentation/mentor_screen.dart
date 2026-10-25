@@ -58,14 +58,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     _scrollToBottom();
 
     try {
-      final dio = ref.read(dioProvider);
+      final dio = ref.read(coreDioProvider);
       final sessionId = ref.read(mentorSessionProvider);
 
       final response = await dio.post<Map<String, dynamic>>(
-        '/mentor/chat',
+        '/api/mentor/chat',
         data: {'session_id': sessionId, 'message': text},
         options: Options(
-          receiveTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 60),
           sendTimeout: const Duration(seconds: 15),
         ),
       );
@@ -84,23 +84,22 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      final dio = ref.read(dioProvider);
       String errMsg;
       if (e is DioException) {
-        if (e.type == DioExceptionType.connectionTimeout ||
+        final serverMsg = e.response?.data is Map ? e.response?.data['message']?.toString() : null;
+        if (serverMsg != null && serverMsg.isNotEmpty) {
+          errMsg = serverMsg;
+        } else if (e.type == DioExceptionType.connectionTimeout ||
             e.type == DioExceptionType.receiveTimeout) {
-          errMsg =
-              'AI Mentor request timed out. Please check if the ML service is running on port 8001.';
+          errMsg = 'AI Mentor request timed out. Please try again.';
         } else if (e.type == DioExceptionType.connectionError ||
             e.response == null) {
-          errMsg =
-              'Cannot reach AI Mentor service at ${dio.options.baseUrl}. Please verify the ML service is running.';
+          errMsg = 'Cannot reach backend server. Please verify network connectivity.';
         } else {
-          errMsg =
-              'AI Mentor service returned error ${e.response?.statusCode}: ${e.message}';
+          errMsg = 'AI Mentor service returned error ${e.response?.statusCode}: ${e.message}';
         }
       } else {
-        errMsg = 'AI Mentor service error: $e';
+        errMsg = 'AI Mentor error: $e';
       }
       setState(() {
         _error = errMsg;
@@ -114,10 +113,10 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     if (_sending) return;
 
     try {
-      final dio = ref.read(dioProvider);
+      final dio = ref.read(coreDioProvider);
       final sessionId = ref.read(mentorSessionProvider);
       await dio.post<void>(
-        '/mentor/reset',
+        '/api/mentor/reset',
         queryParameters: {'session_id': sessionId},
       );
     } catch (_) {
