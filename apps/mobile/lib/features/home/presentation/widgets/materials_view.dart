@@ -33,31 +33,19 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           if (isTeacher) ...[
-            SizedBox(
-              width: double.infinity,
-              child: ClayButton(
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => const UploadMaterialDialog(),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.upload_file_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Upload Study Material',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+            ClayButton(
+              isFullWidth: true,
+              icon: Icons.upload_file_rounded,
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => const UploadMaterialDialog(),
+              ),
+              child: const Text(
+                'Upload Study Material',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -552,14 +540,17 @@ class _MaterialCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    ClayBadge(
-                      label: item.subject,
-                      backgroundColor: ClayTokens.softLavender,
-                      textColor: ClayTokens.deepIndigo,
-                      fontSize: 10,
+                    Flexible(
+                      child: ClayBadge(
+                        label: item.subject,
+                        backgroundColor: ClayTokens.softLavender,
+                        textColor: ClayTokens.deepIndigo,
+                        fontSize: 10,
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 6),
                     Text(
                       _getTypeLabel(item.type),
                       style: TextStyle(
@@ -592,20 +583,34 @@ class _MaterialCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (item.createdAt != null) ...[
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 12,
-                        color: colors.outline,
+                    if (item.createdAt != null)
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 12,
+                              color: colors.outline,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                item.createdAt!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colors.outline,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.createdAt!,
-                        style: TextStyle(fontSize: 11, color: colors.outline),
-                      ),
-                    ],
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     const Text(
                       'View Details →',
                       style: TextStyle(

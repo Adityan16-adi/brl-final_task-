@@ -605,31 +605,28 @@ class OverviewView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Expanded(
-                      child: Text(
-                        isTeacher
-                            ? 'Welcome back, Teacher'
-                            : 'Welcome back, Student',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 18,
-                          letterSpacing: -0.3,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      isTeacher
+                          ? 'Welcome back, Teacher'
+                          : 'Welcome back, Student',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        letterSpacing: -0.3,
                       ),
                     ),
                     if (user?.isDemo == true ||
-                        user?.email.contains('@demo.com') == true) ...[
+                        user?.email.contains('@demo.com') == true)
                       const ClayBadge(
                         label: 'DEMO DATA',
                         backgroundColor: Color(0xFFFEF3C7),
                         textColor: Color(0xFF92400E),
                       ),
-                      const SizedBox(width: 6),
-                    ],
                     ClayBadge(
                       label: isTeacher ? 'TEACHER' : 'STUDENT',
                       backgroundColor: isTeacher

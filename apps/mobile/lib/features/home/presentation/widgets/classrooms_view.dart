@@ -214,49 +214,57 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ClayBadge(
-                label: item.subject,
-                backgroundColor: ClayTokens.softLavender,
-                textColor: ClayTokens.deepIndigo,
-              ),
-              if (item.code != null)
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: item.code!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Class code "${item.code}" copied!'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: ClayContainer(
-                    depth: 2,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Code: ${item.code}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.copy_rounded, size: 10),
-                      ],
-                    ),
-                  ),
+              Flexible(
+                child: ClayBadge(
+                  label: item.subject,
+                  backgroundColor: ClayTokens.softLavender,
+                  textColor: ClayTokens.deepIndigo,
                 ),
+              ),
               const SizedBox(width: 6),
-              InkWell(
-                onTap: () => _showClassroomDetails(context, item),
-                child: const Icon(Icons.info_outline_rounded, size: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (item.code != null)
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: item.code!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Class code "${item.code}" copied!'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      child: ClayContainer(
+                        depth: 2,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Code: ${item.code}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.copy_rounded, size: 10),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => _showClassroomDetails(context, item),
+                    child: const Icon(Icons.info_outline_rounded, size: 16),
+                  ),
+                ],
               ),
             ],
           ),
@@ -301,24 +309,32 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.schedule_rounded,
-                    size: 14,
-                    color: colors.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    item.schedule,
-                    style: TextStyle(
-                      fontSize: 11,
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 14,
                       color: colors.onSurfaceVariant,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item.schedule,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.room_rounded,
