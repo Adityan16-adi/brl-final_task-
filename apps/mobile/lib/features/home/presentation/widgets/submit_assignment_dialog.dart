@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
 
@@ -17,6 +18,7 @@ class SubmitAssignmentDialog extends ConsumerStatefulWidget {
 class _SubmitAssignmentDialogState
     extends ConsumerState<SubmitAssignmentDialog> {
   final _textController = TextEditingController();
+  final _attachmentController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isSubmitting = false;
 
@@ -26,23 +28,44 @@ class _SubmitAssignmentDialogState
     if (widget.assignment.submittedText != null) {
       _textController.text = widget.assignment.submittedText!;
     }
+    if (widget.assignment.submittedFileUrl != null) {
+      _attachmentController.text = widget.assignment.submittedFileUrl!;
+    }
   }
 
   @override
   void dispose() {
     _textController.dispose();
+    _attachmentController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
 
+    final text = _textController.text.trim();
+    final fileUrl = _attachmentController.text.trim();
+
+    if (text.isEmpty && fileUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please provide submission text or an attachment link.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     final repo = ref.read(homeRepositoryProvider);
+    final user = ref.read(currentUserProvider);
     final success = await repo.submitAssignment(
       widget.assignment.id,
-      _textController.text.trim(),
+      text,
+      studentId: user?.uid,
+      fileUrl: fileUrl.isNotEmpty ? fileUrl : null,
     );
 
     if (!mounted) return;
@@ -50,6 +73,7 @@ class _SubmitAssignmentDialogState
     if (success) {
       ref.invalidate(assignmentsProvider);
       ref.invalidate(homeSummaryProvider);
+      ref.invalidate(scheduleProvider);
       Navigator.of(context).pop(true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -141,6 +165,36 @@ class _SubmitAssignmentDialogState
                 widget.assignment.description,
                 style: const TextStyle(fontSize: 13, height: 1.4),
               ),
+              if (widget.assignment.attachmentUrl != null &&
+                  widget.assignment.attachmentUrl!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHighest.withValues(
+                      alpha: 0.4,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.attachment_rounded, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Reference File: ${widget.assignment.attachmentName ?? widget.assignment.attachmentUrl}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const Divider(height: 24),
               if (isGraded) ...[
                 Container(
@@ -189,7 +243,7 @@ class _SubmitAssignmentDialogState
               ],
               Text(
                 isGraded || isSubmitted
-                    ? 'Your Submission'
+                    ? 'Your Written Solution / Notes'
                     : 'Submit Solution / Notes',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
@@ -210,11 +264,32 @@ class _SubmitAssignmentDialogState
                 ),
                 validator: (val) {
                   if (isGraded) return null;
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Please enter your submission text or response';
+                  final textEmpty = val == null || val.trim().isEmpty;
+                  final attachEmpty = _attachmentController.text.trim().isEmpty;
+                  if (textEmpty && attachEmpty) {
+                    return 'Please enter written notes or attach a file link';
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Submission Attachment / Document Link (Optional)',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: colors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _attachmentController,
+                readOnly: isGraded,
+                decoration: const InputDecoration(
+                  hintText: 'https://docs.google.com/... or cloud storage URL',
+                  prefixIcon: Icon(Icons.link_rounded, size: 18),
+                  isDense: true,
+                ),
               ),
             ],
           ),

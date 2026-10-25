@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/clay_theme.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
+import '../screens/classroom_detail_screen.dart';
 import 'create_class_dialog.dart';
 import 'join_class_dialog.dart';
 
@@ -33,34 +35,67 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'Search classrooms or subjects...',
-                    prefixIcon: Icon(Icons.search_rounded),
-                    isDense: true,
+                child: ClayContainer(
+                  depth: 3,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 2,
                   ),
-                  onChanged: (val) =>
-                      setState(() => _searchQuery = val.trim().toLowerCase()),
+                  borderRadius: BorderRadius.circular(16),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search classrooms, subjects, or teachers...',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: ClayTokens.secondaryText,
+                      ),
+                      prefixIcon: Icon(Icons.search_rounded, size: 20),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onChanged: (val) =>
+                        setState(() => _searchQuery = val.trim().toLowerCase()),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               if (isTeacher)
-                FilledButton.icon(
-                  onPressed: () => showDialog<bool>(
-                    context: context,
-                    builder: (_) => const CreateClassDialog(),
-                  ),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Create Class'),
+                ClayButton(
+                  icon: Icons.add_circle_outline_rounded,
+                  onPressed: () async {
+                    final res = await showDialog<dynamic>(
+                      context: context,
+                      builder: (_) => const CreateClassDialog(),
+                    );
+                    if (res is ClassroomItem && context.mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ClassroomDetailScreen(classroom: res),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Create Class'),
                 )
               else
-                FilledButton.icon(
-                  onPressed: () => showDialog<bool>(
-                    context: context,
-                    builder: (_) => const JoinClassDialog(),
-                  ),
-                  icon: const Icon(Icons.vpn_key_rounded, size: 18),
-                  label: const Text('Join Code'),
+                ClayButton(
+                  icon: Icons.vpn_key_rounded,
+                  onPressed: () async {
+                    final res = await showDialog<dynamic>(
+                      context: context,
+                      builder: (_) => const JoinClassDialog(),
+                    );
+                    if (res is ClassroomItem && context.mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ClassroomDetailScreen(classroom: res),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Join Code'),
                 ),
             ],
           ),
@@ -81,12 +116,20 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(
-                          Icons.search_off_rounded,
-                          size: 48,
-                          color: colors.onSurfaceVariant,
+                        ClayContainer(
+                          width: 64,
+                          height: 64,
+                          depth: 4,
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Center(
+                            child: Icon(
+                              Icons.school_outlined,
+                              size: 32,
+                              color: ClayTokens.deepIndigo,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Text(
                           _searchQuery.isEmpty
                               ? (isTeacher
@@ -94,7 +137,7 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                                     : 'No classrooms joined yet')
                               : 'No classrooms matching "$_searchQuery"',
                           style: const TextStyle(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w800,
                             fontSize: 16,
                           ),
                         ),
@@ -124,9 +167,9 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: isWide ? 2 : 1,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      mainAxisExtent: 180,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      mainAxisExtent: 185,
                     ),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
@@ -154,142 +197,147 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
   Widget _buildClassroomCard(BuildContext context, ClassroomItem item) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _showClassroomDetails(context, item),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return ClayCard(
+      depth: 5,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ClassroomDetailScreen(classroom: item),
+          ),
+        );
+      },
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
+              ClayBadge(
+                label: item.subject,
+                backgroundColor: ClayTokens.softLavender,
+                textColor: ClayTokens.deepIndigo,
+              ),
+              if (item.code != null)
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: item.code!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Class code "${item.code}" copied!'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: ClayContainer(
+                    depth: 2,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 3,
                     ),
-                    decoration: BoxDecoration(
-                      color: colors.primaryContainer,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      item.subject,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: colors.onPrimaryContainer,
-                      ),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Code: ${item.code}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.copy_rounded, size: 10),
+                      ],
                     ),
                   ),
-                  if (item.code != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: colors.outlineVariant),
-                      ),
-                      child: Text(
-                        'Code: ${item.code}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () => _showClassroomDetails(context, item),
+                child: const Icon(Icons.info_outline_rounded, size: 16),
               ),
-              const SizedBox(height: 6),
-              Text(
-                item.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            item.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 12,
+                backgroundColor: ClayTokens.softLavender,
+                child: Text(
+                  item.teacher
+                      .split(' ')
+                      .map((p) => p.isNotEmpty ? p[0] : '')
+                      .take(2)
+                      .join(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: ClayTokens.deepIndigo,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.teacher,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 12,
-                    backgroundColor: colors.primary.withValues(alpha: 0.15),
-                    child: Text(
-                      item.teacher
-                          .split(' ')
-                          .map((p) => p.isNotEmpty ? p[0] : '')
-                          .take(2)
-                          .join(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: colors.primary,
-                      ),
-                    ),
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 14,
+                    color: colors.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item.teacher,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: colors.onSurfaceVariant,
-                      ),
+                  const SizedBox(width: 4),
+                  Text(
+                    item.schedule,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
-              const Divider(height: 12),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        size: 14,
-                        color: colors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.schedule,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    Icons.room_rounded,
+                    size: 14,
+                    color: colors.onSurfaceVariant,
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.room_rounded,
-                        size: 14,
-                        color: colors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.room,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 4),
+                  Text(
+                    item.room,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -323,19 +371,19 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: colors.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
+                  ClayContainer(
+                    width: 48,
+                    height: 48,
+                    depth: 4,
+                    color: ClayTokens.softLavender,
+                    borderRadius: BorderRadius.circular(14),
+                    child: const Icon(
                       Icons.school_rounded,
-                      color: colors.onPrimaryContainer,
-                      size: 24,
+                      color: ClayTokens.deepIndigo,
+                      size: 26,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,13 +408,10 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                 ],
               ),
               const SizedBox(height: 20),
-              Container(
+              ClayContainer(
+                depth: 3,
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colors.outlineVariant),
-                ),
+                borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
                 child: Column(
                   children: [
                     _infoRow(
@@ -379,8 +424,8 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                     _infoRow('Location', item.room, Icons.room_rounded, colors),
                     const Divider(height: 16),
                     _infoRow(
-                      'Learners',
-                      '${item.studentCount} enrolled students',
+                      'Enrolled Learners',
+                      '${item.studentCount} students',
                       Icons.groups_rounded,
                       colors,
                     ),
@@ -388,10 +433,10 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                       const Divider(height: 16),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.vpn_key_rounded,
                             size: 16,
-                            color: colors.primary,
+                            color: ClayTokens.deepIndigo,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -402,28 +447,16 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                             ),
                           ),
                           const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.primaryContainer,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              item.code!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: colors.onPrimaryContainer,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
+                          ClayBadge(
+                            label: item.code!,
+                            backgroundColor: ClayTokens.softLavender,
+                            textColor: ClayTokens.deepIndigo,
+                            fontSize: 12,
                           ),
-                          const SizedBox(width: 6),
-                          InkWell(
-                            onTap: () {
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.copy_rounded, size: 16),
+                            onPressed: () {
                               Clipboard.setData(
                                 ClipboardData(text: item.code!),
                               );
@@ -432,18 +465,10 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                                   content: Text(
                                     'Class code "${item.code}" copied!',
                                   ),
-                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: ClayTokens.deepIndigo,
                                 ),
                               );
                             },
-                            child: Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Icon(
-                                Icons.copy_rounded,
-                                size: 16,
-                                color: colors.primary,
-                              ),
-                            ),
                           ),
                         ],
                       ),
@@ -484,12 +509,9 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                     final details = snapshot.data;
                     final students = details?.students ?? [];
                     if (students.isEmpty) {
-                      return Container(
+                      return ClayContainer(
+                        depth: 2,
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: colors.surfaceContainerHighest.withAlpha(80),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
                         child: Text(
                           'No students have enrolled yet. Share code "${item.code ?? ''}" with your learners.',
                           style: TextStyle(
@@ -501,29 +523,26 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                     }
                     return Column(
                       children: students.map((s) {
-                        return Container(
+                        return ClayContainer(
                           margin: const EdgeInsets.only(bottom: 6),
+                          depth: 2,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.surfaceContainerHighest.withAlpha(60),
-                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
                               CircleAvatar(
                                 radius: 14,
-                                backgroundColor: colors.primaryContainer,
+                                backgroundColor: ClayTokens.softLavender,
                                 child: Text(
                                   s.name.isNotEmpty
                                       ? s.name[0].toUpperCase()
                                       : 'S',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: colors.onPrimaryContainer,
+                                    color: ClayTokens.deepIndigo,
                                   ),
                                 ),
                               ),
@@ -575,28 +594,28 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
                             content: Text(
                               'Meeting preview link copied to clipboard.',
                             ),
+                            backgroundColor: ClayTokens.deepIndigo,
                           ),
                         );
                       },
                       icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text('Copy Meeting Link'),
+                      label: const Text('Copy Link'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: FilledButton.icon(
+                    child: ClayButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Joined live session for "${item.name}" (Preview)',
-                            ),
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ClassroomDetailScreen(classroom: item),
                           ),
                         );
                       },
-                      icon: const Icon(Icons.videocam_rounded, size: 18),
-                      label: const Text('Enter Meeting'),
+                      icon: Icons.videocam_rounded,
+                      child: const Text('Open Classroom'),
                     ),
                   ),
                 ],
@@ -616,7 +635,7 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
   ) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: colors.primary),
+        Icon(icon, size: 16, color: ClayTokens.deepIndigo),
         const SizedBox(width: 8),
         Text(
           label,
@@ -625,7 +644,7 @@ class _ClassroomsViewState extends ConsumerState<ClassroomsView> {
         const Spacer(),
         Text(
           value,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
         ),
       ],
     );

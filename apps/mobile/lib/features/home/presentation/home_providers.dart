@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/network_providers.dart';
+import '../../auth/application/auth_providers.dart';
 import '../data/home_repository_impl.dart';
 import '../data/http_home_repository.dart';
 import '../domain/home_repository.dart';
@@ -62,17 +63,38 @@ final scheduleProvider = FutureProvider.autoDispose<List<ScheduleItem>>((
 });
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
-  @override
-  ThemeMode build() => ThemeMode.system;
+  static const _key = 'app_theme_mode';
 
-  void setThemeMode(ThemeMode mode) => state = mode;
+  @override
+  ThemeMode build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final saved = prefs?.getString(_key);
+    if (saved == 'light') return ThemeMode.light;
+    if (saved == 'dark') return ThemeMode.dark;
+    return ThemeMode.system;
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    state = mode;
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (prefs != null) {
+      if (mode == ThemeMode.light) {
+        prefs.setString(_key, 'light');
+      } else if (mode == ThemeMode.dark) {
+        prefs.setString(_key, 'dark');
+      } else {
+        prefs.remove(_key);
+      }
+    }
+  }
 
   void cycle() {
-    state = switch (state) {
+    final next = switch (state) {
       ThemeMode.system => ThemeMode.light,
       ThemeMode.light => ThemeMode.dark,
       ThemeMode.dark => ThemeMode.system,
     };
+    setThemeMode(next);
   }
 }
 

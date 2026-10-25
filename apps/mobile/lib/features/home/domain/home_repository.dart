@@ -12,7 +12,29 @@ abstract interface class HomeRepository {
   Future<List<AssignmentItem>> getAssignments();
   Future<List<MaterialItem>> getMaterials();
   Future<List<ScheduleItem>> getSchedule();
-  Future<bool> submitAssignment(String assignmentId, String text);
+  Future<bool> submitAssignment(
+    String assignmentId,
+    String text, {
+    String? studentId,
+    String? fileUrl,
+    String? fileName,
+  });
+  Future<AssignmentItem> createAssignment({
+    required String classId,
+    required String title,
+    required String subject,
+    required String dueDate,
+    required int points,
+    String? description,
+    String? createdBy,
+    String? attachmentUrl,
+    String? attachmentName,
+  });
+  Future<bool> gradeSubmission(
+    String submissionId, {
+    required int marks,
+    String? feedback,
+  });
 }
 
 class ClassroomException implements Exception {
@@ -171,7 +193,13 @@ class AssignmentItem {
     required this.points,
     required this.status,
     this.description = '',
+    this.classId,
+    this.attachmentUrl,
+    this.attachmentName,
     this.submittedText,
+    this.submittedFileUrl,
+    this.submittedAt,
+    this.isLate = false,
     this.marks,
     this.feedback,
   });
@@ -183,13 +211,25 @@ class AssignmentItem {
   final int points;
   final AssignmentStatus status;
   final String description;
+  final String? classId;
+  final String? attachmentUrl;
+  final String? attachmentName;
   final String? submittedText;
+  final String? submittedFileUrl;
+  final DateTime? submittedAt;
+  final bool isLate;
   final int? marks;
   final String? feedback;
 
   AssignmentItem copyWith({
     AssignmentStatus? status,
+    String? classId,
+    String? attachmentUrl,
+    String? attachmentName,
     String? submittedText,
+    String? submittedFileUrl,
+    DateTime? submittedAt,
+    bool? isLate,
     int? marks,
     String? feedback,
   }) {
@@ -201,7 +241,13 @@ class AssignmentItem {
       points: points,
       status: status ?? this.status,
       description: description,
+      classId: classId ?? this.classId,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      attachmentName: attachmentName ?? this.attachmentName,
       submittedText: submittedText ?? this.submittedText,
+      submittedFileUrl: submittedFileUrl ?? this.submittedFileUrl,
+      submittedAt: submittedAt ?? this.submittedAt,
+      isLate: isLate ?? this.isLate,
       marks: marks ?? this.marks,
       feedback: feedback ?? this.feedback,
     );

@@ -2,16 +2,22 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/providers/network_providers.dart';
+import 'package:mobile/core/theme/clay_theme.dart';
 
 final mentorSessionProvider = Provider<String>((ref) {
   return 'mobile-${DateTime.now().microsecondsSinceEpoch}';
 });
 
 class MentorMessage {
-  const MentorMessage({required this.text, required this.isUser});
+  const MentorMessage({
+    required this.text,
+    required this.isUser,
+    this.timestamp,
+  });
 
   final String text;
   final bool isUser;
+  final DateTime? timestamp;
 }
 
 class MentorScreen extends ConsumerStatefulWidget {
@@ -35,13 +41,17 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     super.dispose();
   }
 
-  Future<void> _sendMessage() async {
-    final text = _controller.text.trim();
+  Future<void> _sendMessage([String? prefilledText]) async {
+    final text = (prefilledText ?? _controller.text).trim();
     if (text.isEmpty || _sending) return;
 
-    _controller.clear();
+    if (prefilledText == null) {
+      _controller.clear();
+    }
     setState(() {
-      _messages.add(MentorMessage(text: text, isUser: true));
+      _messages.add(
+        MentorMessage(text: text, isUser: true, timestamp: DateTime.now()),
+      );
       _sending = true;
       _error = null;
     });
@@ -54,31 +64,47 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       final response = await dio.post<Map<String, dynamic>>(
         '/mentor/chat',
         data: {'session_id': sessionId, 'message': text},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 15),
+        ),
       );
 
       final reply = response.data?['reply'] as String?;
       if (reply == null || reply.trim().isEmpty) {
-        throw const FormatException('The mentor returned an empty reply.');
+        throw const FormatException('The mentor service returned an empty reply.');
       }
 
       if (!mounted) return;
       setState(() {
-        _messages.add(MentorMessage(text: reply, isUser: false));
+        _messages.add(
+          MentorMessage(text: reply, isUser: false, timestamp: DateTime.now()),
+        );
       });
       _scrollToBottom();
-    } on DioException catch (e) {
+    } catch (e) {
       if (!mounted) return;
+      final dio = ref.read(dioProvider);
+      String errMsg;
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout) {
+          errMsg =
+              'AI Mentor request timed out. Please check if the ML service is running on port 8001.';
+        } else if (e.type == DioExceptionType.connectionError ||
+            e.response == null) {
+          errMsg =
+              'Cannot reach AI Mentor service at ${dio.options.baseUrl}. Please verify the ML service is running.';
+        } else {
+          errMsg =
+              'AI Mentor service returned error ${e.response?.statusCode}: ${e.message}';
+        }
+      } else {
+        errMsg = 'AI Mentor service error: $e';
+      }
       setState(() {
-        _error = e.response?.statusCode == 500 || e.response?.statusCode == 502
-            ? 'The AI service could not generate a reply. Check the ML service logs and API key.'
-            : 'Could not reach the ML service. Check your Wi-Fi and API address.';
+        _error = errMsg;
       });
-    } on FormatException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -94,22 +120,21 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         '/mentor/reset',
         queryParameters: {'session_id': sessionId},
       );
-
-      if (!mounted) return;
-      setState(() {
-        _messages.clear();
-        _error = null;
-      });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Conversation reset.')));
-    } on DioException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not reset the conversation. Try again.'),
-        ),
-      );
+    } catch (_) {
+      // Local reset
     }
+
+    if (!mounted) return;
+    setState(() {
+      _messages.clear();
+      _error = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Conversation reset successfully.'),
+        backgroundColor: ClayTokens.deepIndigo,
+      ),
+    );
   }
 
   void _scrollToBottom() {
@@ -126,17 +151,32 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('AI Mentor'),
+            Row(
+              children: [
+                Text(
+                  'AI Mentor',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                ),
+                SizedBox(width: 8),
+                ClayBadge(
+                  label: '24/7 ONLINE',
+                  fontSize: 9,
+                  backgroundColor: ClayTokens.mint,
+                  textColor: ClayTokens.mintDark,
+                ),
+              ],
+            ),
             Text(
-              'Your personal study companion',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              'Your personalized interactive study companion',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
             ),
           ],
         ),
@@ -146,30 +186,27 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             onPressed: _sending ? null : _resetChat,
             icon: const Icon(Icons.refresh_rounded),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
         children: [
           Expanded(
             child: _messages.isEmpty
-                ? _welcome(colors)
+                ? _buildWelcomeState(context, isDark)
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
                     itemCount: _messages.length + (_sending ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == _messages.length) {
-                        return const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
+                        return _buildTypingIndicator(isDark);
                       }
-
                       final message = _messages[index];
-                      return _messageBubble(message, colors);
+                      return _buildMessageBubble(context, message, isDark);
                     },
                   ),
           ),
@@ -177,43 +214,61 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: colors.errorContainer,
+              color: Colors.redAccent.shade100,
               child: Text(
                 _error!,
-                style: TextStyle(color: colors.onErrorContainer),
+                style: const TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
+
+          // Claymorphic Input Area
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      minLines: 1,
-                      maxLines: 5,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                      decoration: InputDecoration(
-                        hintText: 'Ask me anything about your studies...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 12,
+                    child: ClayContainer(
+                      depth: 3,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      child: TextField(
+                        controller: _controller,
+                        minLines: 1,
+                        maxLines: 5,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendMessage(),
+                        style: const TextStyle(fontSize: 14),
+                        decoration: const InputDecoration(
+                          hintText: 'Ask a question or explain a concept...',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: ClayTokens.secondaryText,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    tooltip: 'Send message',
-                    onPressed: _sending ? null : _sendMessage,
-                    icon: const Icon(Icons.send_rounded),
+                  const SizedBox(width: 10),
+                  ClayButton(
+                    onPressed: _sending ? null : () => _sendMessage(),
+                    padding: const EdgeInsets.all(13),
+                    borderRadius: BorderRadius.circular(ClayTokens.radiusPill),
+                    depth: 5,
+                    child: const Icon(
+                      Icons.send_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -224,51 +279,94 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
   }
 
-  Widget _welcome(ColorScheme colors) {
+  Widget _buildWelcomeState(BuildContext context, bool isDark) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              radius: 34,
-              backgroundColor: colors.primaryContainer,
-              child: Icon(
-                Icons.auto_awesome_rounded,
-                size: 34,
-                color: colors.onPrimaryContainer,
+            ClayContainer(
+              width: 72,
+              height: 72,
+              depth: 6,
+              color: ClayTokens.softLavender,
+              borderRadius: BorderRadius.circular(24),
+              child: const Center(
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 38,
+                  color: ClayTokens.deepIndigo,
+                ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              'What would you like to learn?',
+              'What would you like to master today?',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+                  ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.4),
             ),
             const SizedBox(height: 8),
             Text(
-              'Ask questions, explore difficult concepts, or get help planning your studies.',
+              'Get instant homework help, step-by-step math derivations, and personalized study schedules.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: colors.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                height: 1.4,
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
+
+            // Prompt Chips
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Suggested Topics:',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 10),
             for (final prompt in [
-              'Explain a difficult topic step by step',
-              'Help me prepare for an exam',
-              'Create a study plan for this week',
+              'Explain Newton\'s Laws of Motion with real examples',
+              'Break down Calculus derivatives step-by-step',
+              'Create a 5-day study plan for midterm exams',
+              'How to structure an academic research report',
             ])
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: OutlinedButton(
-                  onPressed: _sending
-                      ? null
-                      : () {
-                          _controller.text = prompt;
-                          _sendMessage();
-                        },
-                  child: Text(prompt, textAlign: TextAlign.center),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ClayCard(
+                  depth: 3,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  onTap: _sending ? null : () => _sendMessage(prompt),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 16,
+                        color: ClayTokens.deepIndigo,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          prompt,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 12,
+                        color: ClayTokens.secondaryText,
+                      ),
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -277,27 +375,114 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
   }
 
-  Widget _messageBubble(MentorMessage message, ColorScheme colors) {
+  Widget _buildTypingIndicator(bool isDark) {
     return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: ClayContainer(
+          depth: 3,
+          color: isDark ? ClayTokens.darkCard : ClayTokens.softLavender,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          borderRadius: BorderRadius.circular(18),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: ClayTokens.deepIndigo,
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                'AI Mentor is thinking...',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: ClayTokens.deepIndigo,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(
+    BuildContext context,
+    MentorMessage message,
+    bool isDark,
+  ) {
+    final isUser = message.isUser;
+
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.82,
         ),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: message.isUser
-              ? colors.primaryContainer
-              : colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: SelectableText(
-          message.text,
-          style: TextStyle(
-            color: message.isUser
-                ? colors.onPrimaryContainer
-                : colors.onSurface,
+        margin: const EdgeInsets.only(bottom: 14),
+        child: ClayContainer(
+          depth: 4,
+          gradient: isUser
+              ? const LinearGradient(
+                  colors: [Color(0xFF6356F5), Color(0xFF473BB8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: !isUser ? (isDark ? ClayTokens.darkCard : Colors.white) : null,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: isUser
+                ? const Radius.circular(20)
+                : const Radius.circular(4),
+            bottomRight: isUser
+                ? const Radius.circular(4)
+                : const Radius.circular(20),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Column(
+            crossAxisAlignment: isUser
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isUser ? Icons.person_rounded : Icons.auto_awesome_rounded,
+                    size: 13,
+                    color: isUser ? Colors.white70 : ClayTokens.deepIndigo,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isUser ? 'You' : 'AI Mentor',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isUser ? Colors.white70 : ClayTokens.deepIndigo,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              SelectableText(
+                message.text,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  height: 1.45,
+                  color: isUser
+                      ? Colors.white
+                      : (isDark ? Colors.white : ClayTokens.darkInk),
+                ),
+              ),
+            ],
           ),
         ),
       ),

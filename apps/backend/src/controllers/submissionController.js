@@ -1,9 +1,12 @@
+const path = require("path");
+const mongoose = require("mongoose");
 const { notifyUser } = require("../utils/notify");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const { deleteFromCloudinary } = uploadToCloudinary;
 
 const Assignment = require("../models/Assignment");
 const Submission = require("../models/Submission");
+const User = mongoose.models.User || require(path.resolve(__dirname, "../../../../src/models/User"));
 
 // POST /api/submissions/assignment/:assignmentId
 exports.submitAssignment = async (req, res) => {
@@ -11,7 +14,31 @@ exports.submitAssignment = async (req, res) => {
   let newlyUploadedResourceType = null;
 
   try {
-    const { studentId, text } = req.body || {};
+    const rawStudentId = req.body?.studentId || req.user?._id || req.user?.uid || (process.env.NODE_ENV !== "production" ? "mock-student-01" : null);
+    const text = req.body?.text;
+
+    if (!rawStudentId || (!text?.trim() && !req.file && !req.body?.fileUrl)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "studentId and text or fileUrl are required" });
+    }
+
+    // Resolve studentId to a valid User ObjectId
+    let studentId = rawStudentId;
+    if (!mongoose.Types.ObjectId.isValid(rawStudentId)) {
+      let userDoc = await User.findOne({ uid: rawStudentId });
+      if (!userDoc && process.env.NODE_ENV !== "production") {
+        userDoc = await User.create({
+          uid: rawStudentId,
+          name: "Demo Student",
+          email: `${rawStudentId}@demo.com`,
+          role: "student",
+        });
+      }
+      if (userDoc) {
+        studentId = userDoc._id;
+      }
+    }
 
     const assignment = await Assignment.findById(req.params.assignmentId);
     if (!assignment) {
@@ -45,12 +72,6 @@ exports.submitAssignment = async (req, res) => {
       if (!req.body?.fileUrl) {
         fileUrl = previous.fileUrl || "";
       }
-    }
-
-    if (!studentId || (!text?.trim() && !fileUrl)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "studentId and text or fileUrl are required" });
     }
 
     const now = new Date();
@@ -104,9 +125,17 @@ exports.getSubmissionsByAssignment = async (req, res) => {
 // GET /api/submissions/assignment/:assignmentId/student/:studentId
 exports.getMySubmission = async (req, res) => {
   try {
+    let studentId = req.params.studentId;
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      const userDoc = await User.findOne({ uid: studentId });
+      if (userDoc) {
+        studentId = userDoc._id;
+      }
+    }
+
     const submission = await Submission.findOne({
       assignmentId: req.params.assignmentId,
-      studentId: req.params.studentId,
+      studentId,
     });
     res.json({ success: true, data: submission });
   } catch (error) {
@@ -137,12 +166,12 @@ exports.gradeSubmission = async (req, res) => {
     existing.status = "graded";
     await existing.save();
     await notifyUser({
-  userId: existing.studentId,
-  title: "Assignment graded",
-  message: `You got ${marks}/${existing.assignmentId.maxMarks} in "${existing.assignmentId.title}"`,
-  type: "grade",
-  refId: existing._id,
-});
+      userId: existing.studentId.toString(),
+      title: "Assignment graded",
+      message: `You got ${marks}/${existing.assignmentId.maxMarks} in "${existing.assignmentId.title}"`,
+      type: "grade",
+      refId: existing._id,
+    });
 
     res.json({ success: true, message: "Graded", data: existing });
   } catch (error) {

@@ -332,7 +332,13 @@ class InMemoryHomeRepository implements HomeRepository {
   }
 
   @override
-  Future<bool> submitAssignment(String assignmentId, String text) async {
+  Future<bool> submitAssignment(
+    String assignmentId,
+    String text, {
+    String? studentId,
+    String? fileUrl,
+    String? fileName,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     final index = _assignments.indexWhere((a) => a.id == assignmentId);
     if (index == -1) return false;
@@ -340,7 +346,56 @@ class InMemoryHomeRepository implements HomeRepository {
     _assignments[index] = _assignments[index].copyWith(
       status: AssignmentStatus.submitted,
       submittedText: text,
+      submittedFileUrl: fileUrl,
+      submittedAt: DateTime.now(),
     );
+    return true;
+  }
+
+  @override
+  Future<AssignmentItem> createAssignment({
+    required String classId,
+    required String title,
+    required String subject,
+    required String dueDate,
+    required int points,
+    String? description,
+    String? createdBy,
+    String? attachmentUrl,
+    String? attachmentName,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final item = AssignmentItem(
+      id: 'assign-${DateTime.now().millisecondsSinceEpoch}',
+      classId: classId,
+      title: title.trim(),
+      subject: subject.trim(),
+      dueDate: dueDate.trim(),
+      points: points,
+      status: AssignmentStatus.pending,
+      description: description?.trim() ?? '',
+      attachmentUrl: attachmentUrl?.trim(),
+      attachmentName: attachmentName?.trim(),
+    );
+    _assignments.insert(0, item);
+    return item;
+  }
+
+  @override
+  Future<bool> gradeSubmission(
+    String submissionId, {
+    required int marks,
+    String? feedback,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    final index = _assignments.indexWhere((a) => a.id == submissionId);
+    if (index != -1) {
+      _assignments[index] = _assignments[index].copyWith(
+        status: AssignmentStatus.graded,
+        marks: marks,
+        feedback: feedback,
+      );
+    }
     return true;
   }
 }

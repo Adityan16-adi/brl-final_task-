@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ["teacher", "student"],
         default: "student"
+    },
+    passwordHash: {
+        type: String,
+        default: null,
+        select: false
     }
 }, { timestamps: true });
 

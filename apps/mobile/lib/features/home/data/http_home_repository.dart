@@ -8,6 +8,10 @@ class HttpHomeRepository implements HomeRepository {
 
   final Dio dio;
 
+  // Local submission registry so student submissions persist across provider invalidations
+  final Map<String, ({String text, String? fileUrl, DateTime submittedAt})>
+  _submittedMap = {};
+
   @override
   Future<List<ClassroomItem>> getClassrooms() async {
     try {
@@ -137,10 +141,86 @@ class HttpHomeRepository implements HomeRepository {
 
   @override
   Future<List<AssignmentItem>> getAssignments() async {
-    // Return standard course assignments
-    return const [
-      AssignmentItem(
+    // 1. Fetch server submissions to synchronize status, marks and feedback
+    final serverSubmissions = <String, Map<String, dynamic>>{};
+    try {
+      final subRes = await dio.get<Map<String, dynamic>>('/api/submissions/my');
+      final data = subRes.data;
+      if (data != null && data['success'] == true && data['data'] is List) {
+        for (final raw in (data['data'] as List)) {
+          final s = raw as Map<String, dynamic>;
+          final assignId = s['assignmentId'] is Map
+              ? s['assignmentId']['_id']?.toString()
+              : s['assignmentId']?.toString();
+          if (assignId != null) {
+            serverSubmissions[assignId] = s;
+          }
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final response = await dio.get<Map<String, dynamic>>('/api/assignments');
+      final data = response.data;
+      if (data != null && data['success'] == true && data['data'] is List) {
+        final list = (data['data'] as List).map((raw) {
+          final m = raw as Map<String, dynamic>;
+          final id = m['_id']?.toString() ?? m['id']?.toString() ?? '';
+          final localSub = _submittedMap[id];
+          final s = serverSubmissions[id];
+
+          var status = AssignmentStatus.pending;
+          int? marks;
+          String? feedback;
+          var submittedText = localSub?.text;
+          var submittedFileUrl = localSub?.fileUrl;
+          var submittedAt = localSub?.submittedAt;
+
+          if (s != null) {
+            submittedText = s['text']?.toString() ?? submittedText;
+            submittedFileUrl = s['fileUrl']?.toString() ?? submittedFileUrl;
+            if (s['submittedAt'] != null) {
+              submittedAt = DateTime.tryParse(s['submittedAt'].toString()) ?? submittedAt;
+            }
+            if (s['status'] == 'graded') {
+              status = AssignmentStatus.graded;
+              marks = (s['marks'] as num?)?.toInt();
+              feedback = s['feedback']?.toString();
+            } else {
+              status = AssignmentStatus.submitted;
+            }
+          } else if (localSub != null) {
+            status = AssignmentStatus.submitted;
+          }
+
+          return AssignmentItem(
+            id: id,
+            classId: m['classId']?.toString(),
+            title: m['title']?.toString() ?? 'Assignment',
+            subject: m['subject']?.toString() ?? 'General',
+            dueDate: m['dueDate'] != null
+                ? m['dueDate'].toString().split('T')[0]
+                : 'Upcoming',
+            points: (m['maxMarks'] as num?)?.toInt() ?? 10,
+            status: status,
+            description: m['description']?.toString() ?? '',
+            attachmentUrl: m['fileUrl']?.toString(),
+            submittedText: submittedText,
+            submittedFileUrl: submittedFileUrl,
+            submittedAt: submittedAt,
+            marks: marks,
+            feedback: feedback,
+          );
+        }).toList();
+        if (list.isNotEmpty) return list;
+      }
+    } catch (_) {}
+
+    // Return standard course assignments with local and server submission status overlay
+    final defaults = [
+      const AssignmentItem(
         id: 'assign-cell-notes',
+        classId: 'class-cell-biology',
         title: 'Cell Structures Concept Map',
         subject: 'Biology',
         dueDate: 'Tomorrow, 11:59 PM',
@@ -148,8 +228,9 @@ class HttpHomeRepository implements HomeRepository {
         status: AssignmentStatus.pending,
         description: 'Create a conceptual diagram mapping eukaryotic vs prokaryotic organelle functions.',
       ),
-      AssignmentItem(
+      const AssignmentItem(
         id: 'assign-calc-ps3',
+        classId: 'class-calc-mechanics',
         title: 'Problem Set 3: Derivatives & Rates',
         subject: 'Mathematics',
         dueDate: 'In 3 days',
@@ -157,8 +238,9 @@ class HttpHomeRepository implements HomeRepository {
         status: AssignmentStatus.pending,
         description: 'Complete questions 1 to 15 from Chapter 4 on implicit differentiation.',
       ),
-      AssignmentItem(
+      const AssignmentItem(
         id: 'assign-hist-essay',
+        classId: 'class-mod-history',
         title: 'Primary Source Analysis Essay',
         subject: 'History',
         dueDate: 'Last Friday',
@@ -171,10 +253,64 @@ class HttpHomeRepository implements HomeRepository {
         feedback: 'Excellent synthesis of primary excerpts with thorough historiography.',
       ),
     ];
+
+    return defaults.map((a) {
+      final s = serverSubmissions[a.id];
+      final sub = _submittedMap[a.id];
+      if (s != null) {
+        return a.copyWith(
+          status: s['status'] == 'graded' ? AssignmentStatus.graded : AssignmentStatus.submitted,
+          submittedText: s['text']?.toString() ?? sub?.text,
+          submittedFileUrl: s['fileUrl']?.toString() ?? sub?.fileUrl,
+          marks: (s['marks'] as num?)?.toInt() ?? a.marks,
+          feedback: s['feedback']?.toString() ?? a.feedback,
+        );
+      }
+      if (sub != null) {
+        return a.copyWith(
+          status: AssignmentStatus.submitted,
+          submittedText: sub.text,
+          submittedFileUrl: sub.fileUrl,
+          submittedAt: sub.submittedAt,
+        );
+      }
+      return a;
+    }).toList();
   }
 
   @override
   Future<List<MaterialItem>> getMaterials() async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>('/api/materials');
+      final data = response.data;
+      if (data != null && data['success'] == true && data['data'] is List) {
+        final list = (data['data'] as List).map((raw) {
+          final m = raw as Map<String, dynamic>;
+          final id = m['_id']?.toString() ?? m['id']?.toString() ?? '';
+          final typeStr = m['type']?.toString().toLowerCase() ?? '';
+          var type = CourseMaterialType.notes;
+          if (typeStr.contains('video')) {
+            type = CourseMaterialType.video;
+          } else if (typeStr.contains('doc') || typeStr.contains('pdf')) {
+            type = CourseMaterialType.document;
+          }
+
+          return MaterialItem(
+            id: id,
+            title: m['title']?.toString() ?? 'Learning Material',
+            subject: m['subject']?.toString() ?? 'General',
+            type: type,
+            details: m['description']?.toString() ?? '',
+            link: m['fileUrl']?.toString() ?? m['link']?.toString() ?? '',
+            createdAt: m['createdAt'] != null
+                ? m['createdAt'].toString().split('T')[0]
+                : 'Recent',
+          );
+        }).toList();
+        if (list.isNotEmpty) return list;
+      }
+    } catch (_) {}
+
     return const [
       MaterialItem(
         id: 'mat-cell-slides',
@@ -208,6 +344,52 @@ class HttpHomeRepository implements HomeRepository {
 
   @override
   Future<List<ScheduleItem>> getSchedule() async {
+    try {
+      final classrooms = await getClassrooms();
+      final assignments = await getAssignments();
+      final items = <ScheduleItem>[];
+
+      // Add classroom sessions
+      for (final c in classrooms) {
+        final isToday =
+            c.schedule.toLowerCase().contains('today') ||
+            c.schedule.toLowerCase().contains('now');
+        items.add(
+          ScheduleItem(
+            id: 'sched-class-${c.id}',
+            title: '${c.name} Lecture',
+            subject: c.subject,
+            time: c.schedule.isNotEmpty ? c.schedule : 'Scheduled Session',
+            location: c.room.isNotEmpty ? c.room : 'Virtual Hall',
+            type: 'Lecture',
+            isToday: isToday,
+          ),
+        );
+      }
+
+      // Add assignment deadlines
+      for (final a in assignments) {
+        final isToday =
+            a.dueDate.toLowerCase().contains('today') ||
+            a.dueDate.toLowerCase().contains('tomorrow');
+        items.add(
+          ScheduleItem(
+            id: 'sched-assign-${a.id}',
+            title: '${a.title} (Due)',
+            subject: a.subject,
+            time: 'Due: ${a.dueDate}',
+            location: a.status == AssignmentStatus.submitted
+                ? 'Turned In'
+                : 'Assignment Deadline',
+            type: 'Deadline',
+            isToday: isToday,
+          ),
+        );
+      }
+
+      if (items.isNotEmpty) return items;
+    } catch (_) {}
+
     return const [
       ScheduleItem(
         id: 'sched-today-bio',
@@ -240,15 +422,114 @@ class HttpHomeRepository implements HomeRepository {
   }
 
   @override
-  Future<bool> submitAssignment(String assignmentId, String text) async {
+  Future<bool> submitAssignment(
+    String assignmentId,
+    String text, {
+    String? studentId,
+    String? fileUrl,
+    String? fileName,
+  }) async {
     try {
       final response = await dio.post<Map<String, dynamic>>(
         '/api/submissions/assignment/$assignmentId',
-        data: {'text': text},
+        data: {
+          'text': text.trim(),
+          'studentId': studentId ?? 'mock-student-01',
+          if (fileUrl != null && fileUrl.isNotEmpty) 'fileUrl': fileUrl.trim(),
+        },
       );
-      return response.statusCode == 200 || response.statusCode == 201;
+      final ok = response.statusCode == 200 || response.statusCode == 201;
+      if (ok) {
+        _submittedMap[assignmentId] = (
+          text: text.trim(),
+          fileUrl: fileUrl?.trim(),
+          submittedAt: DateTime.now(),
+        );
+      }
+      return ok;
     } catch (_) {
-      return true; // Optimistic fallback for demo
+      // Optimistic fallback for demo / test mode
+      _submittedMap[assignmentId] = (
+        text: text.trim(),
+        fileUrl: fileUrl?.trim(),
+        submittedAt: DateTime.now(),
+      );
+      return true;
+    }
+  }
+
+  @override
+  Future<AssignmentItem> createAssignment({
+    required String classId,
+    required String title,
+    required String subject,
+    required String dueDate,
+    required int points,
+    String? description,
+    String? createdBy,
+    String? attachmentUrl,
+    String? attachmentName,
+  }) async {
+    try {
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/assignments',
+        data: {
+          'classId': classId,
+          'title': title.trim(),
+          'subject': subject.trim(),
+          'dueDate': dueDate.trim(),
+          'maxMarks': points,
+          if (createdBy != null && createdBy.isNotEmpty) 'createdBy': createdBy,
+          if (description != null && description.isNotEmpty)
+            'description': description.trim(),
+          if (attachmentUrl != null && attachmentUrl.isNotEmpty)
+            'fileUrl': attachmentUrl.trim(),
+        },
+      );
+      final data = response.data;
+      if (data != null && data['success'] == true && data['data'] != null) {
+        final a = data['data'] as Map<String, dynamic>;
+        return AssignmentItem(
+          id: a['_id']?.toString() ?? a['id']?.toString() ?? '',
+          classId: classId,
+          title: a['title']?.toString() ?? title,
+          subject: subject,
+          dueDate: a['dueDate']?.toString() ?? dueDate,
+          points: (a['maxMarks'] as num?)?.toInt() ?? points,
+          status: AssignmentStatus.pending,
+          description: a['description']?.toString() ?? description ?? '',
+          attachmentUrl: a['fileUrl']?.toString() ?? attachmentUrl,
+          attachmentName: attachmentName,
+        );
+      }
+      throw const ClassroomException('Unexpected response from server');
+    } on DioException catch (e) {
+      final message =
+          e.response?.data is Map && e.response?.data['message'] != null
+          ? e.response?.data['message'].toString()
+          : e.message ?? 'Unable to connect to server';
+      throw ClassroomException(message!, statusCode: e.response?.statusCode);
+    }
+  }
+
+  @override
+  Future<bool> gradeSubmission(
+    String submissionId, {
+    required int marks,
+    String? feedback,
+  }) async {
+    try {
+      final response = await dio.put<Map<String, dynamic>>(
+        '/api/submissions/$submissionId/grade',
+        data: {
+          'marks': marks,
+          if (feedback != null && feedback.trim().isNotEmpty)
+            'feedback': feedback.trim(),
+        },
+      );
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 }

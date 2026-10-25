@@ -1,5 +1,6 @@
-
+const mongoose = require("mongoose");
 const Material = require("../models/Material");
+const User = require("../models/User");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const { deleteFromCloudinary } = uploadToCloudinary;
 
@@ -17,14 +18,18 @@ exports.createMaterial = async (req, res) => {
     try {
         const {
             classId,
-            uploadedBy,
             title,
             description,
             link,
             thumbnailUrl,
         } = req.body || {};
 
-        if (!classId || !title || !uploadedBy) {
+        let uploaderInput = req.body?.uploadedBy || req.user?._id || req.user?.uid;
+        if (!uploaderInput && process.env.NODE_ENV !== "production") {
+            uploaderInput = "mock-teacher-01";
+        }
+
+        if (!classId || !title || !uploaderInput) {
             return res.status(400).json({
                 success: false,
                 message: "classId, uploadedBy and title are required",
@@ -36,6 +41,23 @@ exports.createMaterial = async (req, res) => {
                 success: false,
                 message: "Attach a file or provide a link",
             });
+        }
+
+        // Resolve uploadedBy to a valid User ObjectId
+        let uploadedBy = uploaderInput;
+        if (!mongoose.Types.ObjectId.isValid(uploaderInput)) {
+            let userDoc = await User.findOne({ uid: uploaderInput });
+            if (!userDoc && process.env.NODE_ENV !== "production") {
+                userDoc = await User.create({
+                    uid: uploaderInput,
+                    name: "Demo Teacher",
+                    email: `${uploaderInput}@demo.com`,
+                    role: "teacher",
+                });
+            }
+            if (userDoc) {
+                uploadedBy = userDoc._id;
+            }
         }
 
         let type = "link";
@@ -102,15 +124,11 @@ exports.createMaterial = async (req, res) => {
 // GET /api/materials/class/:classId
 exports.getMaterialsByClass = async (req, res) => {
     try {
-        const filter = { classId: req.params.classId };
+        const materials = await Material.find({
+            classId: req.params.classId,
+        }).sort({ createdAt: -1 });
 
-        if (req.query.type) {
-            filter.type = req.query.type;
-        }
-
-        const data = await Material.find(filter).sort({ createdAt: -1 });
-
-        return res.json({ success: true, data });
+        return res.json({ success: true, data: materials });
     } catch (error) {
         console.error("Get materials error:", error);
         return res.status(500).json({
@@ -164,13 +182,26 @@ exports.deleteMaterial = async (req, res) => {
         return res.json({
             success: true,
             message: "Material deleted",
-            data: material,
         });
     } catch (error) {
         console.error("Delete material error:", error);
         return res.status(500).json({
             success: false,
             message: "Unable to delete material",
+        });
+    }
+};
+
+// GET /api/materials
+exports.getAllMaterials = async (req, res) => {
+    try {
+        const materials = await Material.find().sort({ createdAt: -1 });
+        return res.json({ success: true, data: materials });
+    } catch (error) {
+        console.error("Get all materials error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to retrieve materials",
         });
     }
 };

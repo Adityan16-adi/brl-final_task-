@@ -20,10 +20,24 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
   final _scheduleController = TextEditingController();
   final _descController = TextEditingController();
 
+  bool _startNow = false;
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  int _durationMinutes = 60;
+
   bool _isSubmitting = false;
   String? _errorMessage;
   ClassroomItem? _createdClassroom;
   bool _copied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    _selectedDate = tomorrow;
+    _selectedTime = const TimeOfDay(hour: 10, minute: 0);
+    _updateScheduleText();
+  }
 
   @override
   void dispose() {
@@ -32,6 +46,59 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
     _scheduleController.dispose();
     _descController.dispose();
     super.dispose();
+  }
+
+  void _updateScheduleText() {
+    if (_startNow) {
+      _scheduleController.text = 'Started Now · Live Session';
+      return;
+    }
+
+    if (_selectedDate != null && _selectedTime != null) {
+      final d = _selectedDate!;
+      final dateStr =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      final hour = _selectedTime!.hourOfPeriod == 0
+          ? 12
+          : _selectedTime!.hourOfPeriod;
+      final minute = _selectedTime!.minute.toString().padLeft(2, '0');
+      final period = _selectedTime!.period == DayPeriod.am ? 'AM' : 'PM';
+      final durationStr = _durationMinutes >= 60
+          ? '${(_durationMinutes / 60).toStringAsFixed(_durationMinutes % 60 == 0 ? 0 : 1)}h'
+          : '${_durationMinutes}m';
+
+      _scheduleController.text =
+          '$dateStr · $hour:$minute $period ($durationStr)';
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _updateScheduleText();
+      });
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedTime = picked;
+        _updateScheduleText();
+      });
+    }
   }
 
   Future<void> _handleCreate() async {
@@ -44,15 +111,18 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
 
     try {
       final repo = ref.read(homeRepositoryProvider);
+      final finalSchedule = _scheduleController.text.trim();
+
       final created = await repo.createClassroom(
         name: _nameController.text.trim(),
         subject: _subjectController.text.trim(),
         description: _descController.text.trim(),
-        schedule: _scheduleController.text.trim(),
+        schedule: finalSchedule.isNotEmpty ? finalSchedule : 'Flexible Online',
       );
 
       ref.invalidate(classroomsProvider);
       ref.invalidate(homeSummaryProvider);
+      ref.invalidate(scheduleProvider);
 
       if (!mounted) return;
       setState(() {
@@ -97,15 +167,15 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusDialog),
         ),
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(
+            Icon(
               Icons.check_circle_rounded,
               color: AppTheme.statusGraded,
               size: 26,
             ),
-            const SizedBox(width: 10),
-            const Expanded(
+            SizedBox(width: 10),
+            Expanded(
               child: Text(
                 'Classroom Created!',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -118,7 +188,7 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Your new classroom "${_createdClassroom!.name}" is ready.',
+              'Your classroom "${_createdClassroom!.name}" is ready.',
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 16),
@@ -172,15 +242,20 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Students can use this join code to enroll in your class immediately.',
+              'Students can use this join code to enroll immediately.',
               style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
             ),
           ],
         ),
         actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_createdClassroom),
             child: const Text('Done'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(_createdClassroom),
+            icon: const Icon(Icons.meeting_room_rounded, size: 18),
+            label: const Text('Open Classroom'),
           ),
         ],
       );
@@ -210,7 +285,7 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Set up a new virtual classroom for your students.',
+                'Set up a new virtual classroom and configure its schedule.',
                 style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
               ),
               const SizedBox(height: 16),
@@ -245,14 +320,151 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
+
+              // Scheduling Mode Card
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.flash_on_rounded,
+                                size: 18,
+                                color: Colors.amber,
+                              ),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Start Class Session Now',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: _startNow,
+                          onChanged: _isSubmitting
+                              ? null
+                              : (val) {
+                                  setState(() {
+                                    _startNow = val;
+                                    _updateScheduleText();
+                                  });
+                                },
+                        ),
+                      ],
+                    ),
+                    if (!_startNow) ...[
+                      const Divider(height: 18),
+                      const Text(
+                        'Scheduled Date & Time:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isSubmitting ? null : _pickDate,
+                              icon: const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 14,
+                              ),
+                              label: Text(
+                                _selectedDate != null
+                                    ? '${_selectedDate!.month}/${_selectedDate!.day}/${_selectedDate!.year}'
+                                    : 'Pick Date',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isSubmitting ? null : _pickTime,
+                              icon: const Icon(
+                                Icons.access_time_rounded,
+                                size: 14,
+                              ),
+                              label: Text(
+                                _selectedTime != null
+                                    ? _selectedTime!.format(context)
+                                    : 'Pick Time',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<int>(
+                        decoration: const InputDecoration(
+                          labelText: 'Estimated Duration',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                        ),
+                        initialValue: _durationMinutes,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 30,
+                            child: Text('30 Minutes'),
+                          ),
+                          DropdownMenuItem(
+                            value: 45,
+                            child: Text('45 Minutes'),
+                          ),
+                          DropdownMenuItem(value: 60, child: Text('1 Hour')),
+                          DropdownMenuItem(value: 90, child: Text('1.5 Hours')),
+                          DropdownMenuItem(value: 120, child: Text('2 Hours')),
+                        ],
+                        onChanged: _isSubmitting
+                            ? null
+                            : (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _durationMinutes = val;
+                                    _updateScheduleText();
+                                  });
+                                }
+                              },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _scheduleController,
                 enabled: !_isSubmitting,
                 decoration: const InputDecoration(
                   labelText: 'Schedule (Optional)',
-                  hintText: 'e.g. Mon, Wed 10:00 AM',
-                  prefixIcon: Icon(Icons.calendar_today_rounded),
+                  prefixIcon: Icon(Icons.event_note_rounded),
                 ),
               ),
               const SizedBox(height: 12),
@@ -316,7 +528,7 @@ class _CreateClassDialogState extends ConsumerState<CreateClassDialog> {
                     color: Colors.white,
                   ),
                 )
-              : const Text('Create Class'),
+              : Text(_startNow ? 'Start Classroom Now' : 'Create Class'),
         ),
       ],
     );

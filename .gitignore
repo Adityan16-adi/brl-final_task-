@@ -35,3 +35,5 @@ Thumbs.db
 
 # Backend uploads
 apps/backend/uploads/
+ml_service/.venv/
+uploads/

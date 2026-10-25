@@ -5,6 +5,7 @@ Docs: http://localhost:8001/docs  (try every endpoint from the browser)
 """
 from dataclasses import asdict
 import logging
+import os
 
 from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
@@ -25,6 +26,41 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 spam_detector = SpamDetector()
 mentor = Mentor()
+
+
+def _handle_llm_exception(service_name: str, e: Exception):
+    err_str = str(e)
+    err_type = type(e).__name__
+    if isinstance(e, RuntimeError) or "GROQ_API_KEY not found" in err_str:
+        logger.error(f"{service_name} configuration error: {e}")
+        raise HTTPException(503, "GROQ_API_KEY not found. Set GROQ_API_KEY in ml_service/.env to enable live AI responses.")
+    if "invalid_api_key" in err_str or "Invalid API Key" in err_str or "AuthenticationError" in err_type:
+        logger.error(f"{service_name} authentication error: {e}")
+        raise HTTPException(503, "Invalid GROQ_API_KEY: The configured Groq key was rejected by the Groq API. Please update GROQ_API_KEY in ml_service/.env.")
+    if isinstance(e, ValueError):
+        raise HTTPException(400, str(e))
+    logger.error(f"{service_name} error: {e}")
+    raise HTTPException(502, f"The {service_name} service is currently unavailable. Please try again.")
+
+
+# ---------- health & status ----------
+@app.get("/")
+@app.get("/health")
+def health():
+    groq_configured = bool(os.getenv("GROQ_API_KEY") and "your_free_key" not in os.getenv("GROQ_API_KEY", ""))
+    return {
+        "status": "ok",
+        "service": "ml_service",
+        "features": {
+            "spam_detection": True,
+            "summarizer": True,
+            "quiz_generation": True,
+            "ai_mentor": True,
+            "live_captions": True,
+            "noise_cancellation": True,
+        },
+        "llm_configured": groq_configured,
+    }
 
 
 # ---------- spam ----------
@@ -57,11 +93,8 @@ class SummarizeIn(BaseModel):
 async def summarize(body: SummarizeIn):
     try:
         return {"summary": await run_in_threadpool(summarize_notes, body.text, body.style)}
-    except ValueError as e:
-        raise HTTPException(400, str(e))
     except Exception as e:
-        logger.error(f"Summarizer service error: {e}")
-        raise HTTPException(502, "The summarizer service is currently unavailable. Please try again.")
+        _handle_llm_exception("Summarizer", e)
 
 
 # ---------- quiz ----------
@@ -75,11 +108,8 @@ class QuizIn(BaseModel):
 async def quiz(body: QuizIn):
     try:
         return await run_in_threadpool(generate_quiz, body.text, body.num_questions, body.difficulty)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
     except Exception as e:
-        logger.error(f"Quiz service error: {e}")
-        raise HTTPException(502, "The quiz generation service is currently unavailable. Please try again.")
+        _handle_llm_exception("Quiz generator", e)
 
 
 # ---------- AI mentor ----------
@@ -98,11 +128,8 @@ class MaterialIn(BaseModel):
 async def mentor_chat(body: ChatIn):
     try:
         return {"reply": await run_in_threadpool(mentor.chat, body.session_id, body.message, body.course_id)}
-    except ValueError as e:
-        raise HTTPException(400, str(e))
     except Exception as e:
-        logger.error(f"AI Mentor service error: {e}")
-        raise HTTPException(502, "The AI Mentor service is currently unavailable. Please try again.")
+        _handle_llm_exception("AI Mentor", e)
 
 
 @app.post("/mentor/materials")

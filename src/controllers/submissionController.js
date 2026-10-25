@@ -1,7 +1,8 @@
-
+const mongoose = require("mongoose");
 const { notifyUser } = require("../utils/notify");
 const Assignment = require("../models/Assignment");
 const Submission = require("../models/Submission");
+const User = require("../models/User");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const { deleteFromCloudinary } = uploadToCloudinary;
 
@@ -11,13 +12,31 @@ exports.submitAssignment = async (req, res) => {
     let newlyUploadedResourceType = null;
 
     try {
-        const { studentId, text } = req.body || {};
+        const rawStudentId = req.body?.studentId || req.user?._id || req.user?.uid || (process.env.NODE_ENV !== "production" ? "mock-student-01" : null);
+        const text = req.body?.text;
 
-        if (!studentId || (!text?.trim() && !req.file && !req.body.fileUrl)) {
+        if (!rawStudentId || (!text?.trim() && !req.file && !req.body?.fileUrl)) {
             return res.status(400).json({
                 success: false,
                 message: "studentId and text or a file are required",
             });
+        }
+
+        // Resolve studentId to a valid User ObjectId
+        let studentId = rawStudentId;
+        if (!mongoose.Types.ObjectId.isValid(rawStudentId)) {
+            let userDoc = await User.findOne({ uid: rawStudentId });
+            if (!userDoc && process.env.NODE_ENV !== "production") {
+                userDoc = await User.create({
+                    uid: rawStudentId,
+                    name: "Demo Student",
+                    email: `${rawStudentId}@demo.com`,
+                    role: "student",
+                });
+            }
+            if (userDoc) {
+                studentId = userDoc._id;
+            }
         }
 
         const assignment = await Assignment.findById(req.params.assignmentId);
@@ -34,7 +53,7 @@ exports.submitAssignment = async (req, res) => {
             studentId,
         });
 
-        let fileUrl = req.body.fileUrl || "";
+        let fileUrl = req.body?.fileUrl || "";
         let filePublicId = "";
         let fileResourceType = "";
 
@@ -58,7 +77,7 @@ exports.submitAssignment = async (req, res) => {
         if (!req.file && previous) {
             filePublicId = previous.filePublicId || "";
             fileResourceType = previous.fileResourceType || "";
-            if (!req.body.fileUrl) {
+            if (!req.body?.fileUrl) {
                 fileUrl = previous.fileUrl || "";
             }
         }
@@ -130,9 +149,17 @@ exports.getSubmissionsByAssignment = async (req, res) => {
 // GET /api/submissions/assignment/:assignmentId/student/:studentId
 exports.getMySubmission = async (req, res) => {
     try {
+        let studentId = req.params.studentId;
+        if (!mongoose.Types.ObjectId.isValid(studentId)) {
+            const userDoc = await User.findOne({ uid: studentId });
+            if (userDoc) {
+                studentId = userDoc._id;
+            }
+        }
+
         const submission = await Submission.findOne({
             assignmentId: req.params.assignmentId,
-            studentId: req.params.studentId,
+            studentId,
         });
 
         return res.json({ success: true, data: submission });
@@ -192,7 +219,7 @@ exports.gradeSubmission = async (req, res) => {
         await existing.save();
 
         await notifyUser({
-            userId: existing.studentId,
+            userId: existing.studentId.toString(),
             title: "Assignment graded",
             message: `You got ${numericMarks}/${existing.assignmentId.maxMarks} in "${existing.assignmentId.title}"`,
             type: "grade",
@@ -209,6 +236,32 @@ exports.gradeSubmission = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Unable to grade submission",
+        });
+    }
+};
+
+// GET /api/submissions/student/:studentId or /api/submissions/my
+exports.getAllStudentSubmissions = async (req, res) => {
+    try {
+        const rawStudentId = req.params.studentId || req.user?._id || req.user?.uid || "mock-student-01";
+        let studentId = rawStudentId;
+        if (!mongoose.Types.ObjectId.isValid(rawStudentId)) {
+            const userDoc = await User.findOne({ uid: rawStudentId });
+            if (userDoc) {
+                studentId = userDoc._id;
+            }
+        }
+
+        const submissions = await Submission.find({
+            $or: [{ studentId }, { studentId: rawStudentId }]
+        }).populate("assignmentId");
+
+        return res.json({ success: true, data: submissions });
+    } catch (error) {
+        console.error("Get student submissions error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to retrieve submissions",
         });
     }
 };

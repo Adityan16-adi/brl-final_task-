@@ -1,6 +1,10 @@
+const path = require("path");
+const mongoose = require("mongoose");
 const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const { deleteFromCloudinary } = uploadToCloudinary;
 const Assignment = require("../models/Assignment");
+const Classroom = mongoose.models.Classroom || require(path.resolve(__dirname, "../../../../src/models/Classroom"));
+const User = mongoose.models.User || require(path.resolve(__dirname, "../../../../src/models/User"));
 
 // POST /api/assignments  -> create a new assignment
 exports.createAssignment = async (req, res) => {
@@ -8,12 +12,42 @@ exports.createAssignment = async (req, res) => {
   let newlyUploadedResourceType = null;
 
   try {
-    const { classId, title, description, dueDate, maxMarks, createdBy } = req.body;
+    const { classId, title, description, dueDate, maxMarks } = req.body;
+    let creatorInput = req.body?.createdBy || req.user?._id || req.user?.uid;
+    if (!creatorInput && process.env.NODE_ENV !== "production") {
+      creatorInput = "mock-teacher-01";
+    }
 
-    if (!classId || !title || !dueDate) {
+    if (!classId || !title || !dueDate || !creatorInput) {
       return res
         .status(400)
         .json({ success: false, message: "classId, title and dueDate are required" });
+    }
+
+    // Resolve createdBy to a valid User ObjectId
+    let createdBy = creatorInput;
+    if (!mongoose.Types.ObjectId.isValid(creatorInput)) {
+      let userDoc = await User.findOne({ uid: creatorInput });
+      if (!userDoc && process.env.NODE_ENV !== "production") {
+        userDoc = await User.create({
+          uid: creatorInput,
+          name: "Demo Teacher",
+          email: `${creatorInput}@demo.com`,
+          role: "teacher",
+        });
+      }
+      if (userDoc) {
+        createdBy = userDoc._id;
+      }
+    }
+
+    // Resolve classId if provided as code
+    let resolvedClassId = classId;
+    if (!mongoose.Types.ObjectId.isValid(classId)) {
+      const foundClass = await Classroom.findOne({ code: classId });
+      if (foundClass) {
+        resolvedClassId = foundClass._id;
+      }
     }
 
     let fileData = {};
@@ -29,11 +63,11 @@ exports.createAssignment = async (req, res) => {
     }
 
     const assignment = await Assignment.create({
-      classId,
+      classId: resolvedClassId,
       title,
       description,
       dueDate,
-      maxMarks,
+      maxMarks: maxMarks ? Number(maxMarks) : 10,
       createdBy,
       ...fileData
     });
@@ -49,6 +83,18 @@ exports.createAssignment = async (req, res) => {
         message: "Storage service not configured. Unable to upload file.",
       });
     }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET /api/assignments -> get all assignments
+exports.getAllAssignments = async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query?.classId) filter.classId = req.query.classId;
+    const assignments = await Assignment.find(filter).sort({ dueDate: 1 });
+    res.json({ success: true, data: assignments });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };

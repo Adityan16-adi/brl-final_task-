@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile/core/branding/app_branding.dart';
 import 'package:mobile/core/routing/app_router.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/features/auth/application/auth_providers.dart';
 import 'package:mobile/features/home/presentation/home_providers.dart';
 
-void main() {
-  runApp(const ProviderScope(child: LearningApp()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const LearningApp(),
+    ),
+  );
 }
 
 class LearningApp extends ConsumerWidget {

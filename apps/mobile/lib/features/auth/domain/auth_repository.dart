@@ -21,6 +21,20 @@ class AppUser {
 
   bool get isTeacher => role == UserRole.teacher;
   bool get isStudent => role == UserRole.student;
+
+  Map<String, dynamic> toJson() => {
+        'uid': uid,
+        'email': email,
+        'name': name,
+        'role': role.name,
+      };
+
+  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
+        uid: json['uid']?.toString() ?? '',
+        email: json['email']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        role: UserRole.fromString(json['role']?.toString()),
+      );
 }
 
 /// A user-facing authentication failure.
@@ -49,4 +63,10 @@ abstract interface class AuthRepository {
 
   /// Current ID token for API calls, or null.
   Future<String?> getIdToken();
+
+  /// Whether onboarding has been completed by the user
+  bool hasCompletedOnboarding();
+
+  /// Mark onboarding state
+  Future<void> setOnboardingCompleted(bool value);
 }

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/branding/app_branding.dart';
-import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/core/theme/clay_theme.dart';
 
 import '../../auth/application/auth_providers.dart';
 import '../../auth/domain/auth_repository.dart';
 import 'home_providers.dart';
+import 'widgets/app_drawer.dart';
 import 'widgets/assignments_view.dart';
 import 'widgets/classrooms_view.dart';
 import 'widgets/create_class_dialog.dart';
@@ -67,95 +68,132 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _showAccountSheet(BuildContext context, AppUser? user) {
     final colors = Theme.of(context).colorScheme;
+    final isTeacher = user?.isTeacher == true;
+
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetCtx) {
         return Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40,
+                width: 44,
                 height: 4,
                 decoration: BoxDecoration(
                   color: colors.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 16),
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: colors.primaryContainer,
-                child: Text(
-                  user?.name.isNotEmpty == true
-                      ? user!.name[0].toUpperCase()
-                      : 'U',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: colors.primary,
+              const SizedBox(height: 20),
+              ClayContainer(
+                width: 64,
+                height: 64,
+                depth: 5,
+                gradient: LinearGradient(
+                  colors: isTeacher
+                      ? [const Color(0xFF9333EA), const Color(0xFF6B21A8)]
+                      : [const Color(0xFF6356F5), const Color(0xFF473BB8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+                child: Center(
+                  child: Text(
+                    user?.name.isNotEmpty == true
+                        ? user!.name[0].toUpperCase()
+                        : 'U',
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 user?.name ?? 'Demo User',
                 style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
                 user?.email ?? 'student@demo.com',
                 style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
               ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      (user?.isTeacher == true
-                              ? AppTheme.roleTeacher
-                              : AppTheme.roleStudent)
-                          .withAlpha(24),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color:
-                        (user?.isTeacher == true
-                                ? AppTheme.roleTeacher
-                                : AppTheme.roleStudent)
-                            .withAlpha(80),
-                  ),
-                ),
-                child: Text(
-                  user?.role.name.toUpperCase() ?? 'STUDENT',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: user?.isTeacher == true
-                        ? AppTheme.roleTeacher
-                        : AppTheme.roleStudent,
-                  ),
-                ),
+              const SizedBox(height: 10),
+              ClayBadge(
+                label: user?.role.name.toUpperCase() ?? 'STUDENT',
+                backgroundColor: isTeacher
+                    ? const Color(0xFFF3E8FF)
+                    : ClayTokens.softLavender,
+                textColor: isTeacher
+                    ? const Color(0xFF8B5CF6)
+                    : ClayTokens.deepIndigo,
+                icon: isTeacher
+                    ? Icons.co_present_rounded
+                    : Icons.school_rounded,
               ),
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.manage_accounts_rounded, size: 16),
+                      label: const Text('Account', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        Navigator.of(sheetCtx).pop();
+                        context.push('/account');
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.settings_rounded, size: 16),
+                      label: const Text('Settings', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        Navigator.of(sheetCtx).pop();
+                        context.push('/settings');
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.help_outline_rounded, size: 16),
+                      label: const Text('Help', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        Navigator.of(sheetCtx).pop();
+                        context.push('/help');
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ClayButton(
+                isFullWidth: true,
+                color: Colors.redAccent.shade700,
+                gradient: LinearGradient(
+                  colors: [Colors.redAccent.shade400, Colors.red.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                icon: Icons.logout_rounded,
                 onPressed: () {
                   Navigator.of(sheetCtx).pop();
                   ref.read(authRepositoryProvider).signOut();
                 },
-                icon: const Icon(Icons.logout_rounded, size: 18),
-                label: const Text('Sign Out / Switch Account'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(44),
-                ),
+                child: const Text('Sign Out / Switch Account'),
               ),
             ],
           ),
@@ -183,261 +221,277 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final currentThemeMode = ref.watch(themeModeProvider);
     final currentUser = ref.watch(currentUserProvider);
+    final currentThemeMode = ref.watch(themeModeProvider);
+    final colors = Theme.of(context).colorScheme;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWideScreen = constraints.maxWidth >= 640;
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+        }
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 720;
 
-        if (isWideScreen) {
-          return Scaffold(
-            body: Row(
-              children: [
-                // Navigation Rail for tablet / desktop / wide screens
-                NavigationRail(
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: _onTabSelect,
-                  extended: constraints.maxWidth >= 900,
-                  minExtendedWidth: 200,
-                  leading: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            borderRadius: BorderRadius.circular(10),
+          if (isWide) {
+            return Scaffold(
+              drawer: AppDrawer(
+                currentTabIndex: _currentIndex,
+                onSelectTab: _onTabSelect,
+              ),
+              body: Row(
+                children: [
+                  NavigationRail(
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: _onTabSelect,
+                    extended: constraints.maxWidth >= 900,
+                    minExtendedWidth: 200,
+                    leading: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ClayContainer(
+                            width: 40,
+                            height: 40,
+                            depth: 3,
+                            color: ClayTokens.deepIndigo,
+                            borderRadius: BorderRadius.circular(12),
+                            padding: EdgeInsets.zero,
+                            child: const Center(
+                              child: Icon(
+                                Icons.school_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
                           ),
-                          child: Icon(
-                            Icons.school_rounded,
-                            color: colors.onPrimary,
-                            size: 20,
-                          ),
-                        ),
-                        if (constraints.maxWidth >= 900) ...[
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          if (constraints.maxWidth >= 900) ...[
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  AppBranding.appName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                Text(
+                                  currentUser?.name ?? 'Virtual Classroom',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    trailing: Expanded(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                AppBranding.appName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
+                              IconButton(
+                                tooltip: 'Account Profile',
+                                icon: const Icon(Icons.account_circle_outlined),
+                                onPressed: () =>
+                                    _showAccountSheet(context, currentUser),
                               ),
-                              Text(
-                                currentUser?.name ?? 'Virtual Classroom',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: colors.onSurfaceVariant,
+                              const SizedBox(height: 4),
+                              IconButton(
+                                tooltip: _getThemeTooltip(currentThemeMode),
+                                icon: Icon(_getThemeIcon(currentThemeMode)),
+                                onPressed: _cycleTheme,
+                              ),
+                              const SizedBox(height: 8),
+                              ClayButton(
+                                onPressed: () => context.push('/mentor'),
+                                icon: Icons.auto_awesome_rounded,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
+                                child: constraints.maxWidth >= 900
+                                    ? const Text('AI Mentor')
+                                    : const Text('AI'),
                               ),
                             ],
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  trailing: Expanded(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Account Profile',
-                              icon: const Icon(Icons.account_circle_outlined),
-                              onPressed: () =>
-                                  _showAccountSheet(context, currentUser),
-                            ),
-                            const SizedBox(height: 4),
-                            IconButton(
-                              tooltip: _getThemeTooltip(currentThemeMode),
-                              icon: Icon(_getThemeIcon(currentThemeMode)),
-                              onPressed: _cycleTheme,
-                            ),
-                            const SizedBox(height: 8),
-                            FilledButton.tonalIcon(
-                              onPressed: () => context.push('/mentor'),
-                              icon: const Icon(
-                                Icons.auto_awesome_rounded,
-                                size: 18,
-                              ),
-                              label: constraints.maxWidth >= 900
-                                  ? const Text('AI Mentor')
-                                  : const Text('AI'),
-                              style: FilledButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ),
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.dashboard_outlined),
+                        selectedIcon: Icon(Icons.dashboard_rounded),
+                        label: Text('Overview'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.school_outlined),
+                        selectedIcon: Icon(Icons.school_rounded),
+                        label: Text('Classrooms'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.assignment_outlined),
+                        selectedIcon: Icon(Icons.assignment_rounded),
+                        label: Text('Assignments'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.menu_book_outlined),
+                        selectedIcon: Icon(Icons.menu_book_rounded),
+                        label: Text('Materials'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.calendar_month_outlined),
+                        selectedIcon: Icon(Icons.calendar_month_rounded),
+                        label: Text('Schedule'),
+                      ),
+                    ],
                   ),
-                  destinations: const [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard_rounded),
-                      label: Text('Overview'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.school_outlined),
-                      selectedIcon: Icon(Icons.school_rounded),
-                      label: Text('Classrooms'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.assignment_outlined),
-                      selectedIcon: Icon(Icons.assignment_rounded),
-                      label: Text('Assignments'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.menu_book_outlined),
-                      selectedIcon: Icon(Icons.menu_book_rounded),
-                      label: Text('Materials'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.calendar_month_outlined),
-                      selectedIcon: Icon(Icons.calendar_month_rounded),
-                      label: Text('Schedule'),
-                    ),
-                  ],
-                ),
-                const VerticalDivider(width: 1, thickness: 1),
-                Expanded(
-                  child: Scaffold(
-                    appBar: AppBar(
-                      title: Text(_titles[_currentIndex]),
-                      actions: [
-                        if (currentUser?.isTeacher == true)
-                          IconButton(
-                            tooltip: 'Create Classroom',
-                            icon: const Icon(Icons.add_circle_outline_rounded),
-                            onPressed: () => showDialog<bool>(
-                              context: context,
-                              builder: (_) => const CreateClassDialog(),
+                  const VerticalDivider(width: 1, thickness: 1),
+                  Expanded(
+                    child: Scaffold(
+                      appBar: AppBar(
+                        title: Text(_titles[_currentIndex]),
+                        actions: [
+                          if (currentUser?.isTeacher == true)
+                            IconButton(
+                              tooltip: 'Create Classroom',
+                              icon: const Icon(Icons.add_circle_outline_rounded),
+                              onPressed: () => showDialog<bool>(
+                                context: context,
+                                builder: (_) => const CreateClassDialog(),
+                              ),
+                            )
+                          else
+                            IconButton(
+                              tooltip: 'Join Classroom with Code',
+                              icon: const Icon(Icons.vpn_key_rounded),
+                              onPressed: () => showDialog<bool>(
+                                context: context,
+                                builder: (_) => const JoinClassDialog(),
+                              ),
                             ),
-                          )
-                        else
                           IconButton(
-                            tooltip: 'Join Classroom with Code',
-                            icon: const Icon(Icons.group_add_outlined),
-                            onPressed: () => showDialog<bool>(
-                              context: context,
-                              builder: (_) => const JoinClassDialog(),
-                            ),
+                            tooltip: 'AI Mentor Assistant',
+                            icon: const Icon(Icons.auto_awesome_rounded),
+                            onPressed: () => context.push('/mentor'),
                           ),
-                        IconButton(
-                          tooltip: 'AI Mentor Assistant',
-                          icon: const Icon(Icons.auto_awesome_rounded),
-                          onPressed: () => context.push('/mentor'),
-                        ),
-                        IconButton(
-                          tooltip: _getThemeTooltip(currentThemeMode),
-                          icon: Icon(_getThemeIcon(currentThemeMode)),
-                          onPressed: _cycleTheme,
-                        ),
-                        IconButton(
-                          tooltip: 'Account Profile',
-                          icon: const Icon(Icons.account_circle_outlined),
-                          onPressed: () =>
-                              _showAccountSheet(context, currentUser),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
+                          IconButton(
+                            tooltip: _getThemeTooltip(currentThemeMode),
+                            icon: Icon(_getThemeIcon(currentThemeMode)),
+                            onPressed: _cycleTheme,
+                          ),
+                          IconButton(
+                            tooltip: 'Account Profile',
+                            icon: const Icon(Icons.account_circle_outlined),
+                            onPressed: () =>
+                                _showAccountSheet(context, currentUser),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ),
+                      body: _buildBody(),
                     ),
-                    body: _buildBody(),
                   ),
+                ],
+              ),
+            );
+          }
+
+          // Mobile layout: Bottom NavigationBar + AppDrawer
+          return Scaffold(
+            drawer: AppDrawer(
+              currentTabIndex: _currentIndex,
+              onSelectTab: _onTabSelect,
+            ),
+            appBar: AppBar(
+              title: Text(_titles[_currentIndex]),
+              actions: [
+                if (currentUser?.isTeacher == true)
+                  IconButton(
+                    tooltip: 'Create Classroom',
+                    icon: const Icon(Icons.add_circle_outline_rounded),
+                    onPressed: () => showDialog<bool>(
+                      context: context,
+                      builder: (_) => const CreateClassDialog(),
+                    ),
+                  )
+                else
+                  IconButton(
+                    tooltip: 'Join Classroom with Code',
+                    icon: const Icon(Icons.vpn_key_rounded),
+                    onPressed: () => showDialog<bool>(
+                      context: context,
+                      builder: (_) => const JoinClassDialog(),
+                    ),
+                  ),
+                IconButton(
+                  tooltip: 'AI Mentor Assistant',
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                  onPressed: () => context.push('/mentor'),
+                ),
+                IconButton(
+                  tooltip: _getThemeTooltip(currentThemeMode),
+                  icon: Icon(_getThemeIcon(currentThemeMode)),
+                  onPressed: _cycleTheme,
+                ),
+                IconButton(
+                  tooltip: 'Account Profile',
+                  icon: const Icon(Icons.account_circle_outlined),
+                  onPressed: () => _showAccountSheet(context, currentUser),
+                ),
+                const SizedBox(width: 4),
+              ],
+            ),
+            body: _buildBody(),
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: _onTabSelect,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard_rounded),
+                  label: 'Overview',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.school_outlined),
+                  selectedIcon: Icon(Icons.school_rounded),
+                  label: 'Classrooms',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.assignment_outlined),
+                  selectedIcon: Icon(Icons.assignment_rounded),
+                  label: 'Assignments',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.menu_book_outlined),
+                  selectedIcon: Icon(Icons.menu_book_rounded),
+                  label: 'Materials',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  selectedIcon: Icon(Icons.calendar_month_rounded),
+                  label: 'Schedule',
                 ),
               ],
             ),
           );
-        }
-
-        // Mobile layout: Bottom NavigationBar
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(_titles[_currentIndex]),
-            actions: [
-              if (currentUser?.isTeacher == true)
-                IconButton(
-                  tooltip: 'Create Classroom',
-                  icon: const Icon(Icons.add_circle_outline_rounded),
-                  onPressed: () => showDialog<bool>(
-                    context: context,
-                    builder: (_) => const CreateClassDialog(),
-                  ),
-                )
-              else
-                IconButton(
-                  tooltip: 'Join Classroom with Code',
-                  icon: const Icon(Icons.group_add_outlined),
-                  onPressed: () => showDialog<bool>(
-                    context: context,
-                    builder: (_) => const JoinClassDialog(),
-                  ),
-                ),
-              IconButton(
-                tooltip: 'AI Mentor Assistant',
-                icon: const Icon(Icons.auto_awesome_rounded),
-                onPressed: () => context.push('/mentor'),
-              ),
-              IconButton(
-                tooltip: _getThemeTooltip(currentThemeMode),
-                icon: Icon(_getThemeIcon(currentThemeMode)),
-                onPressed: _cycleTheme,
-              ),
-              IconButton(
-                tooltip: 'Account Profile',
-                icon: const Icon(Icons.account_circle_outlined),
-                onPressed: () => _showAccountSheet(context, currentUser),
-              ),
-              const SizedBox(width: 4),
-            ],
-          ),
-          body: _buildBody(),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: _onTabSelect,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard_rounded),
-                label: 'Overview',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.school_outlined),
-                selectedIcon: Icon(Icons.school_rounded),
-                label: 'Classrooms',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.assignment_outlined),
-                selectedIcon: Icon(Icons.assignment_rounded),
-                label: 'Assignments',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.menu_book_outlined),
-                selectedIcon: Icon(Icons.menu_book_rounded),
-                label: 'Materials',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                selectedIcon: Icon(Icons.calendar_month_rounded),
-                label: 'Schedule',
-              ),
-            ],
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }

@@ -40,7 +40,8 @@ class _JoinClassDialogState extends ConsumerState<JoinClassDialog> {
       ref.invalidate(homeSummaryProvider);
 
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      ref.invalidate(scheduleProvider);
+      Navigator.of(context).pop(joined);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

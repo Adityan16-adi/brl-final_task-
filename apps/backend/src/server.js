@@ -7,10 +7,21 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With", "Origin"],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+// Mount core routes
+app.use("/api/auth", require("../../../src/routes/authRoutes"));
+app.use("/api/classrooms", require("../../../src/routes/classroomRoutes"));
 app.use("/api/assignments", require("./routes/assignmentRoutes"));
 app.use("/api/submissions", require("./routes/submissionRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));

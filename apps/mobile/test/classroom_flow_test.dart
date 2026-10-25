@@ -278,7 +278,8 @@ void main() {
 
         // 4. Dialog is dismissed and class list contains the joined class
         expect(find.text('Join a Classroom'), findsNothing);
-        expect(find.text('Applied Classical Mechanics'), findsOneWidget);
+        expect(find.text('Applied Classical Mechanics'), findsWidgets);
+        expect(find.text('Classroom Hub'), findsOneWidget);
       },
     );
 

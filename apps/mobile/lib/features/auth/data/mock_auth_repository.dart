@@ -5,10 +5,14 @@ import '../domain/auth_repository.dart';
 /// Offline mock authentication used for development and testing.
 /// Provides instant student and teacher test credentials.
 class MockAuthRepository implements AuthRepository {
-  MockAuthRepository({AppUser? initialUser}) : _current = initialUser;
+  MockAuthRepository({AppUser? initialUser, bool onboardingCompleted = false})
+      : _current = initialUser {
+    _onboardingCompleted = onboardingCompleted;
+  }
 
   final _controller = StreamController<AppUser?>.broadcast();
   AppUser? _current;
+  bool _onboardingCompleted = false;
 
   static const String demoPassword = 'demo1234';
 
@@ -32,6 +36,14 @@ class MockAuthRepository implements AuthRepository {
   };
 
   @override
+  bool hasCompletedOnboarding() => _onboardingCompleted;
+
+  @override
+  Future<void> setOnboardingCompleted(bool value) async {
+    _onboardingCompleted = value;
+  }
+
+  @override
   Stream<AppUser?> authStateChanges() async* {
     yield _current;
     yield* _controller.stream;
@@ -52,6 +64,7 @@ class MockAuthRepository implements AuthRepository {
       );
     }
 
+    _onboardingCompleted = true;
     _set(user);
     return user;
   }
@@ -78,6 +91,7 @@ class MockAuthRepository implements AuthRepository {
     );
 
     _accounts[key] = user;
+    _onboardingCompleted = true;
     _set(user);
     return user;
   }

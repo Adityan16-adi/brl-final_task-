@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/clay_theme.dart';
+import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
+import 'create_assignment_dialog.dart';
 import 'submit_assignment_dialog.dart';
 
 class AssignmentsView extends ConsumerStatefulWidget {
@@ -19,6 +22,7 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
   @override
   Widget build(BuildContext context) {
     final assignmentsAsync = ref.watch(assignmentsProvider);
+    final isTeacher = ref.watch(isTeacherProvider);
     final colors = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
@@ -27,16 +31,48 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           // Search & Filter header
-          TextField(
-            decoration: const InputDecoration(
-              hintText: 'Search assignments or subjects...',
-              prefixIcon: Icon(Icons.search_rounded),
-              isDense: true,
-            ),
-            onChanged: (val) =>
-                setState(() => _searchQuery = val.trim().toLowerCase()),
+          Row(
+            children: [
+              Expanded(
+                child: ClayContainer(
+                  depth: 3,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search assignments or subjects...',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: ClayTokens.secondaryText,
+                      ),
+                      prefixIcon: Icon(Icons.search_rounded, size: 20),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onChanged: (val) =>
+                        setState(() => _searchQuery = val.trim().toLowerCase()),
+                  ),
+                ),
+              ),
+              if (isTeacher) ...[
+                const SizedBox(width: 12),
+                ClayButton(
+                  icon: Icons.add_task_rounded,
+                  onPressed: () => showDialog<bool>(
+                    context: context,
+                    builder: (_) => const CreateAssignmentDialog(),
+                  ),
+                  child: const Text('New Task'),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Filter chips
           SingleChildScrollView(
@@ -44,19 +80,13 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
             child: Row(
               children: [
                 FilterChip(
-                  label: const Text('All'),
+                  label: const Text('All Tasks'),
                   selected: _filterStatus == null,
                   onSelected: (_) => setState(() => _filterStatus = null),
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
-                  avatar: Icon(
-                    Icons.pending_actions_rounded,
-                    size: 16,
-                    color: _filterStatus == AssignmentStatus.pending
-                        ? colors.onPrimary
-                        : Colors.amber.shade700,
-                  ),
+                  avatar: const Icon(Icons.hourglass_top_rounded, size: 15),
                   label: const Text('Pending'),
                   selected: _filterStatus == AssignmentStatus.pending,
                   onSelected: (_) =>
@@ -64,12 +94,9 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
-                  avatar: Icon(
+                  avatar: const Icon(
                     Icons.check_circle_outline_rounded,
-                    size: 16,
-                    color: _filterStatus == AssignmentStatus.submitted
-                        ? colors.onPrimary
-                        : Colors.blue.shade700,
+                    size: 15,
                   ),
                   label: const Text('Submitted'),
                   selected: _filterStatus == AssignmentStatus.submitted,
@@ -79,13 +106,7 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
-                  avatar: Icon(
-                    Icons.grade_rounded,
-                    size: 16,
-                    color: _filterStatus == AssignmentStatus.graded
-                        ? colors.onPrimary
-                        : Colors.green.shade700,
-                  ),
+                  avatar: const Icon(Icons.grade_rounded, size: 15),
                   label: const Text('Graded'),
                   selected: _filterStatus == AssignmentStatus.graded,
                   onSelected: (_) =>
@@ -121,20 +142,27 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.assignment_turned_in_outlined,
-                          size: 56,
-                          color: colors.onSurfaceVariant.withAlpha(120),
+                        ClayContainer(
+                          width: 64,
+                          height: 64,
+                          depth: 4,
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Center(
+                            child: Icon(
+                              Icons.assignment_turned_in_outlined,
+                              size: 32,
+                              color: ClayTokens.deepIndigo,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Text(
                           _filterStatus != null || _searchQuery.isNotEmpty
                               ? 'No matching assignments found'
                               : 'All caught up! No assignments right now.',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: colors.onSurfaceVariant,
+                            fontWeight: FontWeight.w800,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -162,10 +190,10 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
 
                   if (isWide) {
                     return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+                      spacing: 14,
+                      runSpacing: 14,
                       children: filtered.map((item) {
-                        final cardWidth = (constraints.maxWidth - 12) / 2;
+                        final cardWidth = (constraints.maxWidth - 14) / 2;
                         return SizedBox(
                           width: cardWidth,
                           child: _AssignmentCard(assignment: item),
@@ -229,14 +257,25 @@ class _AssignmentCard extends StatelessWidget {
 
   final AssignmentItem assignment;
 
-  Color _getStatusColor(AssignmentStatus status, ColorScheme colors) {
+  Color _getStatusBg(AssignmentStatus status) {
     switch (status) {
       case AssignmentStatus.pending:
-        return Colors.amber.shade700;
+        return ClayTokens.softPeach;
       case AssignmentStatus.submitted:
-        return Colors.blue.shade600;
+        return ClayTokens.softLavender;
       case AssignmentStatus.graded:
-        return Colors.green.shade600;
+        return ClayTokens.mint;
+    }
+  }
+
+  Color _getStatusText(AssignmentStatus status) {
+    switch (status) {
+      case AssignmentStatus.pending:
+        return ClayTokens.peachDark;
+      case AssignmentStatus.submitted:
+        return ClayTokens.deepIndigo;
+      case AssignmentStatus.graded:
+        return ClayTokens.mintDark;
     }
   }
 
@@ -265,224 +304,185 @@ class _AssignmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final statusColor = _getStatusColor(assignment.status, colors);
+    final statusBg = _getStatusBg(assignment.status);
+    final statusText = _getStatusText(assignment.status);
     final statusLabel = _getStatusLabel(assignment.status);
     final isGraded = assignment.status == AssignmentStatus.graded;
     final isSubmitted = assignment.status == AssignmentStatus.submitted;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: colors.outlineVariant.withAlpha(80)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Row: Subject & Status Chip
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer.withAlpha(120),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    assignment.subject,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: colors.primary,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withAlpha(28),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _getStatusIcon(assignment.status),
-                        size: 13,
-                        color: statusColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        statusLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return ClayCard(
+      depth: 5,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Row: Subject & Status Chip
+          Row(
+            children: [
+              ClayBadge(
+                label: assignment.subject,
+                backgroundColor: ClayTokens.softLavender,
+                textColor: ClayTokens.deepIndigo,
+              ),
+              const Spacer(),
+              ClayBadge(
+                label: statusLabel,
+                icon: _getStatusIcon(assignment.status),
+                backgroundColor: statusBg,
+                textColor: statusText,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Title
+          Text(
+            assignment.title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Description preview
+          if (assignment.description.isNotEmpty) ...[
+            Text(
+              assignment.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: colors.onSurfaceVariant,
+                height: 1.3,
+              ),
             ),
             const SizedBox(height: 10),
+          ],
 
-            // Title
-            Text(
-              assignment.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
+          // Meta row: Due date & points
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 14,
+                color: colors.onSurfaceVariant,
               ),
-            ),
-            const SizedBox(height: 6),
-
-            // Description preview
-            if (assignment.description.isNotEmpty) ...[
-              Text(
-                assignment.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: colors.onSurfaceVariant,
-                  height: 1.3,
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  'Due: ${assignment.dueDate}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(width: 8),
+              ClayContainer(
+                depth: 2,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                borderRadius: BorderRadius.circular(6),
+                child: Text(
+                  '${assignment.points} pts',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
             ],
+          ),
 
-            // Meta row: Due date & points
+          if (assignment.attachmentUrl != null &&
+              assignment.attachmentUrl!.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Row(
               children: [
-                Icon(
-                  Icons.calendar_today_rounded,
-                  size: 14,
-                  color: colors.onSurfaceVariant,
-                ),
-                const SizedBox(width: 5),
+                const Icon(Icons.attachment_rounded, size: 14),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    'Due: ${assignment.dueDate}',
-                    maxLines: 1,
+                    assignment.attachmentName ?? assignment.attachmentUrl!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${assignment.points} pts',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
-                    ),
                   ),
                 ),
               ],
             ),
+          ],
 
-            if (isGraded && assignment.marks != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.withAlpha(20),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withAlpha(60)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.grade_rounded,
-                      size: 16,
-                      color: Colors.green,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Score: ${assignment.marks} / ${assignment.points}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    if (assignment.feedback != null) ...[
-                      const Spacer(),
-                      const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 14,
-                        color: Colors.green,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 12),
-            const Divider(height: 1),
+          if (isGraded && assignment.marks != null) ...[
             const SizedBox(height: 10),
-
-            // Action Button
-            SizedBox(
-              width: double.infinity,
-              child: isGraded
-                  ? OutlinedButton.icon(
-                      onPressed: () => _openSubmitDialog(context),
-                      icon: const Icon(Icons.visibility_outlined, size: 16),
-                      label: const Text('View Submission & Feedback'),
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    )
-                  : isSubmitted
-                  ? OutlinedButton.icon(
-                      onPressed: () => _openSubmitDialog(context),
-                      icon: const Icon(Icons.edit_note_rounded, size: 18),
-                      label: const Text('View / Resubmit'),
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    )
-                  : FilledButton.icon(
-                      onPressed: () => _openSubmitDialog(context),
-                      icon: const Icon(Icons.send_rounded, size: 16),
-                      label: const Text('Submit Assignment'),
-                      style: FilledButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                      ),
+            ClayContainer(
+              depth: 2,
+              color: ClayTokens.mint,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              borderRadius: BorderRadius.circular(8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.grade_rounded,
+                    size: 16,
+                    color: ClayTokens.mintDark,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Score: ${assignment.marks} / ${assignment.points}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: ClayTokens.mintDark,
                     ),
+                  ),
+                  if (assignment.feedback != null) ...[
+                    const Spacer(),
+                    const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 14,
+                      color: ClayTokens.mintDark,
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
-        ),
+
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+
+          // Action Button
+          SizedBox(
+            width: double.infinity,
+            child: isGraded
+                ? OutlinedButton.icon(
+                    onPressed: () => _openSubmitDialog(context),
+                    icon: const Icon(Icons.visibility_outlined, size: 16),
+                    label: const Text('View Submission & Feedback'),
+                  )
+                : isSubmitted
+                ? OutlinedButton.icon(
+                    onPressed: () => _openSubmitDialog(context),
+                    icon: const Icon(Icons.edit_note_rounded, size: 18),
+                    label: const Text('View / Resubmit Work'),
+                  )
+                : FilledButton.icon(
+                    onPressed: () => _openSubmitDialog(context),
+                    icon: const Icon(Icons.send_rounded, size: 16),
+                    label: const Text('Submit Assignment'),
+                  ),
+          ),
+        ],
       ),
     );
   }

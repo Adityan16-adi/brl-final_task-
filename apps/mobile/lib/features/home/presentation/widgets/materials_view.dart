@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/clay_theme.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
 
@@ -27,16 +28,28 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           // Search bar
-          TextField(
-            decoration: const InputDecoration(
-              hintText: 'Search study materials, notes, videos...',
-              prefixIcon: Icon(Icons.search_rounded),
-              isDense: true,
+          ClayContainer(
+            depth: 3,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+            borderRadius: BorderRadius.circular(16),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'Search study materials, notes, videos...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: ClayTokens.secondaryText,
+                ),
+                prefixIcon: Icon(Icons.search_rounded, size: 20),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
+              ),
+              onChanged: (val) =>
+                  setState(() => _searchQuery = val.trim().toLowerCase()),
             ),
-            onChanged: (val) =>
-                setState(() => _searchQuery = val.trim().toLowerCase()),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Filter chips
           SingleChildScrollView(
@@ -108,20 +121,27 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.folder_open_rounded,
-                          size: 56,
-                          color: colors.onSurfaceVariant.withAlpha(120),
+                        ClayContainer(
+                          width: 64,
+                          height: 64,
+                          depth: 4,
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Center(
+                            child: Icon(
+                              Icons.folder_open_rounded,
+                              size: 32,
+                              color: ClayTokens.deepIndigo,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Text(
                           _filterType != null || _searchQuery.isNotEmpty
                               ? 'No matching materials found'
                               : 'No materials available yet.',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: colors.onSurfaceVariant,
+                            fontWeight: FontWeight.w800,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -148,10 +168,10 @@ class _MaterialsViewState extends ConsumerState<MaterialsView> {
 
                   if (isWide) {
                     return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+                      spacing: 14,
+                      runSpacing: 14,
                       children: filtered.map((item) {
-                        final cardWidth = (constraints.maxWidth - 12) / 2;
+                        final cardWidth = (constraints.maxWidth - 14) / 2;
                         return SizedBox(
                           width: cardWidth,
                           child: _MaterialCard(item: item),
@@ -229,11 +249,22 @@ class _MaterialCard extends StatelessWidget {
   Color _getTypeColor(CourseMaterialType type) {
     switch (type) {
       case CourseMaterialType.notes:
-        return Colors.indigo.shade600;
+        return ClayTokens.deepIndigo;
       case CourseMaterialType.video:
-        return Colors.red.shade600;
+        return Colors.redAccent.shade400;
       case CourseMaterialType.document:
-        return Colors.teal.shade600;
+        return const Color(0xFF0D9488);
+    }
+  }
+
+  Color _getTypeBg(CourseMaterialType type) {
+    switch (type) {
+      case CourseMaterialType.notes:
+        return ClayTokens.softLavender;
+      case CourseMaterialType.video:
+        return const Color(0xFFFFECEE);
+      case CourseMaterialType.document:
+        return ClayTokens.mint;
     }
   }
 
@@ -251,12 +282,13 @@ class _MaterialCard extends StatelessWidget {
   void _showDetails(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final typeColor = _getTypeColor(item.type);
+    final typeBg = _getTypeBg(item.type);
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetCtx) {
         return Padding(
@@ -283,19 +315,19 @@ class _MaterialCard extends StatelessWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: typeColor.withAlpha(24),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                  ClayContainer(
+                    width: 48,
+                    height: 48,
+                    depth: 4,
+                    color: typeBg,
+                    borderRadius: BorderRadius.circular(14),
                     child: Icon(
                       _getTypeIcon(item.type),
                       color: typeColor,
-                      size: 24,
+                      size: 26,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +336,7 @@ class _MaterialCard extends StatelessWidget {
                           item.subject,
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             color: colors.primary,
                           ),
                         ),
@@ -320,15 +352,15 @@ class _MaterialCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Text(
                 item.title,
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
                 item.details,
                 style: TextStyle(
@@ -346,12 +378,9 @@ class _MaterialCard extends StatelessWidget {
               ],
               const SizedBox(height: 20),
               if (item.link != null) ...[
-                Container(
+                ClayContainer(
+                  depth: 2,
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colors.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
                   child: Row(
                     children: [
                       const Icon(Icons.link_rounded, size: 20),
@@ -377,6 +406,7 @@ class _MaterialCard extends StatelessWidget {
                               content: Text(
                                 'Resource link copied to clipboard!',
                               ),
+                              backgroundColor: ClayTokens.deepIndigo,
                             ),
                           );
                         },
@@ -386,26 +416,24 @@ class _MaterialCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
               ],
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(sheetCtx).pop();
-                    if (item.link != null) {
-                      Clipboard.setData(ClipboardData(text: item.link!));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Copied link for "${item.title}" to clipboard!',
-                          ),
-                          backgroundColor: colors.primary,
+              ClayButton(
+                isFullWidth: true,
+                onPressed: () {
+                  Navigator.of(sheetCtx).pop();
+                  if (item.link != null) {
+                    Clipboard.setData(ClipboardData(text: item.link!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Copied link for "${item.title}" to clipboard!',
                         ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.download_rounded, size: 18),
-                  label: const Text('Access Material'),
-                ),
+                        backgroundColor: ClayTokens.deepIndigo,
+                      ),
+                    );
+                  }
+                },
+                icon: Icons.download_rounded,
+                child: const Text('Access Material Resource'),
               ),
             ],
           ),
@@ -418,125 +446,97 @@ class _MaterialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final typeColor = _getTypeColor(item.type);
+    final typeBg = _getTypeBg(item.type);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: colors.outlineVariant.withAlpha(80)),
-      ),
-      child: InkWell(
-        onTap: () => _showDetails(context),
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: typeColor.withAlpha(24),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  _getTypeIcon(item.type),
-                  color: typeColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return ClayCard(
+      depth: 5,
+      onTap: () => _showDetails(context),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClayContainer(
+            width: 44,
+            height: 44,
+            depth: 3,
+            color: typeBg,
+            borderRadius: BorderRadius.circular(12),
+            child: Icon(_getTypeIcon(item.type), color: typeColor, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.primaryContainer.withAlpha(120),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Text(
-                            item.subject,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: colors.primary,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          _getTypeLabel(item.type),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                    ClayBadge(
+                      label: item.subject,
+                      backgroundColor: ClayTokens.softLavender,
+                      textColor: ClayTokens.deepIndigo,
+                      fontSize: 10,
                     ),
-                    const SizedBox(height: 6),
+                    const Spacer(),
                     Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.details,
+                      _getTypeLabel(item.type),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                         color: colors.onSurfaceVariant,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        if (item.createdAt != null) ...[
-                          Icon(
-                            Icons.schedule_rounded,
-                            size: 12,
-                            color: colors.outline,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.createdAt!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colors.outline,
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        Text(
-                          'View Resource →',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: colors.primary,
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.details,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.onSurfaceVariant,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (item.createdAt != null) ...[
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 12,
+                        color: colors.outline,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.createdAt!,
+                        style: TextStyle(fontSize: 11, color: colors.outline),
+                      ),
+                    ],
+                    const Spacer(),
+                    const Text(
+                      'View Details →',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: ClayTokens.deepIndigo,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -1,0 +1,70 @@
+# Render Blueprint Specification for Unified Learning & Virtual Classroom
+# Deploy with one click via Render Dashboard -> Blueprints -> New Blueprint Instance
+version: "1"
+
+services:
+  # 1. Core Express & Socket.IO Backend
+  - type: web
+    name: smart-classroom-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    plan: starter
+    region: oregon
+    numInstances: 1
+    healthCheckPath: /api/ready
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+        # Enter your MongoDB Atlas connection string:
+        # mongodb+srv://<user>:<password>@cluster0.mongodb.net/unified_learn?retryWrites=true&w=majority
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TEACHER_SIGNUP_KEY
+        generateValue: true
+      - key: ML_SERVICE_URL
+        fromService:
+          type: web
+          name: smart-classroom-ml
+          property: host
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+    disk:
+      name: uploads_disk
+      mountPath: /app/uploads
+      sizeGB: 5
+
+  # 2. Python ML & AI Service (FastAPI)
+  - type: web
+    name: smart-classroom-ml
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./ml_service
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8001
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: WHISPER_MODEL
+        value: base
