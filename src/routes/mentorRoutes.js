@@ -12,6 +12,7 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
+router.get("/health", optionalAuth, mentorController.health);
 router.post("/chat", optionalAuth, mentorController.chat);
 router.post("/materials", verifyToken, mentorController.addMaterials);
 router.post("/reset", optionalAuth, mentorController.resetSession);
