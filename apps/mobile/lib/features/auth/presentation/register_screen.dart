@@ -23,10 +23,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _teacherKeyController = TextEditingController();
 
   UserRole _role = UserRole.student;
   bool _busy = false;
   bool _obscure = true;
+  bool _obscureTeacherKey = true;
   bool _submitted = false;
   String? _errorMessage;
 
@@ -36,6 +38,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _teacherKeyController.dispose();
     super.dispose();
   }
 
@@ -48,6 +51,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
+    if (_role == UserRole.teacher && _teacherKeyController.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Teacher invite key is required for teacher registration.');
+      return;
+    }
+
     setState(() {
       _busy = true;
       _errorMessage = null;
@@ -55,18 +63,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final repo = ref.read(authRepositoryProvider);
+      final teacherCode = _role == UserRole.teacher ? _teacherKeyController.text.trim() : null;
       await repo.register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
         role: _role,
+        teacherCode: teacherCode,
       );
 
       if (mounted) {
         context.go('/');
       }
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = ErrorMessageHelper.format(e));
+      if (mounted) {
+        final rawMsg = e.toString().toLowerCase();
+        if (_role == UserRole.teacher &&
+            (rawMsg.contains('teacher') ||
+             rawMsg.contains('provisioning') ||
+             rawMsg.contains('invite') ||
+             rawMsg.contains('403') ||
+             rawMsg.contains('400'))) {
+          setState(() => _errorMessage = 'Invalid teacher invite key. Contact your administrator.');
+        } else {
+          setState(() => _errorMessage = ErrorMessageHelper.format(e));
+        }
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -262,6 +284,81 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
+
+                      if (_role == UserRole.teacher) ...[
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, bottom: 6),
+                              child: Text(
+                                'Teacher invite key',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white70 : ClayTokens.darkInk,
+                                ),
+                              ),
+                            ),
+                            TextFormField(
+                              key: const Key('teacher_invite_key_field'),
+                              controller: _teacherKeyController,
+                              obscureText: _obscureTeacherKey,
+                              textInputAction: TextInputAction.next,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? Colors.white : ClayTokens.darkInk,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Enter teacher invite key',
+                                helperText: 'Configured in TEACHER_INVITE_KEY on the server',
+                                helperStyle: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white54 : ClayTokens.secondaryText,
+                                ),
+                                prefixIcon: const Icon(Icons.key_rounded, size: 20),
+                                suffixIcon: IconButton(
+                                  tooltip: _obscureTeacherKey ? 'Show key' : 'Hide key',
+                                  icon: Icon(
+                                    _obscureTeacherKey ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    size: 18,
+                                  ),
+                                  onPressed: () => setState(() => _obscureTeacherKey = !_obscureTeacherKey),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                filled: true,
+                                fillColor: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(
+                                    color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
+                                    width: 1,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(color: ClayTokens.brightBlue, width: 1.5),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                                ),
+                              ),
+                              validator: (val) {
+                                if (_role == UserRole.teacher && (val == null || val.trim().isEmpty)) {
+                                  return 'Teacher invite key is required';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                      ],
 
                       // Full Name Field
                       Column(

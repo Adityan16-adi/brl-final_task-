@@ -6,8 +6,13 @@ import '../../../../core/branding/app_branding.dart';
 import '../../../../core/branding/brand_widgets.dart';
 import '../../../../core/theme/clay_theme.dart';
 import '../../../auth/application/auth_providers.dart';
+import '../../domain/home_repository.dart';
+import '../home_providers.dart';
+import 'create_class_dialog.dart';
 
-/// Clean, focused drawer holding Profile, Settings, Help, and Sign Out.
+/// Full navigation drawer for Pragti ("Learn · Connect · Grow").
+/// Provides navigation items with count and due-soon badges, teacher actions,
+/// account management links, and secure sign-out.
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({
     super.key,
@@ -26,13 +31,19 @@ class AppDrawer extends ConsumerWidget {
     final isTeacher = user?.isTeacher == true;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final classrooms = ref.watch(classroomsProvider).value ?? [];
+    final assignments = ref.watch(assignmentsProvider).value ?? [];
+    final pendingCount = assignments
+        .where((a) => a.status == AssignmentStatus.pending)
+        .length;
+
     return Drawer(
       child: SafeArea(
         child: Column(
           children: [
             // Header Profile Card
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: InkWell(
                 borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
                 onTap: () {
@@ -40,14 +51,12 @@ class AppDrawer extends ConsumerWidget {
                   context.push('/account');
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: isDark ? ClayTokens.darkCard : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark
-                          ? Theme.of(context).colorScheme.outlineVariant
-                          : const Color(0xFFE2E8F0),
+                      color: isDark ? ClayTokens.darkBorder : ClayTokens.lightBorder,
                       width: 1,
                     ),
                   ),
@@ -57,7 +66,7 @@ class AppDrawer extends ConsumerWidget {
                       Row(
                         children: [
                           const BrandLogo(
-                            size: 22,
+                            size: 20,
                             useMarkOnly: true,
                             onCard: false,
                           ),
@@ -85,22 +94,22 @@ class AppDrawer extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           if (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
                             CircleAvatar(
-                              radius: 24,
+                              radius: 22,
                               backgroundImage: NetworkImage(user.avatarUrl!),
                               backgroundColor: Colors.transparent,
                             )
                           else
                             Container(
-                              width: 48,
-                              height: 48,
+                              width: 44,
+                              height: 44,
                               decoration: BoxDecoration(
-                                color: isTeacher ? const Color(0xFF8B5CF6) : ClayTokens.brightBlue,
-                                borderRadius: BorderRadius.circular(14),
+                                color: isTeacher ? ClayTokens.pragtiNavy : ClayTokens.brightBlue,
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Center(
                                 child: Text(
@@ -108,7 +117,7 @@ class AppDrawer extends ConsumerWidget {
                                       ? user!.name[0].toUpperCase()
                                       : 'U',
                                   style: const TextStyle(
-                                    fontSize: 20,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
                                   ),
@@ -125,7 +134,7 @@ class AppDrawer extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -135,14 +144,14 @@ class AppDrawer extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     color: isDark ? Colors.white60 : ClayTokens.secondaryText,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
+                                    horizontal: 7,
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
@@ -158,7 +167,7 @@ class AppDrawer extends ConsumerWidget {
                                   child: Text(
                                     isTeacher ? 'Teacher' : 'Student',
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       fontWeight: FontWeight.w700,
                                       color: isTeacher
                                           ? (isDark ? Colors.white70 : ClayTokens.pragtiNavy)
@@ -172,6 +181,7 @@ class AppDrawer extends ConsumerWidget {
                           Icon(
                             Icons.chevron_right_rounded,
                             color: isDark ? Colors.white38 : Colors.grey.shade400,
+                            size: 20,
                           ),
                         ],
                       ),
@@ -181,39 +191,180 @@ class AppDrawer extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 8),
             const Divider(height: 1, indent: 16, endIndent: 16),
-            const SizedBox(height: 8),
 
-            // Navigation Actions: Profile, Settings, Help
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
-                children: [
-                  ListTile(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.person_outline_rounded, size: 22),
-                    title: const Text('My Profile', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            // Scrollable Navigation Items
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Column(
+                  children: [
+                  _DrawerNavTile(
+                    icon: Icons.dashboard_rounded,
+                    title: 'Dashboard',
+                    isActive: currentTabIndex == 0,
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(0);
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.school_rounded,
+                    title: 'My Classes',
+                    badgeText: classrooms.isNotEmpty ? '${classrooms.length}' : null,
+                    badgeColor: ClayTokens.brightBlue,
+                    isActive: currentTabIndex == 1,
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(1);
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.assignment_rounded,
+                    title: 'Assignments',
+                    badgeText: pendingCount > 0 ? '$pendingCount due' : null,
+                    badgeColor: ClayTokens.pragtiOrange,
+                    isActive: currentTabIndex == 2,
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(2);
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.checklist_rounded,
+                    title: 'Study Planner & To-Do',
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push('/todo');
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.menu_book_rounded,
+                    title: 'Learning Materials',
+                    badgeText: null,
+                    isActive: currentTabIndex == 3,
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(3);
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.calendar_month_rounded,
+                    title: 'Weekly Schedule',
+                    isActive: currentTabIndex == 4,
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(4);
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.people_alt_rounded,
+                    title: 'Attendance Records',
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(1);
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.videocam_rounded,
+                    title: 'Live Video Meetings',
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelectTab?.call(1);
+                    },
+                  ),
+                  _DrawerNavTile(
+                    icon: Icons.auto_awesome_rounded,
+                    title: 'AI Mentor Tutor',
+                    isDark: isDark,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      context.push('/mentor');
+                    },
+                  ),
+
+                  // Teacher specific actions
+                  if (isTeacher) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Text(
+                        'TEACHER TOOLS',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: isDark ? ClayTokens.darkSecondary : ClayTokens.lightSecondary,
+                        ),
+                      ),
+                    ),
+                    _DrawerNavTile(
+                      icon: Icons.add_circle_outline_rounded,
+                      title: 'Create Class',
+                      isDark: isDark,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        showDialog<bool>(
+                          context: context,
+                          builder: (_) => const CreateClassDialog(),
+                        );
+                      },
+                    ),
+                    _DrawerNavTile(
+                      icon: Icons.video_call_rounded,
+                      title: 'Start Live Class',
+                      isDark: isDark,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onSelectTab?.call(1);
+                      },
+                    ),
+                    _DrawerNavTile(
+                      icon: Icons.fact_check_rounded,
+                      title: 'Grade Submissions',
+                      isDark: isDark,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onSelectTab?.call(2);
+                      },
+                    ),
+                  ],
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Divider(height: 1, indent: 8, endIndent: 8),
+                  ),
+
+                  // Account / Preferences Section
+                  _DrawerNavTile(
+                    icon: Icons.person_outline_rounded,
+                    title: 'My Profile',
+                    isDark: isDark,
                     onTap: () {
                       Navigator.of(context).pop();
                       context.push('/account');
                     },
                   ),
-                  const SizedBox(height: 4),
-                  ListTile(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.settings_outlined, size: 22),
-                    title: const Text('Settings & Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  _DrawerNavTile(
+                    icon: Icons.settings_outlined,
+                    title: 'Settings & Preferences',
+                    isDark: isDark,
                     onTap: () {
                       Navigator.of(context).pop();
                       context.push('/settings');
                     },
                   ),
-                  const SizedBox(height: 4),
-                  ListTile(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.help_outline_rounded, size: 22),
-                    title: const Text('Help Desk & FAQ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  _DrawerNavTile(
+                    icon: Icons.help_outline_rounded,
+                    title: 'Help Desk & FAQ',
+                    isDark: isDark,
                     onTap: () {
                       Navigator.of(context).pop();
                       context.push('/help');
@@ -222,22 +373,22 @@ class AppDrawer extends ConsumerWidget {
                 ],
               ),
             ),
+          ),
 
-            const Spacer(),
             const Divider(height: 1, indent: 16, endIndent: 16),
 
-            // Sign out action
+            // Sign Out action at bottom
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: ListTile(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                leading: const Icon(Icons.logout_rounded, size: 22, color: _coral),
+                leading: const Icon(Icons.logout_rounded, size: 20, color: _coral),
                 title: const Text(
                   'Sign Out',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: _coral,
-                    fontSize: 14,
+                    fontSize: 13.5,
                   ),
                 ),
                 onTap: () async {
@@ -267,7 +418,7 @@ class AppDrawer extends ConsumerWidget {
                   if (confirm == true) {
                     await ref.read(authRepositoryProvider).signOut();
                     if (context.mounted) {
-                      context.go('/login');
+                      context.go('/welcome');
                     }
                   }
                 },
@@ -275,6 +426,74 @@ class AppDrawer extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DrawerNavTile extends StatelessWidget {
+  const _DrawerNavTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    required this.isDark,
+    this.isActive = false,
+    this.badgeText,
+    this.badgeColor,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final bool isDark;
+  final bool isActive;
+  final String? badgeText;
+  final Color? badgeColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeBg = ClayTokens.brightBlue.withValues(alpha: isDark ? 0.2 : 0.1);
+    final activeColor = ClayTokens.brightBlue;
+    final inactiveColor = isDark ? Colors.white70 : ClayTokens.navy;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        tileColor: isActive ? activeBg : Colors.transparent,
+        dense: true,
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
+        leading: Icon(
+          icon,
+          size: 20,
+          color: isActive ? activeColor : (isDark ? Colors.white60 : ClayTokens.secondaryText),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+            color: isActive ? activeColor : inactiveColor,
+          ),
+        ),
+        trailing: badgeText != null
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (badgeColor ?? ClayTokens.brightBlue).withValues(alpha: isDark ? 0.25 : 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  badgeText!,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: badgeColor ?? ClayTokens.brightBlue,
+                  ),
+                ),
+              )
+            : null,
+        onTap: onTap,
       ),
     );
   }

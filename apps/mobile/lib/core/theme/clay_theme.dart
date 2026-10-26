@@ -36,6 +36,13 @@ class ClayTokens {
   static const Color darkBg = Color(0xFF0A0F1C);
   static const Color darkSurface = Color(0xFF111827);
   static const Color darkCard = Color(0xFF172033);
+  static const Color darkElevated = Color(0xFF172033);
+  static const Color lightBorder = Color(0xFFE3E8F0);
+  static const Color darkBorder = Color(0xFF243049);
+  static const Color lightSecondary = Color(0xFF5B6B8A);
+  static const Color darkSecondary = Color(0xFF94A3B8);
+  static const Color lightText = Color(0xFF0B1E48);
+  static const Color darkText = Color(0xFFF1F5F9);
   static const Color borderLight = Color(0xFFE3E8F0);
   static const Color borderDark = Color(0xFF243049);
 

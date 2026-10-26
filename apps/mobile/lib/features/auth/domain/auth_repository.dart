@@ -108,6 +108,7 @@ abstract interface class AuthRepository {
     required String email,
     required String password,
     UserRole role = UserRole.student,
+    String? teacherCode,
   });
 
   /// Signs in using Google via Firebase authentication.

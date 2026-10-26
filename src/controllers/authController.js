@@ -507,3 +507,4 @@ const updateProfile = async (req, res) => {
 };
 
 module.exports = { register, login, getMe, syncUser, googleLogin, updateProfile, generateToken, getJwtSecret };
+

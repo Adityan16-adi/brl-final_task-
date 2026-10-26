@@ -226,6 +226,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final isTeacher = user?.isTeacher == true;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -304,8 +305,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                   decoration: BoxDecoration(
                     color: isTeacher
-                        ? const Color(0xFFF3E8FF)
-                        : const Color(0xFFEDEAF8),
+                        ? ClayTokens.pragtiSoftBlue
+                        : (isDark ? ClayTokens.darkElevated : const Color(0xFFF1F5F9)),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -315,7 +316,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       fontWeight: FontWeight.w800,
                       color: isTeacher
                           ? ClayTokens.pragtiBlue
-                          : ClayTokens.pragtiNavy,
+                          : (isDark ? Colors.white : ClayTokens.pragtiNavy),
                     ),
                   ),
                 ),

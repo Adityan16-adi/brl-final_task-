@@ -193,6 +193,7 @@ class PersistentAuthRepository implements AuthRepository {
     required String email,
     required String password,
     UserRole role = UserRole.student,
+    String? teacherCode,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final cleanName = name.trim();
@@ -207,6 +208,7 @@ class PersistentAuthRepository implements AuthRepository {
           'email': cleanEmail,
           'password': password,
           'role': role.name,
+          if (teacherCode != null && teacherCode.isNotEmpty) 'teacherCode': teacherCode,
         },
         options: Options(
           sendTimeout: const Duration(seconds: 4),

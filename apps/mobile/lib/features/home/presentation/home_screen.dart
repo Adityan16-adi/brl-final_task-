@@ -17,6 +17,7 @@ import 'widgets/join_class_dialog.dart';
 import 'widgets/materials_view.dart';
 import 'widgets/overview_view.dart';
 import 'widgets/schedule_view.dart';
+import 'widgets/notifications_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -131,11 +132,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ClayBadge(
                 label: user?.role.name.toUpperCase() ?? 'STUDENT',
                 backgroundColor: isTeacher
-                    ? const Color(0xFFF3E8FF)
+                    ? ClayTokens.pragtiSoftBlue
                     : ClayTokens.softLavender,
                 textColor: isTeacher
-                    ? const Color(0xFF8B5CF6)
-                    : ClayTokens.deepIndigo,
+                    ? ClayTokens.pragtiBlue
+                    : ClayTokens.pragtiNavy,
                 icon: isTeacher
                     ? Icons.co_present_rounded
                     : Icons.school_rounded,
@@ -419,42 +420,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           icon: const Icon(Icons.menu_rounded),
                           onPressed: () => _wideScaffoldKey.currentState?.openDrawer(),
                         ),
-                        title: Text(_titles[_currentIndex]),
+                        title: Text(_currentIndex == 0 ? 'Home' : _titles[_currentIndex]),
                         actions: [
-                          if (currentUser?.isTeacher == true)
+                          if (_currentIndex == 0) ...[
                             IconButton(
-                              tooltip: 'Create Classroom',
-                              icon: const Icon(Icons.add_circle_outline_rounded),
-                              onPressed: () => showDialog<bool>(
-                                context: context,
-                                builder: (_) => const CreateClassDialog(),
-                              ),
-                            )
-                          else
-                            IconButton(
-                              tooltip: 'Join Classroom with Code',
-                              icon: const Icon(Icons.vpn_key_rounded),
-                              onPressed: () => showDialog<bool>(
-                                context: context,
-                                builder: (_) => const JoinClassDialog(),
-                              ),
+                              tooltip: 'Search courses & materials',
+                              icon: const Icon(Icons.search_rounded),
+                              onPressed: () => _onTabSelect(1),
                             ),
-                          IconButton(
-                            tooltip: 'AI Mentor Assistant',
-                            icon: const Icon(Icons.auto_awesome_rounded),
-                            onPressed: () => context.push('/mentor'),
-                          ),
-                          IconButton(
-                            tooltip: _getThemeTooltip(currentThemeMode),
-                            icon: Icon(_getThemeIcon(currentThemeMode)),
-                            onPressed: _cycleTheme,
-                          ),
-                          IconButton(
-                            tooltip: 'Account Profile',
-                            icon: const Icon(Icons.account_circle_outlined),
-                            onPressed: () =>
-                                _showAccountSheet(context, currentUser),
-                          ),
+                            IconButton(
+                              tooltip: 'Reminders & Alerts',
+                              icon: const Icon(Icons.notifications_outlined),
+                              onPressed: () => showInAppNotificationsSheet(context),
+                            ),
+                            IconButton(
+                              tooltip: 'Account Profile',
+                              icon: const Icon(Icons.account_circle_outlined),
+                              onPressed: () => _showAccountSheet(context, currentUser),
+                            ),
+                          ] else ...[
+                            if (currentUser?.isTeacher == true)
+                              IconButton(
+                                tooltip: 'Create Classroom',
+                                icon: const Icon(Icons.add_circle_outline_rounded),
+                                onPressed: () => showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => const CreateClassDialog(),
+                                ),
+                              )
+                            else
+                              IconButton(
+                                tooltip: 'Join Classroom with Code',
+                                icon: const Icon(Icons.vpn_key_rounded),
+                                onPressed: () => showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => const JoinClassDialog(),
+                                ),
+                              ),
+                            IconButton(
+                              tooltip: 'AI Mentor Assistant',
+                              icon: const Icon(Icons.auto_awesome_rounded),
+                              onPressed: () => context.push('/mentor'),
+                            ),
+                            IconButton(
+                              tooltip: _getThemeTooltip(currentThemeMode),
+                              icon: Icon(_getThemeIcon(currentThemeMode)),
+                              onPressed: _cycleTheme,
+                            ),
+                            IconButton(
+                              tooltip: 'Account Profile',
+                              icon: const Icon(Icons.account_circle_outlined),
+                              onPressed: () =>
+                                  _showAccountSheet(context, currentUser),
+                            ),
+                          ],
                           const SizedBox(width: 8),
                         ],
                       ),
@@ -481,41 +500,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onPressed: () => _mobileScaffoldKey.currentState?.openDrawer(),
                 ),
               ),
-              title: Text(_titles[_currentIndex]),
+              title: Text(_currentIndex == 0 ? 'Home' : _titles[_currentIndex]),
               actions: [
-                if (currentUser?.isTeacher == true)
+                if (_currentIndex == 0) ...[
                   IconButton(
-                    tooltip: 'Create Classroom',
-                    icon: const Icon(Icons.add_circle_outline_rounded),
-                    onPressed: () => showDialog<bool>(
-                      context: context,
-                      builder: (_) => const CreateClassDialog(),
-                    ),
-                  )
-                else
-                  IconButton(
-                    tooltip: 'Join Classroom with Code',
-                    icon: const Icon(Icons.vpn_key_rounded),
-                    onPressed: () => showDialog<bool>(
-                      context: context,
-                      builder: (_) => const JoinClassDialog(),
-                    ),
+                    tooltip: 'Search courses & materials',
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () => _onTabSelect(1),
                   ),
-                IconButton(
-                  tooltip: 'AI Mentor Assistant',
-                  icon: const Icon(Icons.auto_awesome_rounded),
-                  onPressed: () => context.push('/mentor'),
-                ),
-                IconButton(
-                  tooltip: _getThemeTooltip(currentThemeMode),
-                  icon: Icon(_getThemeIcon(currentThemeMode)),
-                  onPressed: _cycleTheme,
-                ),
-                IconButton(
-                  tooltip: 'Account Profile',
-                  icon: const Icon(Icons.account_circle_outlined),
-                  onPressed: () => _showAccountSheet(context, currentUser),
-                ),
+                  IconButton(
+                    tooltip: 'Reminders & Alerts',
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () => showInAppNotificationsSheet(context),
+                  ),
+                  IconButton(
+                    tooltip: 'Account Profile',
+                    icon: const Icon(Icons.account_circle_outlined),
+                    onPressed: () => _showAccountSheet(context, currentUser),
+                  ),
+                ] else ...[
+                  if (currentUser?.isTeacher == true)
+                    IconButton(
+                      tooltip: 'Create Classroom',
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      onPressed: () => showDialog<bool>(
+                        context: context,
+                        builder: (_) => const CreateClassDialog(),
+                      ),
+                    )
+                  else
+                    IconButton(
+                      tooltip: 'Join Classroom with Code',
+                      icon: const Icon(Icons.vpn_key_rounded),
+                      onPressed: () => showDialog<bool>(
+                        context: context,
+                        builder: (_) => const JoinClassDialog(),
+                      ),
+                    ),
+                  IconButton(
+                    tooltip: 'AI Mentor Assistant',
+                    icon: const Icon(Icons.auto_awesome_rounded),
+                    onPressed: () => context.push('/mentor'),
+                  ),
+                  IconButton(
+                    tooltip: _getThemeTooltip(currentThemeMode),
+                    icon: Icon(_getThemeIcon(currentThemeMode)),
+                    onPressed: _cycleTheme,
+                  ),
+                  IconButton(
+                    tooltip: 'Account Profile',
+                    icon: const Icon(Icons.account_circle_outlined),
+                    onPressed: () => _showAccountSheet(context, currentUser),
+                  ),
+                ],
                 const SizedBox(width: 4),
               ],
             ),

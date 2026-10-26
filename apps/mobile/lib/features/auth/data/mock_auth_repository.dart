@@ -86,12 +86,17 @@ class MockAuthRepository implements AuthRepository {
     required String email,
     required String password,
     UserRole role = UserRole.student,
+    String? teacherCode,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     final key = email.trim().toLowerCase();
 
     if (_accounts.containsKey(key)) {
       throw const AuthFailure('An account with this email already exists.');
+    }
+
+    if (role == UserRole.teacher && (teacherCode == null || teacherCode.trim().isEmpty)) {
+      throw const AuthFailure('Teacher invite key is required for teacher registration.');
     }
 
     final user = AppUser(

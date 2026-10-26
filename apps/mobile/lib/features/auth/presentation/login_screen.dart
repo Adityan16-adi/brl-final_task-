@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/branding/app_branding.dart';
 import '../../../core/branding/brand_widgets.dart';
@@ -23,9 +24,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  UserRole _selectedRole = UserRole.student;
   bool _busy = false;
   bool _obscure = true;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedRole();
+  }
+
+  Future<void> _loadSavedRole() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('last_login_role');
+      if (saved == 'teacher' && mounted) {
+        setState(() => _selectedRole = UserRole.teacher);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveRole(UserRole role) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_login_role', role.name);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -44,6 +69,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final repo = ref.read(authRepositoryProvider);
       final role = email.contains('teacher') ? UserRole.teacher : UserRole.student;
+      setState(() => _selectedRole = role);
+      _saveRole(role);
+
       await repo.signInDemo(role: role);
       if (mounted) {
         context.go('/');
@@ -66,10 +94,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final repo = ref.read(authRepositoryProvider);
     try {
-      await repo.signIn(
+      final user = await repo.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // Verify that user account role matches the selected role
+      if (user.role != _selectedRole) {
+        await repo.signOut();
+        if (mounted) {
+          final actual = user.role == UserRole.teacher ? 'teacher' : 'student';
+          final expected = user.role == UserRole.teacher ? 'Teacher' : 'Student';
+          setState(() {
+            _errorMessage = 'This is a $actual account. Switch to $expected to sign in.';
+          });
+        }
+        return;
+      }
+
       if (mounted) {
         context.go('/');
       }
@@ -273,6 +315,108 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Role Segmented Control (Student | Teacher)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? ClayTokens.darkCard : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? ClayTokens.darkBorder : ClayTokens.lightBorder,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(9),
+                                onTap: () {
+                                  setState(() => _selectedRole = UserRole.student);
+                                  _saveRole(UserRole.student);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 9),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRole == UserRole.student
+                                        ? ClayTokens.brightBlue
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.school_rounded,
+                                        size: 16,
+                                        color: _selectedRole == UserRole.student
+                                            ? Colors.white
+                                            : (isDark ? Colors.white70 : ClayTokens.navy),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Student',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: _selectedRole == UserRole.student
+                                              ? Colors.white
+                                              : (isDark ? Colors.white70 : ClayTokens.navy),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(9),
+                                onTap: () {
+                                  setState(() => _selectedRole = UserRole.teacher);
+                                  _saveRole(UserRole.teacher);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 9),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRole == UserRole.teacher
+                                        ? ClayTokens.brightBlue
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.co_present_rounded,
+                                        size: 16,
+                                        color: _selectedRole == UserRole.teacher
+                                            ? Colors.white
+                                            : (isDark ? Colors.white70 : ClayTokens.navy),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Teacher',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: _selectedRole == UserRole.teacher
+                                              ? Colors.white
+                                              : (isDark ? Colors.white70 : ClayTokens.navy),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
 
                       // Email Field
                       Column(

@@ -159,7 +159,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final joinBtn = find.byTooltip('Join Classroom with Code');
+    final joinBtn = find.text('Join Class');
     expect(joinBtn, findsOneWidget);
     await tester.tap(joinBtn);
     await tester.pumpAndSettle();
@@ -193,6 +193,10 @@ void main() {
         child: const LearningApp(),
       ),
     );
+    await tester.pumpAndSettle();
+
+    // Navigate to Classrooms tab where the theme toggle is in the AppBar
+    await tester.tap(find.text('Classrooms'));
     await tester.pumpAndSettle();
 
     expect(container.read(themeModeProvider), ThemeMode.system);
