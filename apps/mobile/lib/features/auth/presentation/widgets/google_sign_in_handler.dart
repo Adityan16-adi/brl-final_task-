@@ -148,7 +148,7 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Google sign-in isn't set up on this build. Use email instead."),
+          content: Text('Google sign-in is not configured in this build. Use email/password or Try demo.'),
           behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: 4),
         ),
