@@ -1,14 +1,18 @@
 const Assignment = require("../models/Assignment");
+const mongoose = require("mongoose");
+const { classAccess } = require("../utils/classAccess");
 
 // GET /api/calendar/class/:classId?month=2026-10
 exports.getClassEvents = async (req, res) => {
   try {
+    const access = await classAccess(req.params.classId, req.user);
+    if (access.status) return res.status(access.status).json({ success: false, message: access.message });
     const filter = { classId: req.params.classId };
 
     // optional month filter, format YYYY-MM
     if (req.query.month) {
       const [year, month] = req.query.month.split("-").map(Number);
-      if (!year || !month) {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(req.query.month) || !year || !month) {
         return res.status(400).json({ success: false, message: "month must be YYYY-MM" });
       }
       filter.dueDate = {

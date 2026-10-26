@@ -4,6 +4,7 @@ Run:  uvicorn main:app --reload --port 8001
 Docs: http://localhost:8001/docs  (try every endpoint from the browser)
 """
 from dataclasses import asdict
+import os
 
 from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
@@ -18,10 +19,20 @@ from spam import SpamDetector
 from summarizer import summarize_notes
 
 app = FastAPI(title="Meet+Classroom ML service")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])  # restrict in prod
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in os.getenv("ML_CORS_ORIGINS", "http://localhost:5173").split(",") if origin.strip()],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 spam_detector = SpamDetector()
 mentor = Mentor()
+
+
+@app.get("/health")
+def health():
+    return {"success": True, "status": "ready"}
 
 
 # ---------- spam ----------
@@ -72,7 +83,7 @@ async def quiz(body: QuizIn):
     except ValueError as e:
         raise HTTPException(400, str(e))
     except RuntimeError as e:
-        raise HTTPException(502, str(e))
+        raise HTTPException(502, "Quiz inference failed. Check provider configuration and availability.") from e
 
 
 # ---------- AI mentor ----------
@@ -89,7 +100,13 @@ class MaterialIn(BaseModel):
 
 @app.post("/mentor/chat")
 async def mentor_chat(body: ChatIn):
-    return {"reply": await run_in_threadpool(mentor.chat, body.session_id, body.message, body.course_id)}
+    if not body.session_id.strip() or not body.message.strip() or len(body.message) > 4000:
+        raise HTTPException(400, "session_id and message are required; message must be at most 4000 characters.")
+    try:
+        reply = await run_in_threadpool(mentor.chat, body.session_id, body.message, body.course_id)
+        return {"reply": reply}
+    except Exception as exc:
+        raise HTTPException(502, "Mentor inference failed. Check provider configuration and availability.") from exc
 
 
 @app.post("/mentor/materials")

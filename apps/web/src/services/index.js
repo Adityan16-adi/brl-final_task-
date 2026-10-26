@@ -1,13 +1,14 @@
 // The supported backend endpoints are selected with VITE_DATA_MODE=api.
 // Features without backend endpoints continue to use their existing frontend services.
-export * from "./mock/mockAuthService.js";
 export * from "./mock/mockLearningService.js";
 export * from "./mock/mockCommunicationService.js";
 export * from "./mock/mockStudyService.js";
 
-import { isBackendMode, dataModeError, apiListAssignments, apiGetAssignment, apiCreateAssignment, apiSubmitAssignment, apiListMaterials, apiAddMaterial, apiListNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiListCalendarEvents, apiListCalendarMonth } from "./api/backendAdapter.js";
-import { listAssignments as mockListAssignments, getAssignment as mockGetAssignment, createAssignment as mockCreateAssignment, submitAssignment as mockSubmitAssignment, listMaterials as mockListMaterials, addMaterial as mockAddMaterial, listCalendarEvents as mockListCalendarEvents } from "./mock/mockLearningService.js";
+import { isBackendMode, dataModeError, apiListAssignments, apiGetAssignment, apiCreateAssignment, apiSubmitAssignment, apiListMaterials, apiAddMaterial, apiListNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiListCalendarEvents, apiListCalendarMonth, apiAskMentor, apiGenerateQuiz, apiListAttendance, apiGetClassRosterAttendance, apiSaveClassAttendance } from "./api/backendAdapter.js";
+import { listAssignments as mockListAssignments, getAssignment as mockGetAssignment, createAssignment as mockCreateAssignment, submitAssignment as mockSubmitAssignment, listMaterials as mockListMaterials, addMaterial as mockAddMaterial, listCalendarEvents as mockListCalendarEvents, listAttendance as mockListAttendance, getClassRosterAttendance as mockGetClassRosterAttendance, saveClassAttendance as mockSaveClassAttendance } from "./mock/mockLearningService.js";
 import { listNotifications as mockListNotifications, markNotificationRead as mockMarkNotificationRead, markAllNotificationsRead as mockMarkAllNotificationsRead } from "./mock/mockCommunicationService.js";
+import { askMentor as mockAskMentor, generateQuiz as mockGenerateQuiz } from "./mock/mockStudyService.js";
+export { getSession, loginAccount, loginWithGoogle, logoutAccount, registerAccount, resetPassword } from "./authService.js";
 
 const selectService = (apiService, mockService, args) => {
   if (dataModeError) return Promise.reject(new Error(dataModeError));
@@ -25,3 +26,8 @@ export const markNotificationRead = (...args) => selectService(apiMarkNotificati
 export const markAllNotificationsRead = (...args) => selectService(apiMarkAllNotificationsRead, mockMarkAllNotificationsRead, args);
 export const listCalendarEvents = (...args) => selectService(apiListCalendarEvents, mockListCalendarEvents, args);
 export const listCalendarMonth = (...args) => selectService(apiListCalendarMonth, mockListCalendarEvents, args);
+export const askMentor = (...args) => selectService(apiAskMentor, mockAskMentor, args);
+export const generateQuiz = (...args) => selectService(apiGenerateQuiz, mockGenerateQuiz, args);
+export const listAttendance = (...args) => selectService(apiListAttendance, mockListAttendance, args);
+export const getClassRosterAttendance = (...args) => selectService(apiGetClassRosterAttendance, mockGetClassRosterAttendance, args);
+export const saveClassAttendance = (...args) => selectService(apiSaveClassAttendance, mockSaveClassAttendance, args);

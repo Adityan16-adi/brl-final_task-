@@ -1,0 +1,21 @@
+--- a/src/services/api/backendAdapter.js
++++ b/src/services/api/backendAdapter.js
+@@ -130,7 +130,7 @@
+ export async function apiListNotifications() {
+   return asArray(await request(`/notifications/user/${encodeURIComponent(userId())}`)).map((item) => ({
+     ...item, id: idOf(item), body: item.message || "", category: item.type === "assignment" || item.type === "grade" ? "Assignments" : "Classes",
+-    unread: !item.isRead, href: item.refId ? `/app/assignments/${item.refId}` : "/app/notifications", preview: false,
++    unread: !item.isRead, href: item.type === "assignment" && item.refId ? `/app/assignments/${item.refId}` : "/app/notifications", preview: false,
+   }));
+ }
+ 
+@@ -145,7 +145,8 @@
+ }
+ 
+ export async function apiListCalendarEvents() {
+-  coenst month = new Date().toISOString().slice(0, 7);
++  const now = new Date();
++  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+   return asArray(await request(`/calendar/class/${encodeURIComponent(classId())}?month=${month}`)).map((item) => ({
+     ...item, id: idOf(item), date: item.date ? String(item.date).slice(0, 10) : "",
+     time: "23:59", type: item.type === "assignment" ? "Deadline" : item.type,

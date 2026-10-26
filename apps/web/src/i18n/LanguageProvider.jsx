@@ -16,13 +16,13 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = language;
     document.title = language === "hi"
-      ? "यूनिफाइड लर्न · सीखें। बढ़ें। आगे बढ़ें।"
-      : "Unified Learn · Learn. Grow. Achieve.";
+      ? "प्रगति · Learn · Grow · Achieve"
+      : "Pragti · Learn · Grow · Achieve";
     const description = document.querySelector('meta[name="description"]');
     if (description) {
       description.setAttribute("content", language === "hi"
-        ? "यूनिफाइड लर्न पर लाइव कक्षाएँ, अध्ययन सामग्री और शैक्षणिक काम एक ही जगह व्यवस्थित करें।"
-        : "Unified Learn brings classes, learning resources, and academic work together.");
+        ? "प्रगति पर लाइव कक्षाएँ, अध्ययन सामग्री और शैक्षणिक काम एक ही जगह व्यवस्थित करें।"
+        : "Pragti brings classes, learning resources, and academic work together.");
     }
     try {
       window.localStorage.setItem(LANGUAGE_KEY, language);

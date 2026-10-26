@@ -1,22 +1,21 @@
-const {
-    initializeApp,
-    cert,
-    getApps
-} = require("firebase-admin/app");
+const { initializeApp, applicationDefault, getApps } = require("firebase-admin/app");
 
 const {
     getAuth
 } = require("firebase-admin/auth");
 
-const serviceAccount = require("./firebase-service-account.json");
+if (!process.env.FIREBASE_PROJECT_ID) {
+    throw new Error("FIREBASE_PROJECT_ID is required to initialize Firebase Admin.");
+}
 
 const app = getApps().length
     ? getApps()[0]
     : initializeApp({
-        credential: cert(serviceAccount)
+        credential: applicationDefault(),
+        projectId: process.env.FIREBASE_PROJECT_ID
     });
 
-console.log("Firebase Admin connected successfully!");
+console.log("Firebase Admin initialized");
 
 module.exports = {
     app,

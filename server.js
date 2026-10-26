@@ -4,7 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 
-require("dotenv").config();
+require("dotenv").config({ path: require("path").resolve(__dirname, ".env") });
 require("./config/firebase");
 
 const classroomRoutes = require("./src/routes/classroomRoutes");
@@ -14,26 +14,22 @@ const verifyToken = require("./src/middleware/authMiddleware");
 
 const app = express();
 const server = http.createServer(app);
+const webOrigins = (process.env.WEB_ORIGIN || "http://localhost:5173").split(",").map((origin) => origin.trim());
 
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: webOrigins,
         methods: ["GET", "POST"],
     },
 });
 
 require("./src/sockets/handRaise")(io);
 
-app.use(cors());
+app.use(cors({ origin: webOrigins }));
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/classrooms", classroomRoutes);
-app.use("/api/assignments", require("./src/routes/assignmentRoutes"));
-app.use("/api/submissions", require("./src/routes/submissionRoutes"));
-app.use("/api/materials", require("./src/routes/materialRoutes"));
-app.use("/api/calendar", require("./src/routes/calendarRoutes"));
-app.use("/api/notifications", require("./src/routes/notificationRoutes"));
 
 app.get("/", (req, res) => {
     res.send("Smart Classroom Backend is running!");
@@ -47,7 +43,7 @@ app.get("/protected", verifyToken, (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
     await connectDB();

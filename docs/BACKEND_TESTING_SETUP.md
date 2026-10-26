@@ -1,35 +1,29 @@
-# Frontend ↔ backend testing setup
+# Backend and web development setup
 
-This adapter connects the existing frontend service boundary to the endpoints present in `apps/backend`:
+## Services
 
-- `GET/POST /api/assignments` (listing is class-scoped)
-- `GET /api/assignments/:id`
-- `POST /api/submissions/assignment/:assignmentId`
-- `GET /api/submissions/assignment/:assignmentId/student/:studentId`
-- `GET/POST /api/materials` (listing is class-scoped)
-- `GET/PUT /api/notifications/...`
-- `GET /api/calendar/class/:classId`
+- `apps/backend` is the API currently targeted by `apps/web` on port 5000. It owns assignment, submission, materials, notification, calendar, and the Node-to-ML study proxy routes.
+- `ml_service` is the Python inference service on port 8001. The browser should call the Node API for mentor/quiz operations; it does not need provider credentials or an ML host address.
+- The repository-root `server.js` is a separate Firebase/classroom service on port 3000. Its user sync and classroom management routes remain legacy-only; duplicate data route mounts have been removed.
 
-## Configure
+## Configure and start
 
-Copy `apps/web/.env.example` to `apps/web/.env.local` and replace the placeholder IDs with real 24-character MongoDB ObjectIds from the backend database. The frontend rejects missing or malformed IDs before making requests:
+Copy `apps/backend/.env.example` to `apps/backend/.env` and supply a rotated MongoDB URI and Cloudinary account credentials. Start the canonical API from any working directory with:
 
-```env
-VITE_DATA_MODE=api
-VITE_API_BASE_URL=http://localhost:5000/api
-VITE_DEMO_CLASS_ID=<real Classroom _id>
-VITE_DEMO_TEACHER_ID=<real User _id for teacher>
-VITE_DEMO_STUDENT_ID=<real User _id for student>
+```sh
+cd apps/backend && npm ci && npm start
 ```
 
-Restart `npm run dev` after changing environment variables. For a local backend, start the backend separately and check `GET http://localhost:5000/api/health`.
+The server reads `apps/backend/.env` by absolute path, validates required configuration, connects to MongoDB, and only then listens on port 5000. `/api/health` returns 503 until MongoDB is connected. Cloudinary settings and `FIREBASE_PROJECT_ID` are required. Firebase Admin uses Application Default Credentials or the local untracked path in `GOOGLE_APPLICATION_CREDENTIALS`. CORS defaults to `http://localhost:5173`; set `WEB_ORIGIN` to a comma-separated list of trusted web origins when needed. The root Firebase/classroom service reads root `.env` and defaults to port 3000.
 
-`VITE_DATA_MODE` must be `mock` or `api`. In `api` mode, missing or malformed IDs and failed requests are shown as errors; supported features do not fall back to mock records. Features without an implemented backend adapter continue to use their existing mock services.
+Set up Python with `python -m venv .venv`, activate it, install `pip install -r requirements.txt` from `ml_service/`, copy `.env.example` to `.env`, and set `GROQ_API_KEY` for actual LLM inference. Run `uvicorn main:app --host 127.0.0.1 --port 8001` from `ml_service/`. `ML_SERVICE_URL` on the Node service selects the Python service address. `/health` is a process health check; it does not prove provider credentials or model inference are available.
 
-The current backend models require MongoDB ObjectIds for `classId`, `createdBy`, `uploadedBy`, and `studentId`. The frontend demo IDs `STU-1001` and `TCH-2001` are not MongoDB IDs and cannot be sent to these endpoints. Backend login/authentication and user/class creation endpoints are not included in the supplied backend branch, so the current sign-in remains a local demo session. Do not use this setup as production authentication.
+## Web API mode
 
-## What remains mock-only
+Copy `apps/web/.env.example` to `apps/web/.env.local`, use `VITE_DATA_MODE=api` and `VITE_API_BASE_URL=http://localhost:5000/api`, then run `npm run dev` from `apps/web/`. `VITE_DEMO_CLASS_ID` selects a class, while teacher/student ObjectId values and the browser role are not authorization. Protected calls require a verified Firebase ID token in local storage key `unified-learn-firebase-id-token`. The current demo login does not provide one; full Firebase web login remains to be integrated.
 
-The `apps/backend` service used by this adapter does not expose the class/user, attendance, announcements, chat, or authentication endpoints needed by these UI flows, so those areas remain on existing mock services. The repository-root server is a separate legacy API and is not wired through this adapter. AI Mentor and quiz generation remain on the ML mock service until the ML API contract is available. In API mode, failures for the supported endpoints are shown as errors and are not silently replaced with mock assignment/material/notification/calendar records.
+Mentor requests call `/api/study/mentor` and use the real Python `/mentor/chat` implementation. Quiz generation calls `/api/study/quiz`; it requires lesson text, but the current quiz UI only collects a topic and does not provide lesson notes, so API mode returns a visible validation error instead of inventing quiz content. `checkMessage` remains a deterministic mock; the Python spam detector requires a trusted meeting and user identity contract that the web app does not yet have.
 
-The supported API routes for this adapter are mounted in `apps/backend/src/server.js`. This frontend integration does not modify backend files.
+## Current integration boundary
+
+The canonical API verifies Firebase identities and enforces MongoDB role, class membership, and teacher ownership for data operations. Supported routes are assignment list/detail/create, submission upload/read, material list/add, notification list/read, calendar-by-month, and mentor. File uploads use Cloudinary and persist secure URLs. Web Firebase login, classroom management UI, attendance, announcements, delivered chat, and profile operations remain mock or legacy-only and are not integrated into the canonical API. Browser-provided user IDs are ignored for authorization.
