@@ -5,7 +5,7 @@ import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/core/widgets/demo_data_badge.dart';
 import 'package:mobile/features/auth/application/auth_providers.dart';
 import 'package:mobile/features/auth/domain/auth_repository.dart';
-import 'package:mobile/features/auth/presentation/welcome_screen.dart';
+import 'package:mobile/features/auth/presentation/login_screen.dart';
 import 'package:mobile/features/home/presentation/widgets/materials_view.dart';
 import 'package:mobile/features/home/presentation/widgets/overview_view.dart';
 import 'package:mobile/features/home/presentation/widgets/schedule_view.dart';
@@ -31,14 +31,14 @@ void main() {
   }
 
   group('Step 2: Demo Mode & Demo Data Badge Tests', () {
-    testWidgets('WelcomeScreen has explicit Explore in Demo Mode button', (tester) async {
+    testWidgets('LoginScreen has explicit Try demo link', (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(buildApp(const WelcomeScreen()));
+      await tester.pumpWidget(buildApp(const LoginScreen()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Explore in Demo Mode (Offline)'), findsOneWidget);
+      expect(find.text('Try demo'), findsOneWidget);
     });
 
     testWidgets('OverviewView displays DemoDataBadge when in demo mode', (tester) async {

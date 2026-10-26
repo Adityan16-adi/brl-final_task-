@@ -451,10 +451,11 @@ class PersistentAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {
-    await Future<void>.delayed(const Duration(milliseconds: 50));
     try {
-      await GoogleSignIn().signOut().catchError((_) => null);
-      await FirebaseAuth.instance.signOut().catchError((_) => null);
+      if (Firebase.apps.isNotEmpty) {
+        await GoogleSignIn().signOut().catchError((_) => null);
+        await FirebaseAuth.instance.signOut().catchError((_) => null);
+      }
     } catch (_) {}
     _set(null);
     await _prefs?.remove(keyUser);

@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/network_providers.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/auth/application/auth_providers.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/welcome_screen.dart';
 import '../../features/help/presentation/help_desk_screen.dart';
 import '../../features/home/domain/home_repository.dart';
@@ -19,22 +21,35 @@ import '../../features/settings/presentation/settings_screen.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = ValueNotifier<int>(0);
   ref.listen(authStateProvider, (_, _) => refreshNotifier.value++);
+  ref.listen(sessionExpiredMessageProvider, (_, _) => refreshNotifier.value++);
 
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: refreshNotifier,
     redirect: (context, state) {
       final authAsync = ref.read(authStateProvider);
       final user = authAsync.value;
       final isSignedIn = user != null;
-      final authRepo = ref.read(authRepositoryProvider);
-      final hasCompletedOnboarding = authRepo.hasCompletedOnboarding();
+      final sessionExpiredMsg = ref.read(sessionExpiredMessageProvider);
 
       final loc = state.matchedLocation;
       final isAuthRoute =
           loc == '/welcome' || loc == '/login' || loc == '/register';
 
-      // 1. Signed-in users should not access welcome/login/register
+      // 1. Splash screen manages initial session evaluation
+      if (loc == '/splash') {
+        return null;
+      }
+
+      // 2. 401 session expiration navigates to login screen
+      if (sessionExpiredMsg != null && !isSignedIn) {
+        if (loc != '/login') {
+          return '/login';
+        }
+        return null;
+      }
+
+      // 3. Signed-in users should not access auth routes
       if (isSignedIn) {
         if (isAuthRoute) {
           return '/';
@@ -42,15 +57,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // 2. Unauthenticated users trying to access protected screens
+      // 4. Unauthenticated users trying to access protected screens go to welcome
       if (!isSignedIn && !isAuthRoute) {
-        // First-time users see welcome; returning users go directly to login
-        return hasCompletedOnboarding ? '/login' : '/welcome';
+        return '/welcome';
       }
 
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/welcome',
         builder: (context, state) => const WelcomeScreen(),

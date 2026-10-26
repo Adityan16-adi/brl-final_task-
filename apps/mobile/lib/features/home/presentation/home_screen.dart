@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/branding/app_branding.dart';
 import 'package:mobile/core/branding/brand_widgets.dart';
+import 'package:mobile/core/providers/network_providers.dart';
 import 'package:mobile/core/theme/clay_theme.dart';
 
 import '../../auth/application/auth_providers.dart';
@@ -200,6 +201,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildBody() {
+    final isUnreachable = ref.watch(serverUnreachableProvider);
     Widget child;
     switch (_currentIndex) {
       case 0:
@@ -220,11 +222,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       default:
         child = OverviewView(onNavigateToTab: _onTabSelect);
     }
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: child,
-      ),
+    return Column(
+      children: [
+        if (isUnreachable)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: const Color(0xFFFB9823).withValues(alpha: 0.15),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.cloud_off_rounded,
+                  size: 18,
+                  color: ClayTokens.pragtiOrange,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    "Can't reach the server. Working offline.",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: ClayTokens.pragtiOrange,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    ref.read(serverUnreachableProvider.notifier).setUnreachable(false);
+                    ref.invalidate(classroomsProvider);
+                    ref.invalidate(assignmentsProvider);
+                  },
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: ClayTokens.pragtiOrange,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: child,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

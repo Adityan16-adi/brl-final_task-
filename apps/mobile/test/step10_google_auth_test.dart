@@ -55,15 +55,15 @@ void main() {
       expect(find.text('Sign up with Google'), findsOneWidget);
     });
 
-    testWidgets('GoogleSignInButton renders on WelcomeScreen', (tester) async {
+    testWidgets('WelcomeScreen renders Get Started and Sign in links', (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 640));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(buildTestApp(const WelcomeScreen()));
       await tester.pumpAndSettle();
 
-      expect(find.byType(GoogleSignInButton), findsOneWidget);
-      expect(find.text('Continue with Google'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
+      expect(find.textContaining('Sign in'), findsWidgets);
     });
 
     testWidgets('Google unavailable dialog explains missing services and affirms email/demo login', (tester) async {

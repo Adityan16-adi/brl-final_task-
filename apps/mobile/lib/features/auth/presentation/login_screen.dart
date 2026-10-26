@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/branding/app_branding.dart';
 import '../../../core/branding/brand_widgets.dart';
 import '../../../core/errors/error_message_helper.dart';
+import '../../../core/providers/network_providers.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
 import '../domain/auth_repository.dart';
@@ -34,6 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _quickLogin(String email) async {
+    ref.read(sessionExpiredMessageProvider.notifier).clear();
     setState(() {
       _busy = true;
       _errorMessage = null;
@@ -56,6 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _busy) return;
 
+    ref.read(sessionExpiredMessageProvider.notifier).clear();
     setState(() {
       _busy = true;
       _errorMessage = null;
@@ -142,56 +145,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? ClayTokens.darkSurface : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Try Pragti Demo',
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+        return Material(
+          color: isDark ? ClayTokens.darkSurface : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Try Pragti Demo',
+                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Select a role to explore features with offline demonstration data:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                  const SizedBox(height: 6),
+                  Text(
+                    'Select a role to explore features with offline demonstration data:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white60 : ClayTokens.secondaryText,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.school_rounded, color: ClayTokens.deepIndigo),
-                  title: const Text('Continue as Student'),
-                  subtitle: const Text('student@demo.com'),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  tileColor: isDark ? ClayTokens.darkCard : const Color(0xFFF1F0FB),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _quickLogin('student@demo.com');
-                  },
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: const Icon(Icons.co_present_rounded, color: ClayTokens.deepIndigo),
-                  title: const Text('Continue as Teacher'),
-                  subtitle: const Text('teacher@demo.com'),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  tileColor: isDark ? ClayTokens.darkCard : const Color(0xFFF1F0FB),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _quickLogin('teacher@demo.com');
-                  },
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading: const Icon(Icons.school_rounded, color: ClayTokens.deepIndigo),
+                    title: const Text('Continue as Student'),
+                    subtitle: const Text('student@demo.com'),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    tileColor: isDark ? ClayTokens.darkCard : const Color(0xFFF1F0FB),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _quickLogin('student@demo.com');
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: const Icon(Icons.co_present_rounded, color: ClayTokens.deepIndigo),
+                    title: const Text('Continue as Teacher'),
+                    subtitle: const Text('teacher@demo.com'),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    tileColor: isDark ? ClayTokens.darkCard : const Color(0xFFF1F0FB),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _quickLogin('teacher@demo.com');
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -425,6 +429,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                       ),
+
+                      if (ref.watch(sessionExpiredMessageProvider) != null && _errorMessage == null) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? ClayTokens.darkCard
+                                : const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: ClayTokens.pragtiOrange.withValues(alpha: 0.6),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                size: 18,
+                                color: ClayTokens.pragtiOrange,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  ref.watch(sessionExpiredMessageProvider)!,
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : ClayTokens.navy,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
 
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 6),

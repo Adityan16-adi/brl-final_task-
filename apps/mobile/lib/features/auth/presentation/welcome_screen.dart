@@ -1,14 +1,15 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/branding/brand_widgets.dart';
-import '../../../core/errors/error_message_helper.dart';
 import '../../../core/theme/clay_theme.dart';
 import '../application/auth_providers.dart';
-import '../domain/auth_repository.dart';
-import 'widgets/google_sign_in_handler.dart';
 
+/// Clean, modern Welcome screen for Pragti ("Learn · Connect · Grow").
+/// Features subtle ambient brand circles, a floating logo tile, staggered entrance,
+/// three quiet feature chips, solid #1680ED "Get Started" action, and sign-in link.
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -16,28 +17,66 @@ class WelcomeScreen extends ConsumerStatefulWidget {
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
-  bool _busy = false;
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _entranceController;
+  late AnimationController _floatController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
-  Future<void> _quickLogin(String email) async {
-    setState(() => _busy = true);
-    try {
-      final repo = ref.read(authRepositoryProvider);
-      await repo.setOnboardingCompleted(true);
-      final role =
-          email.contains('teacher') ? UserRole.teacher : UserRole.student;
-      await repo.signInDemo(role: role);
-      if (mounted) {
-        context.go('/');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ErrorMessageHelper.format(e))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
+  @override
+  void initState() {
+    super.initState();
+    // Staggered fade-and-rise entrance under 700ms total
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOut,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic),
+    );
+
+    // Subtle 4px float animation on logo (disabled in test binding for pumpAndSettle compatibility)
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    );
+    if (!WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+      _floatController.repeat(reverse: true);
+    }
+
+    _entranceController.forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    _floatController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onGetStarted() async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.setOnboardingCompleted(true);
+    if (mounted) {
+      context.go('/register');
+    }
+  }
+
+  Future<void> _onSignIn() async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.setOnboardingCompleted(true);
+    if (mounted) {
+      context.go('/login');
     }
   }
 
@@ -45,321 +84,214 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark ? ClayTokens.darkBg : ClayTokens.lightBg;
+    final cardBorder = isDark ? const Color(0xFF243049) : const Color(0xFFE3E8F0);
+    final textColor = isDark ? const Color(0xFFF1F5F9) : ClayTokens.navy;
+    final secondaryTextColor = isDark ? const Color(0xFF94A3B8) : ClayTokens.secondaryText;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Hero Brand Header with Logo & Tagline
-                  const Center(
-                    child: BrandHeader(
-                      markSize: 72,
-                      showTagline: true,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Empowering students & educators with collaborative virtual classrooms, automated grading, and an intelligent AI mentor.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: isDark ? Colors.white70 : ClayTokens.secondaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Quick Demo Evaluation Shortcuts
-                  ClayCard(
-                    depth: 4,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    color: isDark
-                        ? ClayTokens.darkCard
-                        : const Color(0xFFEDEAF8),
-                    child: Column(
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.bolt_rounded,
-                              size: 16,
-                              color: ClayTokens.deepIndigo,
-                            ),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Development Demo Mode',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  color: ClayTokens.deepIndigo,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _busy
-                                  ? null
-                                  : () => _quickLogin('student@demo.com'),
-                              icon: const Icon(
-                                Icons.person_rounded,
-                                size: 15,
-                              ),
-                              label: const Text('Student Login'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 12,
-                                ),
-                              ),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _busy
-                                  ? null
-                                  : () => _quickLogin('teacher@demo.com'),
-                              icon: const Icon(
-                                Icons.co_present_rounded,
-                                size: 15,
-                              ),
-                              label: const Text('Teacher Login'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Call To Actions
-                  ClayButton(
-                    isFullWidth: true,
-                    onPressed: _busy
-                        ? null
-                        : () async {
-                            await ref
-                                .read(authRepositoryProvider)
-                                .setOnboardingCompleted(true);
-                            if (context.mounted) {
-                              context.push('/register');
-                            }
-                          },
-                    icon: Icons.arrow_forward_rounded,
-                    child: const Text('Get Started — Create Account'),
-                  ),
-                  const SizedBox(height: 12),
-
-                  ClayButton(
-                    isFullWidth: true,
-                    color: isDark ? ClayTokens.darkSurface : Colors.white,
-                    textColor: isDark ? Colors.white : ClayTokens.darkInk,
-                    gradient: LinearGradient(
-                      colors: isDark
-                          ? [const Color(0xFF292742), const Color(0xFF1E1C30)]
-                          : [Colors.white, const Color(0xFFF7F6FC)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    onPressed: _busy
-                        ? null
-                        : () async {
-                            await ref
-                                .read(authRepositoryProvider)
-                                .setOnboardingCompleted(true);
-                            if (context.mounted) {
-                              context.push('/login');
-                            }
-                          },
-                    icon: Icons.login_rounded,
-                    child: const Text('Sign In'),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Sign in with Google
-                  const GoogleSignInButton(),
-                  const SizedBox(height: 12),
-
-                  // Explicit Clearly Labelled Demo Mode Button
-                  ClayButton(
-                    isFullWidth: true,
-                    color: isDark ? const Color(0xFF382F18) : const Color(0xFFFEF3C7),
-                    textColor: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
-                    gradient: LinearGradient(
-                      colors: isDark
-                          ? [const Color(0xFF3D3216), const Color(0xFF29210B)]
-                          : [const Color(0xFFFEF9C3), const Color(0xFFFDE68A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    onPressed: _busy
-                        ? null
-                        : () => _quickLogin('student@demo.com'),
-                    icon: Icons.science_outlined,
-                    child: const Text('Explore in Demo Mode (Offline)'),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Feature Cards Carousel / Highlights
-                  ClayCard(
-                    padding: const EdgeInsets.all(14),
-                    depth: 4,
-                    child: Row(
-                      children: [
-                        ClayContainer(
-                          width: 44,
-                          height: 44,
-                          depth: 3,
-                          color: ClayTokens.softLavender,
-                          borderRadius: BorderRadius.circular(14),
-                          child: const Icon(
-                            Icons.groups_rounded,
-                            color: ClayTokens.deepIndigo,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Role-Secured Classrooms',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Teachers manage rosters & share join codes; students enroll in one click.',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: ClayTokens.secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  ClayCard(
-                    padding: const EdgeInsets.all(14),
-                    depth: 4,
-                    child: Row(
-                      children: [
-                        ClayContainer(
-                          width: 44,
-                          height: 44,
-                          depth: 3,
-                          color: ClayTokens.mint,
-                          borderRadius: BorderRadius.circular(14),
-                          child: const Icon(
-                            Icons.assignment_turned_in_rounded,
-                            color: ClayTokens.mintDark,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Assignments & Direct Feedback',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Submit work easily, receive grades with personalized remarks, track progress.',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: ClayTokens.secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  ClayCard(
-                    padding: const EdgeInsets.all(14),
-                    depth: 4,
-                    child: Row(
-                      children: [
-                        ClayContainer(
-                          width: 44,
-                          height: 44,
-                          depth: 3,
-                          color: ClayTokens.softPeach,
-                          borderRadius: BorderRadius.circular(14),
-                          child: const Icon(
-                            Icons.auto_awesome_rounded,
-                            color: ClayTokens.peachDark,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '24/7 AI Mentor Assistant',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Ask difficult study questions, generate study plans, and master concepts.',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: ClayTokens.secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      backgroundColor: bgColor,
+      body: Stack(
+        children: [
+          // ONE soft decorative pair (low-opacity 6-10% plain circles, no images/blur)
+          // Top-right brand blue circle
+          Positioned(
+            top: -50,
+            right: -50,
+            child: IgnorePointer(
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ClayTokens.brightBlue.withValues(alpha: 0.08),
+                ),
               ),
             ),
           ),
-        ),
+          // Bottom-left orange circle
+          Positioned(
+            bottom: -40,
+            left: -40,
+            child: IgnorePointer(
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ClayTokens.pragtiOrange.withValues(alpha: 0.07),
+                ),
+              ),
+            ),
+          ),
+
+          // Main Content with staggered entrance
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 12),
+
+                          // Floating centered logo tile and brand header
+                          AnimatedBuilder(
+                            animation: _floatController,
+                            builder: (context, child) {
+                              final offset = math.sin(_floatController.value * 2 * math.pi) * 3.5;
+                              return Transform.translate(
+                                offset: Offset(0, offset),
+                                child: child,
+                              );
+                            },
+                            child: const BrandHeader(markSize: 76),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // One line description
+                          Text(
+                            'Classes, assignments and live lessons in one place.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              height: 1.4,
+                              color: secondaryTextColor,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Three quiet outlined feature chips (Classes, Live, AI Mentor)
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildFeatureChip(
+                                icon: Icons.school_outlined,
+                                label: 'Classes',
+                                isDark: isDark,
+                                border: cardBorder,
+                                text: textColor,
+                              ),
+                              _buildFeatureChip(
+                                icon: Icons.videocam_outlined,
+                                label: 'Live',
+                                isDark: isDark,
+                                border: cardBorder,
+                                text: textColor,
+                              ),
+                              _buildFeatureChip(
+                                icon: Icons.auto_awesome_outlined,
+                                label: 'AI Mentor',
+                                isDark: isDark,
+                                border: cardBorder,
+                                text: textColor,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 36),
+
+                          // Full-width Get Started button (solid #1680ED, 56px, 16px radius)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: FilledButton(
+                              onPressed: _onGetStarted,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: ClayTokens.brightBlue,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: const Text(
+                                'Get Started',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Link: "Already have an account? Sign in"
+                          GestureDetector(
+                            onTap: _onSignIn,
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text.rich(
+                                TextSpan(
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    color: secondaryTextColor,
+                                  ),
+                                  children: const [
+                                    TextSpan(text: 'Already have an account? '),
+                                    TextSpan(
+                                      text: 'Sign in',
+                                      style: TextStyle(
+                                        color: ClayTokens.brightBlue,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureChip({
+    required IconData icon,
+    required String label,
+    required bool isDark,
+    required Color border,
+    required Color text,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: ClayTokens.brightBlue),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: text,
+            ),
+          ),
+        ],
       ),
     );
   }

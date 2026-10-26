@@ -21,7 +21,7 @@ void _setDesktopDimensions(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('Signed-out users see the LoginScreen with Demo options', (
+  testWidgets('Signed-out users see WelcomeScreen with Get Started and Sign in', (
     WidgetTester tester,
   ) async {
     _setMobileDimensions(tester);
@@ -29,10 +29,8 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: LearningApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Development Demo Mode'), findsOneWidget);
-    expect(find.text('Student Login'), findsOneWidget);
-    expect(find.text('Teacher Login'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
+    expect(find.text('Get Started'), findsOneWidget);
+    expect(find.textContaining('Sign in'), findsWidgets);
   });
 
   testWidgets('Quick login as student navigates to Dashboard Overview', (
@@ -43,8 +41,16 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: LearningApp()));
     await tester.pumpAndSettle();
 
-    // Tap quick student login on WelcomeScreen
-    await tester.tap(find.text('Student Login'));
+    // Tap sign in link on WelcomeScreen
+    await tester.tap(find.textContaining('Sign in'));
+    await tester.pumpAndSettle();
+
+    // Tap Try demo
+    await tester.tap(find.text('Try demo'));
+    await tester.pumpAndSettle();
+
+    // Select Continue as Student
+    await tester.tap(find.text('Continue as Student'));
     await tester.pumpAndSettle();
 
     expect(find.text('Dashboard Overview'), findsOneWidget);
@@ -60,8 +66,16 @@ void main() {
       await tester.pumpWidget(const ProviderScope(child: LearningApp()));
       await tester.pumpAndSettle();
 
-      // Tap quick teacher login on WelcomeScreen
-      await tester.tap(find.text('Teacher Login'));
+      // Tap sign in link on WelcomeScreen
+      await tester.tap(find.textContaining('Sign in'));
+      await tester.pumpAndSettle();
+
+      // Tap Try demo
+      await tester.tap(find.text('Try demo'));
+      await tester.pumpAndSettle();
+
+      // Select Continue as Teacher
+      await tester.tap(find.text('Continue as Teacher'));
       await tester.pumpAndSettle();
 
       expect(find.text('Dashboard Overview'), findsOneWidget);

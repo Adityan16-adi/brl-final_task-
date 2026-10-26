@@ -523,7 +523,7 @@ class _ClaySkeletonState extends State<ClaySkeleton>
   bool get _isInTest =>
       WidgetsBinding.instance.runtimeType
           .toString()
-          .contains('TestWidgetsFlutterBinding');
+          .contains('Test');
 
   @override
   void initState() {

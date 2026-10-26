@@ -96,12 +96,11 @@ void main() {
         expect(find.text(AppBranding.appName), findsOneWidget);
         expect(find.text(AppBranding.tagline), findsOneWidget);
         expect(find.byType(BrandHeader), findsOneWidget);
-        expect(find.text('Role-Secured Classrooms'), findsOneWidget);
-        expect(find.text('Assignments & Direct Feedback'), findsOneWidget);
-        expect(find.text('24/7 AI Mentor Assistant'), findsOneWidget);
-        expect(find.text('Get Started — Create Account'), findsOneWidget);
-        expect(find.text('Sign In'), findsOneWidget);
-        expect(find.text('Development Demo Mode'), findsOneWidget);
+        expect(find.text('Classes'), findsOneWidget);
+        expect(find.text('Live'), findsOneWidget);
+        expect(find.text('AI Mentor'), findsOneWidget);
+        expect(find.text('Get Started'), findsOneWidget);
+        expect(find.textContaining('Sign in'), findsWidgets);
       },
     );
   });

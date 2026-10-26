@@ -62,8 +62,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(WelcomeScreen), findsOneWidget);
-      expect(find.text('Student Login'), findsOneWidget);
-      expect(find.text('Teacher Login'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

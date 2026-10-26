@@ -136,7 +136,7 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    _onboardingCompleted = false;
     _set(null);
   }
 
