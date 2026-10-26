@@ -1,141 +1,169 @@
 import 'package:flutter/material.dart';
 
-import 'clay_theme.dart';
-
+/// Central theme specification for Pragti ("Learn · Connect · Grow").
+/// All light and dark mode colors are defined here with explicit ColorSchemes
+/// and transparent surfaceTint to eliminate purple/violet Material 3 tints.
 class AppTheme {
   AppTheme._();
 
-  // Primary & Accent Brand Palette (Pragti Navy & Blue as primary, Orange as highlight)
-  static const Color primaryNavy = ClayTokens.pragtiNavy;
-  static const Color primaryBlue = ClayTokens.pragtiBlue;
-  static const Color accentOrange = ClayTokens.pragtiOrange;
-  static const Color starGold = ClayTokens.pragtiStar;
-  static const Color primaryIndigo = ClayTokens.pragtiBlue;
-  static const Color accentBlue = ClayTokens.pragtiBlue;
-  static const Color secondarySky = Color(0xFF0EA5E9);
+  // Core Brand Tokens
+  static const Color primaryBlue = Color(0xFF1680ED);
+  static const Color primaryNavy = Color(0xFF0B1E48);
+  static const Color accentOrange = Color(0xFFFB9823);
 
-  // Semantic Status Tokens
-  static const Color statusPending = ClayTokens.pragtiOrange;
-  static const Color statusSubmitted = ClayTokens.pragtiBlue;
-  static const Color statusGraded = Color(0xFF10B981);
-  static const Color statusOverdue = Color(0xFFEF4444);
+  // Status Tokens
+  static const Color statusSuccess = Color(0xFF1E9E6A);
+  static const Color statusWarning = Color(0xFFE5A00D);
+  static const Color statusError = Color(0xFFD64545);
+
+  // Light Mode Surface & Content Tokens
+  static const Color lightBg = Color(0xFFF5F7FB);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightElevated = Color(0xFFFFFFFF);
+  static const Color lightBorder = Color(0xFFE3E8F0);
+  static const Color lightText = Color(0xFF0B1E48);
+  static const Color lightSecondaryText = Color(0xFF5B6B8A);
+
+  // Dark Mode Surface & Content Tokens (Calm deep navy/slate, no violet)
+  static const Color darkBg = Color(0xFF0A0F1C);
+  static const Color darkSurface = Color(0xFF111827);
+  static const Color darkElevated = Color(0xFF172033);
+  static const Color darkBorder = Color(0xFF243049);
+  static const Color darkText = Color(0xFFF1F5F9);
+  static const Color darkSecondaryText = Color(0xFF94A3B8);
+
+  // Semantic Status Aliases
+  static const Color statusPending = accentOrange;
+  static const Color statusSubmitted = primaryBlue;
+  static const Color statusGraded = statusSuccess;
+  static const Color statusOverdue = statusError;
 
   // Role Badges
-  static const Color roleStudent = ClayTokens.pragtiNavy;
-  static const Color roleTeacher = ClayTokens.pragtiBlue;
+  static const Color roleStudent = primaryNavy;
+  static const Color roleTeacher = primaryBlue;
 
   // Corner Radii Tokens
-  static const double radiusSmall = ClayTokens.radiusSmall;
-  static const double radiusMedium = ClayTokens.radiusMedium;
-  static const double radiusCard = ClayTokens.radiusMedium;
-  static const double radiusDialog = ClayTokens.radiusLarge;
+  static const double radiusSmall = 12.0;
+  static const double radiusMedium = 16.0;
+  static const double radiusCard = 16.0;
+  static const double radiusDialog = 20.0;
+  static const double radiusPill = 999.0;
 
-  static ThemeData get light {
-    final colorScheme =
-        ColorScheme.fromSeed(
-          seedColor: primaryBlue,
-          brightness: Brightness.light,
-          surface: ClayTokens.lightBg,
-        ).copyWith(
-          primary: primaryBlue,
-          onPrimary: Colors.white,
-          primaryContainer: ClayTokens.pragtiSoftBlue,
-          onPrimaryContainer: ClayTokens.pragtiDeepNavy,
-          secondary: primaryNavy,
-          onSecondary: Colors.white,
-          tertiary: accentOrange,
-          onTertiary: Colors.white,
-          surface: ClayTokens.lightBg,
-          surfaceContainerHighest: const Color(0xFFE8EEF8),
-          onSurface: ClayTokens.pragtiDeepNavy,
-          onSurfaceVariant: ClayTokens.secondaryText,
-          outlineVariant: const Color(0xFFDCE6F5),
-        );
+  static ColorScheme get lightColorScheme => const ColorScheme(
+        brightness: Brightness.light,
+        primary: primaryBlue,
+        onPrimary: Colors.white,
+        primaryContainer: Color(0xFFEEF4FF),
+        onPrimaryContainer: primaryNavy,
+        secondary: primaryNavy,
+        onSecondary: Colors.white,
+        secondaryContainer: lightBorder,
+        onSecondaryContainer: primaryNavy,
+        tertiary: accentOrange,
+        onTertiary: Colors.white,
+        error: statusError,
+        onError: Colors.white,
+        surface: lightSurface,
+        onSurface: lightText,
+        onSurfaceVariant: lightSecondaryText,
+        outline: lightBorder,
+        outlineVariant: lightBorder,
+        surfaceTint: Colors.transparent,
+      );
 
-    return _buildTheme(colorScheme);
-  }
+  static ColorScheme get darkColorScheme => const ColorScheme(
+        brightness: Brightness.dark,
+        primary: primaryBlue,
+        onPrimary: Colors.white,
+        primaryContainer: darkElevated,
+        onPrimaryContainer: darkText,
+        secondary: darkSecondaryText,
+        onSecondary: darkBg,
+        secondaryContainer: darkBorder,
+        onSecondaryContainer: darkText,
+        tertiary: accentOrange,
+        onTertiary: Colors.white,
+        error: statusError,
+        onError: Colors.white,
+        surface: darkSurface,
+        onSurface: darkText,
+        onSurfaceVariant: darkSecondaryText,
+        outline: darkBorder,
+        outlineVariant: darkBorder,
+        surfaceTint: Colors.transparent,
+      );
 
-  static ThemeData get dark {
-    final colorScheme =
-        ColorScheme.fromSeed(
-          seedColor: primaryBlue,
-          brightness: Brightness.dark,
-          surface: ClayTokens.darkBg,
-        ).copyWith(
-          primary: const Color(0xFF5CA4FF),
-          onPrimary: const Color(0xFF021742),
-          primaryContainer: const Color(0xFF0E234A),
-          onPrimaryContainer: Colors.white,
-          secondary: const Color(0xFF90C2FF),
-          tertiary: accentOrange,
-          onTertiary: Colors.white,
-          surface: ClayTokens.darkBg,
-          surfaceContainerHighest: ClayTokens.darkCard,
-          onSurface: const Color(0xFFF8F7FC),
-          onSurfaceVariant: const Color(0xFFA3A1BD),
-          outlineVariant: const Color(0xFF26334D),
-        );
-
-    return _buildTheme(colorScheme);
-  }
+  static ThemeData get light => _buildTheme(lightColorScheme);
+  static ThemeData get dark => _buildTheme(darkColorScheme);
 
   static ThemeData _buildTheme(ColorScheme colorScheme) {
     final isDark = colorScheme.brightness == Brightness.dark;
-    final cardBg = isDark ? ClayTokens.darkCard : Colors.white;
-    final borderColor = isDark
-        ? const Color(0xFF35334D)
-        : const Color(0xFFE6E4F0);
+    final cardBg = isDark ? darkElevated : lightSurface;
+    final scaffoldBg = isDark ? darkBg : lightBg;
+    final borderColor = isDark ? darkBorder : lightBorder;
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: colorScheme.surface,
+      scaffoldBackgroundColor: scaffoldBg,
+      canvasColor: cardBg,
+      dividerColor: borderColor,
+      splashColor: primaryBlue.withValues(alpha: 0.08),
+      highlightColor: Colors.transparent,
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: scaffoldBg,
         foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: colorScheme.onSurface,
-          fontSize: 19,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.4,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
         ),
       ),
       cardTheme: CardThemeData(
         color: cardBg,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
+          borderRadius: BorderRadius.circular(radiusCard),
           side: BorderSide(color: borderColor, width: 1),
         ),
       ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: isDark ? darkSurface : lightSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: cardBg,
-        elevation: 3,
-        indicatorColor: colorScheme.primary.withValues(alpha: 0.15),
+        backgroundColor: isDark ? darkSurface : lightSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        indicatorColor: primaryBlue.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
           return TextStyle(
             fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-            color: isSelected
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? primaryBlue : colorScheme.onSurfaceVariant,
           );
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: cardBg,
-        elevation: 2,
-        indicatorColor: colorScheme.primary.withValues(alpha: 0.15),
-        selectedIconTheme: IconThemeData(color: colorScheme.primary),
+        backgroundColor: isDark ? darkSurface : lightSurface,
+        elevation: 0,
+        indicatorColor: primaryBlue.withValues(alpha: 0.12),
+        selectedIconTheme: const IconThemeData(color: primaryBlue),
         unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
-        selectedLabelTextStyle: TextStyle(
-          color: colorScheme.primary,
-          fontWeight: FontWeight.w800,
+        selectedLabelTextStyle: const TextStyle(
+          color: primaryBlue,
+          fontWeight: FontWeight.w700,
           fontSize: 13,
         ),
         unselectedLabelTextStyle: TextStyle(
@@ -146,56 +174,72 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
+            borderRadius: BorderRadius.circular(radiusMedium),
           ),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          foregroundColor: colorScheme.onSurface,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
+            borderRadius: BorderRadius.circular(radiusMedium),
           ),
-          side: BorderSide(color: borderColor, width: 1.2),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          side: BorderSide(color: borderColor, width: 1),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       chipTheme: ChipThemeData(
+        backgroundColor: isDark ? darkSurface : lightBg,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ClayTokens.radiusSmall),
+          borderRadius: BorderRadius.circular(radiusSmall),
         ),
-        side: BorderSide(color: borderColor),
+        side: BorderSide(color: borderColor, width: 1),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? ClayTokens.darkCard : const Color(0xFFEBE9F5),
+        fillColor: isDark ? darkElevated : lightSurface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 13,
+          vertical: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(radiusMedium),
+          borderSide: BorderSide(color: borderColor, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
-          borderSide: BorderSide(color: borderColor.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(radiusMedium),
+          borderSide: BorderSide(color: borderColor, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ClayTokens.radiusMedium),
-          borderSide: BorderSide(color: colorScheme.primary, width: 1.8),
+          borderRadius: BorderRadius.circular(radiusMedium),
+          borderSide: const BorderSide(color: primaryBlue, width: 1.5),
+        ),
+        hintStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant,
+          fontSize: 14,
         ),
       ),
       dialogTheme: DialogThemeData(
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: isDark ? darkSurface : lightSurface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ClayTokens.radiusLarge),
+          borderRadius: BorderRadius.circular(radiusDialog),
+          side: BorderSide(color: borderColor, width: 1),
         ),
-        backgroundColor: cardBg,
       ),
     );
   }

@@ -245,13 +245,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   height: 80,
                   depth: 5,
                   padding: EdgeInsets.zero,
-                  gradient: LinearGradient(
-                    colors: isTeacher
-                        ? [const Color(0xFF9333EA), const Color(0xFF6B21A8)]
-                        : [const Color(0xFF6356F5), const Color(0xFF473BB8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: isTeacher ? ClayTokens.pragtiBlue : ClayTokens.pragtiNavy,
                   borderRadius: BorderRadius.circular(28),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(28),
@@ -320,8 +314,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: isTeacher
-                          ? const Color(0xFF7E22CE)
-                          : ClayTokens.deepIndigo,
+                          ? ClayTokens.pragtiBlue
+                          : ClayTokens.pragtiNavy,
                     ),
                   ),
                 ),

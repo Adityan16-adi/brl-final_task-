@@ -146,9 +146,13 @@ class AppDrawer extends ConsumerWidget {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isTeacher
-                                        ? const Color(0xFFF3E8FF)
-                                        : const Color(0xFFEFF6FF),
+                                    color: isDark
+                                        ? (isTeacher
+                                            ? ClayTokens.pragtiNavy.withValues(alpha: 0.5)
+                                            : ClayTokens.brightBlue.withValues(alpha: 0.15))
+                                        : (isTeacher
+                                            ? const Color(0xFFEFF6FF)
+                                            : const Color(0xFFEEF4FF)),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -157,7 +161,7 @@ class AppDrawer extends ConsumerWidget {
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                       color: isTeacher
-                                          ? const Color(0xFF7E22CE)
+                                          ? (isDark ? Colors.white70 : ClayTokens.pragtiNavy)
                                           : ClayTokens.brightBlue,
                                     ),
                                   ),

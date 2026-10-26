@@ -372,7 +372,7 @@ class _ScheduleCard extends StatelessWidget {
       case 'deadline':
         return Colors.redAccent.shade700;
       default:
-        return const Color(0xFF7C3AED);
+        return ClayTokens.pragtiBlue;
     }
   }
 

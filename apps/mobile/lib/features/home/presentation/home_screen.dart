@@ -97,13 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 width: 64,
                 height: 64,
                 depth: 5,
-                gradient: LinearGradient(
-                  colors: isTeacher
-                      ? [const Color(0xFF9333EA), const Color(0xFF6B21A8)]
-                      : [const Color(0xFF6356F5), const Color(0xFF473BB8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: isTeacher ? ClayTokens.pragtiBlue : ClayTokens.pragtiNavy,
                 borderRadius: BorderRadius.circular(22),
                 child: Center(
                   child: Text(

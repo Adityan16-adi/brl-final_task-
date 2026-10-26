@@ -30,52 +30,40 @@ class ClayTokens {
   static const Color brightBlue = Color(0xFF1680ED);
   static const Color navy = Color(0xFF0B1E48);
 
-  // Background and Surface Tones
-  static const Color lightBg = Color(0xFFF3F2F9);
+  // Background and Surface Tones (Calm deep slate #0A0F1C dark, #F5F7FB light)
+  static const Color lightBg = Color(0xFFF5F7FB);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color darkBg = Color(0xFF141322);
-  static const Color darkSurface = Color(0xFF1F1D33);
-  static const Color darkCard = Color(0xFF272540);
+  static const Color darkBg = Color(0xFF0A0F1C);
+  static const Color darkSurface = Color(0xFF111827);
+  static const Color darkCard = Color(0xFF172033);
+  static const Color borderLight = Color(0xFFE3E8F0);
+  static const Color borderDark = Color(0xFF243049);
 
   // Corner Radii
   static const double radiusSmall = 12.0;
-  static const double radiusMedium = 18.0;
-  static const double radiusLarge = 24.0;
+  static const double radiusMedium = 16.0;
+  static const double radiusLarge = 20.0;
   static const double radiusPill = 999.0;
 
-  /// Generates the distinctive dual-layer Claymorphic box shadows:
-  /// 1. Top-left light highlight (reflects ambient overhead light)
-  /// 2. Bottom-right soft dark shadow (creates elevated clay cushion feel)
+  /// Generates clean, subtle soft depth shadows without purple/violet tint:
   static List<BoxShadow> clayShadows({
     required bool isDark,
-    double depth = 6.0,
+    double depth = 4.0,
     double spread = 0.0,
     Color? highlightColor,
     Color? shadowColor,
   }) {
-    final topHighlight =
-        highlightColor ??
+    if (depth <= 0) return const [];
+    final ambientShadow = shadowColor ??
         (isDark
-            ? Colors.white.withValues(alpha: 0.07)
-            : Colors.white.withValues(alpha: 0.95));
-
-    final bottomShadow =
-        shadowColor ??
-        (isDark
-            ? Colors.black.withValues(alpha: 0.45)
-            : const Color(0xFF25243A).withValues(alpha: 0.10));
+            ? Colors.black.withValues(alpha: 0.35)
+            : const Color(0xFF0B1E48).withValues(alpha: 0.04));
 
     return [
       BoxShadow(
-        color: topHighlight,
-        offset: Offset(-depth * 0.6, -depth * 0.6),
-        blurRadius: depth * 1.2,
-        spreadRadius: spread,
-      ),
-      BoxShadow(
-        color: bottomShadow,
-        offset: Offset(depth * 0.7, depth * 0.7),
-        blurRadius: depth * 1.6,
+        color: ambientShadow,
+        offset: Offset(0, depth * 0.5),
+        blurRadius: depth * 1.5,
         spreadRadius: spread,
       ),
     ];
@@ -86,17 +74,10 @@ class ClayTokens {
     return [
       BoxShadow(
         color: isDark
-            ? Colors.black.withValues(alpha: 0.35)
-            : const Color(0xFF25243A).withValues(alpha: 0.08),
-        offset: const Offset(2, 2),
-        blurRadius: 4,
-      ),
-      BoxShadow(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.04)
-            : Colors.white.withValues(alpha: 0.8),
-        offset: const Offset(-2, -2),
-        blurRadius: 4,
+            ? Colors.black.withValues(alpha: 0.3)
+            : const Color(0xFF0B1E48).withValues(alpha: 0.04),
+        offset: const Offset(1, 1),
+        blurRadius: 3,
       ),
     ];
   }
@@ -267,20 +248,8 @@ class _ClayButtonState extends State<ClayButton> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final effectiveRadius =
         widget.borderRadius ?? BorderRadius.circular(ClayTokens.radiusMedium);
-    final buttonColor = widget.color ?? ClayTokens.deepIndigo;
-    final isPrimaryIndigo =
-        buttonColor == ClayTokens.deepIndigo && widget.gradient == null;
-
-    final defaultGradient = isPrimaryIndigo
-        ? const LinearGradient(
-            colors: [Color(0xFF6356F5), Color(0xFF473BB8)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          )
-        : null;
-
-    final effectiveGradient = widget.gradient ?? defaultGradient;
-    final depth = _isPressed ? 1.5 : widget.depth;
+    final buttonColor = widget.color ?? ClayTokens.brightBlue;
+    final depth = _isPressed ? 1.0 : widget.depth;
 
     Widget content = Row(
       mainAxisSize: widget.isFullWidth ? MainAxisSize.max : MainAxisSize.min,
@@ -327,25 +296,27 @@ class _ClayButtonState extends State<ClayButton> {
             }
           : null,
       onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        width: widget.isFullWidth ? double.infinity : null,
-        padding: widget.padding,
-        decoration: BoxDecoration(
-          color: effectiveGradient == null ? buttonColor : null,
-          gradient: effectiveGradient,
-          borderRadius: effectiveRadius,
-          boxShadow: _isPressed
-              ? ClayTokens.insetShadows(isDark: isDark)
-              : ClayTokens.clayShadows(
-                  isDark: isDark,
-                  depth: depth,
-                  shadowColor: isPrimaryIndigo
-                      ? const Color(0xFF32279B).withValues(alpha: 0.35)
-                      : null,
-                ),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          width: widget.isFullWidth ? double.infinity : null,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: widget.gradient == null ? buttonColor : null,
+            gradient: widget.gradient,
+            borderRadius: effectiveRadius,
+            boxShadow: _isPressed
+                ? ClayTokens.insetShadows(isDark: isDark)
+                : ClayTokens.clayShadows(
+                    isDark: isDark,
+                    depth: depth,
+                  ),
+          ),
+          child: content,
         ),
-        child: content,
       ),
     );
   }
