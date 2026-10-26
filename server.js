@@ -61,10 +61,14 @@ app.use("/api/submissions", require("./src/routes/submissionRoutes"));
 app.use("/api/materials", require("./src/routes/materialRoutes"));
 app.use("/api/calendar", require("./src/routes/calendarRoutes"));
 app.use("/api/notifications", require("./src/routes/notificationRoutes"));
+
 app.use("/api/attendance", require("./src/routes/attendanceRoutes"));
 app.use("/api/meetings", require("./src/routes/meetingRoutes"));
 app.use("/api/chat", require("./src/routes/chatRoutes"));
 app.use("/api/mentor", require("./src/routes/mentorRoutes"));
+
+app.use("/api/sessions", require("./src/routes/sessionRoutes"));
+
 
 const healthHandler = (req, res) => {
     const isDbConnected = mongoose.connection.readyState === 1;
@@ -77,6 +81,7 @@ const healthHandler = (req, res) => {
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
     });
+
 };
 
 app.get("/api/health", healthHandler);
@@ -145,6 +150,8 @@ const readyHandler = async (req, res) => {
 
 app.get("/api/ready", readyHandler);
 app.get("/ready", readyHandler);
+
+
 
 app.get("/", (req, res) => {
     res.send("Smart Classroom Backend is running!");

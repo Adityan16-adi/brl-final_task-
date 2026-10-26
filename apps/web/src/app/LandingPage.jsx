@@ -40,9 +40,9 @@ const workflow = [
 
 function Brand({ onClick }) {
   const { t } = useLanguage();
-  return <Link className="landing-brand" to="/" onClick={onClick} aria-label={t("Unified Learn home")}>
-    <span className="landing-brand-mark"><GraduationCap size={21} strokeWidth={2.2} /></span>
-    <span>{<LocalizedText text={"Unified"} />}<strong>{<LocalizedText text={"Learn"} />}</strong></span>
+  return <Link className="landing-brand" to="/" onClick={onClick} aria-label={t("Pragti home")}>
+    <span className="landing-brand-mark"><img src="/pragti-logo.png" alt="Pragti logo" className="brand-logo-img" /></span>
+    <span><strong>{<LocalizedText text={"Pragti"} />}</strong></span>
   </Link>;
 }
 
@@ -77,7 +77,7 @@ function LandingNavbar({ menuOpen, setMenuOpen, scrolled }) {
 
 function HeroInterface() {
   const { t } = useLanguage();
-  return <div className="hero-art" aria-label={t("Preview of the Unified Learn classroom and learning dashboard")}>
+  return <div className="hero-art" aria-label={t("Preview of the Pragti classroom and learning dashboard")}>
     <div className="hero-art-grid" aria-hidden="true" />
     <div className="art-label art-label-class"><span className="art-label-dot" /> {t("CLASS IN SESSION")} <ArrowUpRight size={13} /></div>
     <div className="classroom-window glass-panel">
@@ -206,7 +206,7 @@ function AudienceSection() {
 
 function AboutSection() {
   const { t } = useLanguage();
-  return <section className="about-section" id="about"><div className="about-mark"><GraduationCap size={22} /></div><div><span className="section-kicker">{t("ABOUT UNIFIED LEARN")}</span><h2>{t("A little more connected, every day.")}</h2></div><p>{t("Unified Learn brings the everyday rhythm of school into one thoughtful space, designed for students and teachers to move forward together.")}</p></section>;
+  return <section className="about-section" id="about"><div className="about-mark"><img src="/pragti-logo.png" alt="Pragti logo" className="brand-logo-img" /></div><div><span className="section-kicker">{t("ABOUT PRAGTI")}</span><h2>{t("A little more connected, every day.")}</h2></div><p>{t("Pragti brings the everyday rhythm of school into one thoughtful space, designed for students and teachers to move forward together.")}</p></section>;
 }
 
 function FooterDialog({ kind, onClose }) {
@@ -214,21 +214,21 @@ function FooterDialog({ kind, onClose }) {
   if (!kind) return null;
   const content = kind === "privacy"
     ? { title: "Privacy in this preview", text: "Theme, language, and account session preferences are stored in this browser only. No personal information is sent to a server." }
-    : { title: "Terms for this preview", text: "Unified Learn shows sample classes, messages, assignments, and connected tools. It is not a live education service." };
-  return <div className="footer-dialog-backdrop" onClick={onClose}><section className="footer-dialog" role="dialog" aria-modal="true" aria-labelledby="footer-dialog-title" onClick={(event) => event.stopPropagation()}><button className="dialog-close" type="button" aria-label={t("Close dialog")} onClick={onClose}><X size={18} /></button><span className="section-kicker">{t("UNIFIED LEARN · FRONTEND PREVIEW")}</span><h2 id="footer-dialog-title">{t(content.title)}</h2><p>{t(content.text)}</p><button className="landing-button landing-button-primary" type="button" onClick={onClose}>{t("Understood")} <Check size={15} /></button></section></div>;
+    : { title: "Terms for this preview", text: "Pragti shows sample classes, messages, assignments, and connected tools. It is not a live education service." };
+  return <div className="footer-dialog-backdrop" onClick={onClose}><section className="footer-dialog" role="dialog" aria-modal="true" aria-labelledby="footer-dialog-title" onClick={(event) => event.stopPropagation()}><button className="dialog-close" type="button" aria-label={t("Close dialog")} onClick={onClose}><X size={18} /></button><span className="section-kicker">{t("PRAGTI · FRONTEND PREVIEW")}</span><h2 id="footer-dialog-title">{t(content.title)}</h2><p>{t(content.text)}</p><button className="landing-button landing-button-primary" type="button" onClick={onClose}>{t("Understood")} <Check size={15} /></button></section></div>;
 }
 
 function LandingFooter({ setActiveDialog, notice, setNotice }) {
   const { t } = useLanguage();
   return <footer className="landing-footer">
     <div className="footer-main">
-      <div className="footer-brand-column"><Brand /><p>{t("One connected space for learning, teaching, and everything that moves a school day forward.")}</p><div className="footer-socials" aria-label={t("Social channels")}><button type="button" aria-label={t("Community preview channel")} onClick={() => setNotice(t("Unified Learn social channels are not connected in this frontend preview."))}><Users size={16} /></button><button type="button" aria-label={t("Contact preview channel")} onClick={() => setNotice(t("Unified Learn social channels are not connected in this frontend preview."))}><AtSign size={16} /></button><button type="button" aria-label={t("Video preview channel")} onClick={() => setNotice(t("Unified Learn social channels are not connected in this frontend preview."))}><Play size={16} /></button></div>{notice && <p className="footer-notice" role="status">{notice}</p>}</div>
+      <div className="footer-brand-column"><Brand /><p>{t("One connected space for learning, teaching, and everything that moves a school day forward.")}</p><div className="footer-socials" aria-label={t("Social channels")}><button type="button" aria-label={t("Community preview channel")} onClick={() => setNotice(t("Pragti social channels are not connected in this frontend preview."))}><Users size={16} /></button><button type="button" aria-label={t("Contact preview channel")} onClick={() => setNotice(t("Pragti social channels are not connected in this frontend preview."))}><AtSign size={16} /></button><button type="button" aria-label={t("Video preview channel")} onClick={() => setNotice(t("Pragti social channels are not connected in this frontend preview."))}><Play size={16} /></button></div>{notice && <p className="footer-notice" role="status">{notice}</p>}</div>
       <div className="footer-link-group"><strong>{t("Platform")}</strong><a href="#features">{t("Features")}</a><a href="#how-it-works">{t("How it works")}</a><a href="#feature-live">{t("Live classrooms")}</a><a href="#feature-materials">{t("Learning materials")}</a></div>
       <div className="footer-link-group"><strong>{t("Students")}</strong><Link to="/student/login">{t("Student login")}</Link><Link to="/student/register">{t("Create a profile")}</Link><a href="#feature-assignments">{t("Assignments")}</a><a href="#feature-mentor">{t("Study support")}</a></div>
       <div className="footer-link-group"><strong>{t("Teachers")}</strong><Link to="/teacher/login">{t("Teacher login")}</Link><Link to="/teacher/register">{t("Create a profile")}</Link><a href="#feature-attendance">{t("Attendance")}</a><a href="#feature-chat">{t("Communication")}</a></div>
       <div className="footer-link-group footer-help"><strong>{t("Help & information")}</strong><button type="button" onClick={() => setNotice(t("Contact support is not connected in this frontend preview."))}>{t("Contact support")} <span>{t("Preview only")}</span></button><a href="/forgot-password">{t("Password help")}</a><button type="button" onClick={() => setActiveDialog("privacy")}>{t("Privacy")} <span>{t("Preview info")}</span></button><button type="button" onClick={() => setActiveDialog("terms")}>{t("Terms")} <span>{t("Preview info")}</span></button></div>
     </div>
-    <div className="footer-bottom"><span>{<LocalizedText text={"© 2026 Unified Learn ·"} />}{t("Frontend preview")}</span><span className="footer-bottom-note"><ShieldCheck size={13} /> {t("No live account or classroom services are connected.")}</span><a href="#home">{t("Back to top")} <ArrowUpRight size={13} /></a></div>
+    <div className="footer-bottom"><span>{<LocalizedText text={"© 2026 Pragti ·"} />}{t("Frontend preview")}</span><span className="footer-bottom-note"><ShieldCheck size={13} /> {t("No live account or classroom services are connected.")}</span><a href="#home">{t("Back to top")} <ArrowUpRight size={13} /></a></div>
   </footer>;
 }
 
@@ -292,10 +292,10 @@ export default function LandingPage() {
       <WorkflowSection />
       <FeatureShowcase />
       <AudienceSection />
-      <section className="final-cta-section" id="get-started"><div className="cta-ambient" aria-hidden="true" /><div className="cta-content reveal"><span className="section-kicker">{t("YOUR NEXT CHAPTER")}</span><h2>{t("Your next chapter")}<br /><span>{t("starts here.")}</span></h2><p>{t("Make room for better questions, clearer plans, and more connected learning.")}</p><div className="cta-actions"><Link className="landing-button landing-button-primary" to="/register">{t("Start Learning Free")} <ArrowRight size={16} /></Link><a className="landing-button landing-button-secondary" href="#features">{t("Explore Features")} <ArrowUpRight size={15} /></a></div></div><div className="cta-side-note"><span><GraduationCap size={17} /></span><strong>{<LocalizedText text={"Unified Learn"} />}</strong><small>{t("Learn. Grow. Achieve.")}</small></div></section>
+      <section className="final-cta-section" id="get-started"><div className="cta-ambient" aria-hidden="true" /><div className="cta-content reveal"><span className="section-kicker">{t("YOUR NEXT CHAPTER")}</span><h2>{t("Your next chapter")}<br /><span>{t("starts here.")}</span></h2><p>{t("Make room for better questions, clearer plans, and more connected learning.")}</p><div className="cta-actions"><Link className="landing-button landing-button-primary" to="/register">{t("Start Learning Free")} <ArrowRight size={16} /></Link><a className="landing-button landing-button-secondary" href="#features">{t("Explore Features")} <ArrowUpRight size={15} /></a></div></div><div className="cta-side-note"><span className="landing-brand-mark cta-brand-mark"><img src="/pragti-logo.png" alt="Pragti logo" className="brand-logo-img" /></span><strong>{<LocalizedText text={"Pragti"} />}</strong><small>{t("Learn · Grow · Achieve")}</small></div></section>
       <AboutSection />
     </main>
-    <section className="newsletter-section" aria-labelledby="newsletter-title"><div><span className="section-kicker">{t("NOTES FROM UNIFIED LEARN")}</span><h2 id="newsletter-title">{t("A thoughtful note,")}<br />{t("now and then.")}</h2><p>{t("Ideas on learning, teaching, and what’s next.")}</p></div><form onSubmit={submitNewsletter}><label className="visually-hidden" htmlFor="landing-newsletter-email">{t("Email address")}</label><div className="newsletter-field"><input id="landing-newsletter-email" type="email" value={newsletterEmail} onChange={(event) => setNewsletterEmail(event.target.value)} placeholder={t("Your email address")} autoComplete="email" required /><button type="submit" aria-label={t("Subscribe to newsletter")}><ArrowRight size={17} /></button></div><span className="newsletter-confirmation" role="status">{newsletterMessage ? t(newsletterMessage) : t("Frontend preview only. No email is sent.")}</span></form></section>
+    <section className="newsletter-section" aria-labelledby="newsletter-title"><div><span className="section-kicker">{t("NOTES FROM PRAGTI")}</span><h2 id="newsletter-title">{t("A thoughtful note,")}<br />{t("now and then.")}</h2><p>{t("Ideas on learning, teaching, and what’s next.")}</p></div><form onSubmit={submitNewsletter}><label className="visually-hidden" htmlFor="landing-newsletter-email">{t("Email address")}</label><div className="newsletter-field"><input id="landing-newsletter-email" type="email" value={newsletterEmail} onChange={(event) => setNewsletterEmail(event.target.value)} placeholder={t("Your email address")} autoComplete="email" required /><button type="submit" aria-label={t("Subscribe to newsletter")}><ArrowRight size={17} /></button></div><span className="newsletter-confirmation" role="status">{newsletterMessage ? t(newsletterMessage) : t("Frontend preview only. No email is sent.")}</span></form></section>
     <LandingFooter setActiveDialog={setActiveDialog} notice={notice} setNotice={setNotice} />
     <FooterDialog kind={activeDialog} onClose={() => setActiveDialog(null)} />
   </div>;
