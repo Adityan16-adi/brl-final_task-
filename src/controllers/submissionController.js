@@ -24,19 +24,22 @@ exports.submitAssignment = async (req, res) => {
 
         // Resolve studentId to a valid User ObjectId
         let studentId = rawStudentId;
+        let resolvedUser = null;
         if (rawStudentId && !mongoose.Types.ObjectId.isValid(rawStudentId)) {
-            let userDoc = await User.findOne({ uid: rawStudentId });
-            if (!userDoc && process.env.NODE_ENV !== "production") {
-                userDoc = await User.create({
+            resolvedUser = await User.findOne({ uid: rawStudentId });
+            if (!resolvedUser && process.env.NODE_ENV !== "production") {
+                resolvedUser = await User.create({
                     uid: rawStudentId,
                     name: "Demo Student",
                     email: `${rawStudentId}@demo.com`,
                     role: "student",
                 });
             }
-            if (userDoc) {
-                studentId = userDoc._id;
+            if (resolvedUser) {
+                studentId = resolvedUser._id;
             }
+        } else if (rawStudentId && mongoose.Types.ObjectId.isValid(rawStudentId)) {
+            resolvedUser = await User.findById(rawStudentId);
         }
 
         const assignment = await Assignment.findById(req.params.assignmentId);
@@ -51,7 +54,7 @@ exports.submitAssignment = async (req, res) => {
         if (assignment.classId) {
             const classroom = await Classroom.findById(assignment.classId);
             if (classroom) {
-                const studentUid = req.user?.uid || (typeof rawStudentId === "string" ? rawStudentId : "");
+                const studentUid = req.user?.uid || resolvedUser?.uid || (typeof rawStudentId === "string" ? rawStudentId : "");
                 const studentIdStr = studentId ? studentId.toString() : "";
                 const isTeacher = classroom.teacherUid === studentUid;
                 const isStudent = (classroom.students || []).some(

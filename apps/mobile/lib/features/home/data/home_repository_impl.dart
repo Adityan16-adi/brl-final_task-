@@ -112,8 +112,9 @@ class InMemoryHomeRepository implements HomeRepository {
       ),
     ]);
 
+    final now = DateTime.now();
     _schedules.addAll([
-      const ScheduleItem(
+      ScheduleItem(
         id: 'sched-1',
         title: 'Cell Biology Live Lab',
         subject: 'Biology',
@@ -121,8 +122,9 @@ class InMemoryHomeRepository implements HomeRepository {
         location: 'Lab B-204 · Live Meeting Link',
         type: 'Lab Session',
         isToday: true,
+        date: now,
       ),
-      const ScheduleItem(
+      ScheduleItem(
         id: 'sched-2',
         title: 'Calculus Problem Clinic',
         subject: 'Mathematics',
@@ -130,8 +132,9 @@ class InMemoryHomeRepository implements HomeRepository {
         location: 'Hall 101 · Virtual Session',
         type: 'Lecture',
         isToday: true,
+        date: now,
       ),
-      const ScheduleItem(
+      ScheduleItem(
         id: 'sched-3',
         title: 'History Discussion Round',
         subject: 'History',
@@ -139,6 +142,27 @@ class InMemoryHomeRepository implements HomeRepository {
         location: 'Seminar Room 3',
         type: 'Seminar',
         isToday: false,
+        date: now.add(const Duration(days: 1)),
+      ),
+      ScheduleItem(
+        id: 'sched-4',
+        title: 'Genetics Lab Report Submission',
+        subject: 'Biology',
+        time: 'Due 11:59 PM',
+        location: 'Online Portal',
+        type: 'Deadline',
+        isToday: false,
+        date: now.add(const Duration(days: 3)),
+      ),
+      ScheduleItem(
+        id: 'sched-5',
+        title: 'Advanced Calculus Assignment',
+        subject: 'Mathematics',
+        time: 'Due 05:00 PM',
+        location: 'Coursework Dropbox',
+        type: 'Deadline',
+        isToday: false,
+        date: now.add(const Duration(days: 5)),
       ),
     ]);
   }

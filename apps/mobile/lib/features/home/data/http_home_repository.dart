@@ -489,6 +489,7 @@ class HttpHomeRepository implements HomeRepository {
             location: c.room.isNotEmpty ? c.room : 'Virtual Hall',
             type: 'Lecture',
             isToday: isToday,
+            date: isToday ? DateTime.now() : null,
           ),
         );
       }
@@ -498,6 +499,10 @@ class HttpHomeRepository implements HomeRepository {
         final isToday =
             a.dueDate.toLowerCase().contains('today') ||
             a.dueDate.toLowerCase().contains('tomorrow');
+        DateTime? parsedDate;
+        try {
+          parsedDate = DateTime.tryParse(a.dueDate);
+        } catch (_) {}
         items.add(
           ScheduleItem(
             id: 'sched-assign-${a.id}',
@@ -509,6 +514,7 @@ class HttpHomeRepository implements HomeRepository {
                 : 'Assignment Deadline',
             type: 'Deadline',
             isToday: isToday,
+            date: parsedDate ?? (isToday ? DateTime.now() : null),
           ),
         );
       }

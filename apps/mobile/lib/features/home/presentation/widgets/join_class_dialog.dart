@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/home_repository.dart';
@@ -35,6 +36,7 @@ class _JoinClassDialogState extends ConsumerState<JoinClassDialog> {
     try {
       final repo = ref.read(homeRepositoryProvider);
       final joined = await repo.joinClassroom(code);
+      HapticFeedback.lightImpact();
 
       ref.invalidate(classroomsProvider);
       ref.invalidate(homeSummaryProvider);

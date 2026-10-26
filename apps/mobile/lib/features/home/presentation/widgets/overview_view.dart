@@ -7,9 +7,11 @@ import '../../../../core/widgets/demo_data_badge.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../domain/home_repository.dart';
 import '../home_providers.dart';
+import '../notification_providers.dart';
 import '../screens/classroom_detail_screen.dart';
 import 'create_class_dialog.dart';
 import 'join_class_dialog.dart';
+import 'notifications_sheet.dart';
 import 'submit_assignment_dialog.dart';
 
 /// Bento Grid Dashboard Overview for Pragti ("Learn · Connect · Grow").
@@ -76,82 +78,6 @@ class _OverviewViewState extends ConsumerState<OverviewView>
     final weekday = weekdays[now.weekday - 1];
     final month = months[now.month - 1];
     return '$weekday, $month ${now.day}';
-  }
-
-  void _showNotificationsSheet(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          decoration: BoxDecoration(
-            color: isDark ? ClayTokens.darkSurface : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Notifications',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('Mark all as read', style: TextStyle(fontSize: 12)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                dense: true,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: ClayTokens.brightBlue.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.school_rounded, color: ClayTokens.brightBlue, size: 18),
-                ),
-                title: const Text('Upcoming class session scheduled', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                subtitle: const Text('Check your weekly schedule for session details.', style: TextStyle(fontSize: 11)),
-              ),
-              ListTile(
-                dense: true,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: ClayTokens.pragtiOrange.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.assignment_rounded, color: ClayTokens.pragtiOrange, size: 18),
-                ),
-                title: const Text('New assignment available', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                subtitle: const Text('Review coursework in your course tab.', style: TextStyle(fontSize: 11)),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   void _showTeacherGradingDialog(
@@ -328,27 +254,33 @@ class _OverviewViewState extends ConsumerState<OverviewView>
                           },
                         ),
                         // Notification Bell with Unread Dot
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            IconButton(
-                              tooltip: 'Notifications',
-                              icon: const Icon(Icons.notifications_none_rounded, size: 22),
-                              onPressed: () => _showNotificationsSheet(context),
-                            ),
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: ClayTokens.pragtiOrange,
-                                  shape: BoxShape.circle,
+                        Builder(
+                          builder: (context) {
+                            final unreadCount = ref.watch(unreadNotificationsCountProvider);
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Notifications',
+                                  icon: const Icon(Icons.notifications_none_rounded, size: 22),
+                                  onPressed: () => showInAppNotificationsSheet(context),
                                 ),
-                              ),
-                            ),
-                          ],
+                                if (unreadCount > 0)
+                                  Positioned(
+                                    top: 10,
+                                    right: 10,
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: ClayTokens.pragtiOrange,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(width: 2),
                         // Avatar

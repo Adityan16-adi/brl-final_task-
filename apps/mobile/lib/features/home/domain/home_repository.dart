@@ -425,6 +425,7 @@ class ScheduleItem {
     required this.location,
     required this.type,
     this.isToday = false,
+    this.date,
   });
 
   final String id;
@@ -434,6 +435,7 @@ class ScheduleItem {
   final String location;
   final String type; // Lecture, Lab, Deadline
   final bool isToday;
+  final DateTime? date;
 }
 
 

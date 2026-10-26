@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
 
 import '../../../../core/theme/clay_theme.dart';
@@ -211,6 +212,7 @@ class _LiveMeetingScreenState extends State<LiveMeetingScreen> {
   }
 
   Future<void> _toggleRaiseHand() async {
+    HapticFeedback.lightImpact();
     final newRaised = !_isHandRaised;
     final local = _room?.localParticipant;
     final myId = local?.identity ?? 'local-user';

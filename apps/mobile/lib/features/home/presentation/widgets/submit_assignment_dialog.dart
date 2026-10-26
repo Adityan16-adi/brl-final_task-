@@ -266,6 +266,7 @@ class _SubmitAssignmentDialogState
       if (!mounted) return;
 
       if (success) {
+        HapticFeedback.lightImpact();
         ref.invalidate(assignmentsProvider);
         ref.invalidate(homeSummaryProvider);
         ref.invalidate(scheduleProvider);
