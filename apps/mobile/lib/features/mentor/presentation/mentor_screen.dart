@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/core/errors/error_message_helper.dart';
 import 'package:mobile/core/providers/network_providers.dart';
 import 'package:mobile/core/theme/clay_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final mentorSessionProvider = Provider<String>((ref) {
   return 'mobile-${DateTime.now().microsecondsSinceEpoch}';
@@ -559,17 +561,131 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
               ],
             ),
             const SizedBox(height: 6),
-            SelectableText(
-              message.text,
-              style: TextStyle(
-                fontSize: 13.5,
-                height: 1.45,
-                color: isUser ? Colors.white : (isDark ? Colors.white : ClayTokens.navy),
-              ),
-            ),
+            if (isUser)
+              SelectableText(
+                message.text,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  height: 1.45,
+                  color: Colors.white,
+                ),
+              )
+            else
+              _buildMarkdownReply(context, message.text, isDark),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMarkdownReply(
+    BuildContext context,
+    String rawText,
+    bool isDark,
+  ) {
+    // Replace "<br>" with a newline before rendering
+    final cleanText = rawText.replaceAll(
+      RegExp(r'<br\s*/?>', caseSensitive: false),
+      '\n',
+    );
+
+    final theme = Theme.of(context);
+    final textColor = isDark ? Colors.white : ClayTokens.navy;
+    final secondaryText = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final codeBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
+
+    final styleSheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: TextStyle(
+        fontSize: 13.5,
+        height: 1.45,
+        color: textColor,
+      ),
+      h1: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      h2: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      h3: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: textColor,
+      ),
+      strong: TextStyle(
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      em: TextStyle(
+        fontStyle: FontStyle.italic,
+        color: textColor,
+      ),
+      listBullet: TextStyle(
+        fontSize: 13.5,
+        color: textColor,
+      ),
+      tableHead: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      tableBody: TextStyle(
+        fontSize: 12.5,
+        color: textColor,
+      ),
+      tableBorder: TableBorder.all(
+        color: borderColor,
+        width: 1,
+      ),
+      tableCellsPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      tableColumnWidth: const IntrinsicColumnWidth(),
+      code: TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 12,
+        backgroundColor: codeBg,
+        color: isDark ? const Color(0xFF38BDF8) : ClayTokens.brightBlue,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: codeBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
+      ),
+      blockquote: TextStyle(
+        fontSize: 13,
+        fontStyle: FontStyle.italic,
+        color: secondaryText,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(4),
+        border: const Border(
+          left: BorderSide(
+            color: ClayTokens.brightBlue,
+            width: 3,
+          ),
+        ),
+      ),
+    );
+
+    return MarkdownBody(
+      data: cleanText,
+      selectable: true,
+      styleSheet: styleSheet,
+      onTapLink: (text, href, title) {
+        if (href != null && href.isNotEmpty) {
+          final uri = Uri.tryParse(href);
+          if (uri != null) {
+            launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        }
+      },
     );
   }
 }

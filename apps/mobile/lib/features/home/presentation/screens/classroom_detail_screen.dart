@@ -1384,10 +1384,15 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
             if (isTeacher)
               FilledButton.tonalIcon(
                 onPressed: () async {
-                  await showDialog<AssignmentItem>(
+                  final created = await showDialog<AssignmentItem>(
                     context: context,
                     builder: (_) => const CreateAssignmentDialog(),
                   );
+                  if (created != null) {
+                    ref.invalidate(assignmentsProvider);
+                    ref.invalidate(homeSummaryProvider);
+                    ref.invalidate(scheduleProvider);
+                  }
                 },
                 icon: const Icon(Icons.add_task_rounded, size: 16),
                 label: const Text('Add Assignment'),

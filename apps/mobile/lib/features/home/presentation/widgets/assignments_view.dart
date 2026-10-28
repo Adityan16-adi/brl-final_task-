@@ -63,10 +63,17 @@ class _AssignmentsViewState extends ConsumerState<AssignmentsView> {
                 const SizedBox(width: 12),
                 ClayButton(
                   icon: Icons.add_task_rounded,
-                  onPressed: () => showDialog<bool>(
-                    context: context,
-                    builder: (_) => const CreateAssignmentDialog(),
-                  ),
+                  onPressed: () async {
+                    final created = await showDialog<AssignmentItem>(
+                      context: context,
+                      builder: (_) => const CreateAssignmentDialog(),
+                    );
+                    if (created != null) {
+                      ref.invalidate(assignmentsProvider);
+                      ref.invalidate(homeSummaryProvider);
+                      ref.invalidate(scheduleProvider);
+                    }
+                  },
                   child: const Text('New Task'),
                 ),
               ],

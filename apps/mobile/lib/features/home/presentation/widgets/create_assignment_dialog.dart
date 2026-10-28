@@ -134,13 +134,15 @@ class _CreateAssignmentDialogState
       ref.invalidate(scheduleProvider);
 
       if (!mounted) return;
-      Navigator.of(context).pop(created);
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      final primaryColor = Theme.of(context).colorScheme.primary;
+      Navigator.of(context).pop<AssignmentItem>(created);
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'Assignment "${created.title}" published successfully!',
           ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          backgroundColor: primaryColor,
         ),
       );
     } on ClassroomException catch (e) {
@@ -407,7 +409,7 @@ class _CreateAssignmentDialogState
       ),
       actions: [
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop<AssignmentItem>(),
           child: const Text('Cancel'),
         ),
         FilledButton(
