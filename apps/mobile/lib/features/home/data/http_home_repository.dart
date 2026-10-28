@@ -634,11 +634,40 @@ class HttpHomeRepository implements HomeRepository {
     String? createdBy,
     String? attachmentUrl,
     String? attachmentName,
+    SelectedAttachmentItem? file,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
   }) async {
     try {
-      final response = await dio.post<Map<String, dynamic>>(
-        '/api/assignments',
-        data: {
+      dynamic requestData;
+      final hasFile = file != null || filePath != null || fileBytes != null;
+      if (hasFile) {
+        MultipartFile multipartFile;
+        if (file?.bytes != null) {
+          multipartFile = MultipartFile.fromBytes(
+            file!.bytes!,
+            filename: file.name,
+          );
+        } else if (file?.path != null) {
+          multipartFile = await MultipartFile.fromFile(
+            file!.path!,
+            filename: file.name,
+          );
+        } else if (filePath != null) {
+          multipartFile = await MultipartFile.fromFile(
+            filePath,
+            filename: fileName,
+          );
+        } else {
+          multipartFile = MultipartFile.fromBytes(
+            fileBytes!,
+            filename: fileName ?? 'assignment_file',
+          );
+        }
+
+        requestData = FormData.fromMap({
           'classId': classId,
           'title': title.trim(),
           'subject': subject.trim(),
@@ -649,7 +678,27 @@ class HttpHomeRepository implements HomeRepository {
             'description': description.trim(),
           if (attachmentUrl != null && attachmentUrl.isNotEmpty)
             'fileUrl': attachmentUrl.trim(),
-        },
+          'file': multipartFile,
+        });
+      } else {
+        requestData = {
+          'classId': classId,
+          'title': title.trim(),
+          'subject': subject.trim(),
+          'dueDate': dueDate.trim(),
+          'maxMarks': points,
+          if (createdBy != null && createdBy.isNotEmpty) 'createdBy': createdBy,
+          if (description != null && description.isNotEmpty)
+            'description': description.trim(),
+          if (attachmentUrl != null && attachmentUrl.isNotEmpty)
+            'fileUrl': attachmentUrl.trim(),
+        };
+      }
+
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/assignments',
+        data: requestData,
+        onSendProgress: onProgress,
       );
       final data = response.data;
       if (data != null && data['success'] == true && data['data'] != null) {
@@ -664,7 +713,10 @@ class HttpHomeRepository implements HomeRepository {
           status: AssignmentStatus.pending,
           description: a['description']?.toString() ?? description ?? '',
           attachmentUrl: a['fileUrl']?.toString() ?? attachmentUrl,
-          attachmentName: attachmentName,
+          attachmentName: a['fileOriginalName']?.toString() ??
+              attachmentName ??
+              file?.name ??
+              fileName,
         );
       }
       throw const ClassroomException('Unexpected response from server');
@@ -886,23 +938,26 @@ class HttpHomeRepository implements HomeRepository {
       );
       final data = response.data;
       if (data != null && data['success'] == true && data['data'] is Map) {
-        final item = ChatMessageItem.fromJson(data['data'] as Map<String, dynamic>);
+        final item =
+            ChatMessageItem.fromJson(data['data'] as Map<String, dynamic>);
         _chatMessagesByClass.putIfAbsent(classId, () => []).add(item);
         return item;
       }
-    } catch (_) {}
-
-    final localMsg = ChatMessageItem(
-      id: 'chat-${DateTime.now().millisecondsSinceEpoch}',
-      classId: classId,
-      senderUid: senderUid ?? 'current-user',
-      senderName: senderName ?? 'You',
-      senderRole: senderRole ?? 'student',
-      text: text.trim(),
-      createdAt: DateTime.now(),
-    );
-    _chatMessagesByClass.putIfAbsent(classId, () => []).add(localMsg);
-    return localMsg;
+      throw const ClassroomException('Message not sent');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 422) {
+        final data = e.response?.data;
+        final backendMsg = data is Map && data['message'] != null
+            ? data['message'].toString()
+            : 'Message rejected: contains spam or inappropriate content.';
+        throw ClassroomException(backendMsg, statusCode: 422);
+      }
+      throw ClassroomException('Message not sent',
+          statusCode: e.response?.statusCode);
+    } catch (e) {
+      if (e is ClassroomException) rethrow;
+      throw const ClassroomException('Message not sent');
+    }
   }
 
   @override

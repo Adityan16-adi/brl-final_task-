@@ -48,6 +48,11 @@ abstract interface class HomeRepository {
     String? createdBy,
     String? attachmentUrl,
     String? attachmentName,
+    SelectedAttachmentItem? file,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
   });
   Future<bool> gradeSubmission(
     String submissionId, {

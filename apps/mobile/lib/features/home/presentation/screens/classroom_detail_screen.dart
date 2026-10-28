@@ -2704,9 +2704,12 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
       });
     } catch (e) {
       if (context.mounted) {
+        final errorText = e is ClassroomException
+            ? e.message
+            : ErrorMessageHelper.format(e, fallback: 'Message not sent');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ErrorMessageHelper.format(e, fallback: 'Failed to send message. Please try again.')),
+            content: Text(errorText),
             backgroundColor: Colors.red,
           ),
         );

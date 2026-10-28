@@ -426,8 +426,17 @@ class InMemoryHomeRepository implements HomeRepository {
     String? createdBy,
     String? attachmentUrl,
     String? attachmentName,
+    SelectedAttachmentItem? file,
+    String? filePath,
+    List<int>? fileBytes,
+    String? fileName,
+    void Function(int sent, int total)? onProgress,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
+    final resolvedAttachmentName =
+        attachmentName?.trim() ?? file?.name ?? fileName;
+    final resolvedAttachmentUrl = attachmentUrl?.trim() ??
+        (file != null ? 'https://pragti.app/mock/${file.name}' : null);
     final item = AssignmentItem(
       id: 'assign-${DateTime.now().millisecondsSinceEpoch}',
       classId: classId,
@@ -437,8 +446,8 @@ class InMemoryHomeRepository implements HomeRepository {
       points: points,
       status: AssignmentStatus.pending,
       description: description?.trim() ?? '',
-      attachmentUrl: attachmentUrl?.trim(),
-      attachmentName: attachmentName?.trim(),
+      attachmentUrl: resolvedAttachmentUrl,
+      attachmentName: resolvedAttachmentName,
     );
     _assignments.insert(0, item);
     return item;
