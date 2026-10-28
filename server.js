@@ -66,6 +66,7 @@ app.use("/api/attendance", require("./src/routes/attendanceRoutes"));
 app.use("/api/meetings", require("./src/routes/meetingRoutes"));
 app.use("/api/chat", require("./src/routes/chatRoutes"));
 app.use("/api/mentor", require("./src/routes/mentorRoutes"));
+app.use("/api/ml", require("./src/routes/mlRoutes"));
 
 app.use("/api/sessions", require("./src/routes/sessionRoutes"));
 
