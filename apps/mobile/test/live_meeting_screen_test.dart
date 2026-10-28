@@ -97,5 +97,52 @@ void main() {
       expect(find.text('Open Meeting'), findsOneWidget);
       expect(find.text('Chemistry Lecture'), findsNothing);
     });
+
+    testWidgets('Chat button opens in-meeting chat bottom sheet and sends message', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LiveMeetingScreen(
+            serverUrl: 'ws://localhost:7880',
+            token: 'mock-token',
+            roomTitle: 'Physics 101 Live Class',
+            isTeacher: true,
+            autoConnect: false,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Chat button is present in control bar
+      expect(find.text('Chat'), findsOneWidget);
+      expect(find.byIcon(Icons.chat_bubble_outline_rounded), findsOneWidget);
+
+      // Tap Chat to open sheet
+      await tester.tap(find.text('Chat'));
+      await tester.pumpAndSettle();
+
+      // Verify chat sheet elements
+      expect(find.text('Classroom Chat'), findsOneWidget);
+      expect(find.text('No messages yet'), findsOneWidget);
+
+      // Enter a chat message and send
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Type a message to class...'),
+        'Welcome students, class has started!',
+      );
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+
+      // Verify message is added to chat
+      expect(find.text('Welcome students, class has started!'), findsOneWidget);
+      expect(find.text('You'), findsOneWidget);
+
+      // Close the chat sheet
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Classroom Chat'), findsNothing);
+    });
   });
 }
