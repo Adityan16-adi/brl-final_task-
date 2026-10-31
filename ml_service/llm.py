@@ -21,16 +21,27 @@ if os.getenv("GROQ_API_KEY"):
     os.environ["GROQ_API_KEY"] = os.environ["GROQ_API_KEY"].strip().strip('"').strip("'")
 
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))        # seconds to wait for the provider
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "1"))   # automatic retries on network errors
+
+
+class LLMConfigError(RuntimeError):
+    """The server is missing its LLM API key (a server setup problem, not a user error)."""
+
+
+def llm_configured() -> bool:
+    key = os.getenv("GROQ_API_KEY", "")
+    return bool(key) and "your_free_key" not in key
 
 
 def get_llm(temperature: float = 0.2):
-    if not os.getenv("GROQ_API_KEY") or "your_free_key" in os.getenv("GROQ_API_KEY", ""):
-        raise RuntimeError(
+    if not llm_configured():
+        raise LLMConfigError(
             f"GROQ_API_KEY not found. Create a file named exactly '.env' in {HERE} "
             "containing the line: GROQ_API_KEY=gsk_your_key"
         )
     from langchain_groq import ChatGroq  # imported lazily so the server starts even without a key
-    return ChatGroq(model=GROQ_MODEL, temperature=temperature)
+    return ChatGroq(model=GROQ_MODEL, temperature=temperature, timeout=LLM_TIMEOUT, max_retries=LLM_MAX_RETRIES)
 
 
 @lru_cache(maxsize=1)
